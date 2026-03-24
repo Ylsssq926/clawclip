@@ -130,33 +130,126 @@ function toolCallInput(args: Record<string, unknown>): string {
 }
 
 /**
+ * OpenClaw 当前转写为 Pi SessionManager JSONL：首行常为 type:session，后续 type:message 且正文在 message 内。
+ * 同时保留旧版/直连 API 的 Chat Completions 单行（顶格 role/content）。
+ */
+function unwrapPiEnvelope(outer: JsonlLine): JsonlLine {
+  const t = outer.type;
+  if ((t === 'message' || t === 'custom_message') && outer.message != null && typeof outer.message === 'object') {
+    const inner = outer.message as Record<string, unknown>;
+    return {
+      ...inner,
+      usage: inner.usage ?? outer.usage,
+      model: inner.model ?? outer.model,
+      model_id: inner.model_id ?? outer.model_id,
+      timestamp: inner.timestamp ?? outer.timestamp,
+      created_at: inner.created_at ?? outer.created_at,
+      createdAt: inner.createdAt ?? outer.createdAt,
+    } as JsonlLine;
+  }
+  return outer;
+}
+
+function resolveMessageRole(body: JsonlLine, outerType: string | undefined): string | undefined {
+  if (typeof body.role === 'string') return body.role;
+  if (typeof body.kind === 'string') {
+    const k = body.kind.toLowerCase();
+    if (k === 'user' || k === 'human') return 'user';
+    if (k === 'assistant' || k === 'model') return 'assistant';
+    if (k === 'tool' || k === 'toolresult' || k === 'tool_result') return 'tool';
+    if (k === 'system') return 'system';
+  }
+  if (outerType === 'toolResult' || outerType === 'tool_result') return 'tool';
+  return undefined;
+}
+
+function pickToolCalls(body: JsonlLine, outer: JsonlLine): unknown[] | undefined {
+  const a =
+    body.tool_calls ?? body.toolCalls ?? outer.tool_calls ?? (outer.toolCalls as unknown[] | undefined);
+  return Array.isArray(a) ? a : undefined;
+}
+
+/**
  * 从一行 JSONL 揪出一步；认不出来的行交给 null
  */
 function lineToStep(obj: JsonlLine, index: number): SessionStep | null {
+  const outerType = typeof obj.type === 'string' ? obj.type : undefined;
+
+  if (outerType === 'session') return null;
+  if (outerType === 'custom') return null;
+
+  if (outerType === 'compaction') {
+    const o = obj as Record<string, unknown>;
+    const kept = o.firstKeptEntryId;
+    const before = o.tokensBefore;
+    const u = readUsage(obj);
+    const parts = [
+      '（上下文压缩）',
+      kept != null ? `保留自 ${String(kept)}` : '',
+      before != null ? `压缩前约 ${String(before)} tokens` : '',
+    ].filter(Boolean);
+    return {
+      index,
+      timestamp: parseTimestamp(obj),
+      type: 'thinking',
+      content: parts.join(' · ') || '（上下文压缩）',
+      inputTokens: u.input,
+      outputTokens: u.output,
+      cost: 0,
+      durationMs: 0,
+    };
+  }
+
+  if (outerType === 'branch_summary') {
+    const o = obj as Record<string, unknown>;
+    const u = readUsage(obj);
+    const txt =
+      stringifyContent(o.summary ?? o.text ?? o.content) || '（分支摘要）';
+    return {
+      index,
+      timestamp: parseTimestamp(obj),
+      type: 'thinking',
+      content: txt.slice(0, 4000),
+      inputTokens: u.input,
+      outputTokens: u.output,
+      cost: 0,
+      durationMs: 0,
+    };
+  }
+
+  const body = unwrapPiEnvelope(obj);
   const timestamp = parseTimestamp(obj);
-  const { input, output } = readUsage(obj);
+  const mergedForUsage = { ...body, usage: body.usage ?? obj.usage } as JsonlLine;
+  const { input, output } = readUsage(mergedForUsage);
   const model =
-    typeof obj.model === 'string'
-      ? obj.model
-      : typeof (obj.model_id as string | undefined) === 'string'
-        ? (obj.model_id as string)
-        : undefined;
-  const role = typeof obj.role === 'string' ? obj.role : undefined;
+    typeof body.model === 'string'
+      ? body.model
+      : typeof (body.model_id as string | undefined) === 'string'
+        ? (body.model_id as string)
+        : typeof obj.model === 'string'
+          ? obj.model
+          : undefined;
 
   const base = (): Pick<SessionStep, 'inputTokens' | 'outputTokens'> => ({
     inputTokens: input,
     outputTokens: output,
   });
 
-  const text = extractLineText(obj);
+  const text = extractLineText(body);
   const reasoningExtra =
-    obj.reasoning_content != null
-      ? stringifyContent(obj.reasoning_content)
-      : obj.reasoning != null
-        ? stringifyContent(obj.reasoning)
-        : '';
+    body.reasoning_content != null
+      ? stringifyContent(body.reasoning_content)
+      : body.reasoning != null
+        ? stringifyContent(body.reasoning)
+        : obj.reasoning_content != null
+          ? stringifyContent(obj.reasoning_content)
+          : obj.reasoning != null
+            ? stringifyContent(obj.reasoning)
+            : '';
 
-  if (role === 'user' || obj.type === 'user_message') {
+  const role = resolveMessageRole(body, outerType);
+
+  if (role === 'user' || outerType === 'user_message') {
     return {
       index,
       timestamp,
@@ -168,8 +261,8 @@ function lineToStep(obj: JsonlLine, index: number): SessionStep | null {
     };
   }
 
-  if (role === 'assistant' || obj.type === 'assistant_message') {
-    const fc = obj.function_call as Record<string, unknown> | undefined;
+  if (role === 'assistant' || outerType === 'assistant_message') {
+    const fc = body.function_call as Record<string, unknown> | undefined;
     if (fc && typeof fc.name === 'string') {
       const args = fc.arguments;
       const toolInput = typeof args === 'string' ? args : JSON.stringify(args ?? {});
@@ -187,8 +280,8 @@ function lineToStep(obj: JsonlLine, index: number): SessionStep | null {
       };
     }
 
-    const toolCalls = obj.tool_calls;
-    if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+    const toolCalls = pickToolCalls(body, obj);
+    if (toolCalls && toolCalls.length > 0) {
       const tc = toolCalls[0] as Record<string, unknown>;
       const name = toolCallName(tc);
       const toolInput = toolCallInput(tc);
@@ -225,6 +318,7 @@ function lineToStep(obj: JsonlLine, index: number): SessionStep | null {
         content:
           text ||
           reasoningExtra ||
+          stringifyContent(body.thought) ||
           stringifyContent(obj.thought) ||
           '（模型内部推算）',
         model,
@@ -236,8 +330,10 @@ function lineToStep(obj: JsonlLine, index: number): SessionStep | null {
     return null;
   }
 
-  if (role === 'tool' || obj.type === 'tool_result' || obj.type === 'function_call_output') {
-    const out = text || stringifyContent(obj.output ?? obj.result);
+  if (role === 'tool' || outerType === 'tool_result' || outerType === 'function_call_output') {
+    const out =
+      text ||
+      stringifyContent(body.output ?? body.result ?? obj.output ?? obj.result);
     return {
       index,
       timestamp,
@@ -245,7 +341,16 @@ function lineToStep(obj: JsonlLine, index: number): SessionStep | null {
       content: out,
       toolOutput: out,
       model,
-      toolName: typeof obj.name === 'string' ? obj.name : typeof obj.tool_name === 'string' ? obj.tool_name : undefined,
+      toolName:
+        typeof body.name === 'string'
+          ? body.name
+          : typeof body.tool_name === 'string'
+            ? body.tool_name
+            : typeof obj.name === 'string'
+              ? obj.name
+              : typeof obj.tool_name === 'string'
+                ? obj.tool_name
+                : undefined,
       ...base(),
       cost: 0,
       durationMs: 0,
@@ -265,7 +370,7 @@ function lineToStep(obj: JsonlLine, index: number): SessionStep | null {
     };
   }
 
-  if (obj.usage != null && (input > 0 || output > 0)) {
+  if (mergedForUsage.usage != null && (input > 0 || output > 0)) {
     return {
       index,
       timestamp,

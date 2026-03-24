@@ -7,6 +7,7 @@ import {
   countSessionJsonlFiles,
   getLobsterDataRoots,
   getPrimaryLobsterHome,
+  getSpawnEnvWithOpenclawState,
 } from './agent-data-root.js';
 import { sessionParser } from './session-parser.js';
 
@@ -187,13 +188,19 @@ export class OpenClawBridge {
     return skills;
   }
 
-  /** 安装 Skill（写入主数据根，与 CLAWCLIP_PRIMARY_LOBSTER_HOME 一致） */
+  /**
+   * 安装 Skill：为子进程设置 OPENCLAW_STATE_DIR（及可选 OPENCLAW_CONFIG_PATH），
+   * 与 OpenClaw 官方一致，使 clawhub 写入 CLAWCLIP_PRIMARY_LOBSTER_HOME / OPENCLAW_STATE_DIR 指向的目录，而不是误装到别的 ~/.openclaw。
+   */
   async installSkill(name: string): Promise<{ success: boolean; message: string }> {
     if (!isValidSkillName(name)) {
       return { success: false, message: '无效的 Skill 名称，只允许字母、数字、下划线和连字符' };
     }
     try {
-      await execFileAsync('npx', ['clawhub', 'install', name], { timeout: 30000 });
+      await execFileAsync('npx', ['clawhub', 'install', name], {
+        timeout: 30000,
+        env: getSpawnEnvWithOpenclawState(),
+      });
       return { success: true, message: `${name} 安装成功` };
     } catch (e) {
       return { success: false, message: `安装失败: ${e instanceof Error ? e.message : e}` };

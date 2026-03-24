@@ -2,6 +2,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+/**
+ * 数据根探测（对齐 OpenClaw 当前文档，约 2026）：
+ * - 会话转写：`agents/<agentId>/sessions/*.jsonl`；同目录有 `sessions.json` 元数据（本模块不把其当 JSONL 解析）
+ * - 官方变量：`OPENCLAW_STATE_DIR`（默认 ~/.openclaw）；避免把 OPENCLAW_HOME 设成已以 `.openclaw` 结尾的路径以防嵌套目录问题
+ */
+
 /** 与 OpenClaw / ZeroClaw 等「龙虾」数据目录布局兼容的探测结果 */
 export interface LobsterDataRoot {
   id: string;
@@ -46,6 +52,19 @@ function envExtraRoots(): string[] {
     .filter(Boolean);
 }
 
+/** 与运行中的 Gateway 使用同一状态目录时，可读会话；官方变量见 OPENCLAW_STATE_DIR */
+function envOpenclawStateDirRoot(): string | null {
+  const raw = process.env.OPENCLAW_STATE_DIR?.trim();
+  if (!raw) return null;
+  const homeDir = expandHome(raw);
+  try {
+    if (!fs.existsSync(homeDir) || !fs.statSync(homeDir).isDirectory()) return null;
+  } catch {
+    return null;
+  }
+  return homeDir;
+}
+
 /**
  * 返回可用于读取各代理 sessions 目录的数据根列表（去重、仅存在目录）。
  * 顺序：环境变量优先，再默认 ~/.openclaw、~/.zeroclaw 等。
@@ -69,6 +88,20 @@ export function getLobsterDataRoots(): LobsterDataRoot[] {
     });
   }
 
+  const stateEnv = envOpenclawStateDirRoot();
+  if (stateEnv) {
+    const key = safeRealpath(stateEnv);
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push({
+        id: 'openclaw-state-env',
+        label: 'OPENCLAW_STATE_DIR',
+        homeDir: stateEnv,
+        agentsDir: path.join(stateEnv, 'agents'),
+      });
+    }
+  }
+
   for (const c of DEFAULT_SCAN) {
     const homeDir = path.join(os.homedir(), c.dirname);
     const key = safeRealpath(homeDir);
@@ -87,14 +120,43 @@ export function getLobsterDataRoots(): LobsterDataRoot[] {
 }
 
 /**
- * 模板、Skill 安装等「写入」时的主目录：优先环境变量，否则第一个已探测到的根，最后默认 ~/.openclaw。
+ * 模板、Skill 安装等「写入」时的主目录。
+ * 顺序：CLAWCLIP_PRIMARY_LOBSTER_HOME → OPENCLAW_STATE_DIR（官方，与 Gateway 一致）→ 已探测根 → ~/.openclaw
  */
 export function getPrimaryLobsterHome(): string {
-  const env = process.env.CLAWCLIP_PRIMARY_LOBSTER_HOME?.trim();
-  if (env) return expandHome(env);
+  const primary = process.env.CLAWCLIP_PRIMARY_LOBSTER_HOME?.trim();
+  if (primary) return expandHome(primary);
+  const stateDir = process.env.OPENCLAW_STATE_DIR?.trim();
+  if (stateDir) {
+    const p = expandHome(stateDir);
+    try {
+      if (fs.existsSync(p) && fs.statSync(p).isDirectory()) return p;
+    } catch {
+      /* fall through */
+    }
+  }
   const roots = getLobsterDataRoots();
   if (roots.length > 0) return roots[0].homeDir;
   return path.join(os.homedir(), '.openclaw');
+}
+
+/**
+ * 给 npx clawhub 等子进程：把技能装到「当前主数据根」，与 OpenClaw 文档一致。
+ * 不覆盖调用方已在环境里设置的 OPENCLAW_STATE_DIR / OPENCLAW_CONFIG_PATH（官方约定：不强行覆盖）。
+ */
+export function getSpawnEnvWithOpenclawState(): NodeJS.ProcessEnv {
+  const e = { ...process.env } as NodeJS.ProcessEnv;
+  const resolved = path.resolve(getPrimaryLobsterHome());
+  if (!process.env.OPENCLAW_STATE_DIR?.trim()) {
+    e.OPENCLAW_STATE_DIR = resolved;
+  }
+  if (!process.env.OPENCLAW_CONFIG_PATH?.trim()) {
+    const oc = path.join(resolved, 'openclaw.json');
+    const zc = path.join(resolved, 'zeroclaw.json');
+    if (fs.existsSync(oc)) e.OPENCLAW_CONFIG_PATH = oc;
+    else if (fs.existsSync(zc)) e.OPENCLAW_CONFIG_PATH = zc;
+  }
+  return e;
 }
 
 /**

@@ -50,10 +50,11 @@ resource/
 # Package artifacts
 *.tgz
 
-# Local deploy scripts (not for git)
+# Local deploy/verify scripts (not for git)
 _remote.py
 _deploy*.py
 _ssh*.py
+_verify.py
 
 # Misc cache
 .cache/

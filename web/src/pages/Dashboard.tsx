@@ -124,14 +124,14 @@ export default function Dashboard({ onNavigate }: Props) {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <button
-          onClick={() => onNavigate('templates')}
-          className="group bg-gradient-to-br from-orange-500/20 to-red-500/10 rounded-xl p-6 border border-orange-500/20 hover:border-orange-500/50 transition-all text-left"
+          onClick={() => onNavigate('replay')}
+          className="group bg-gradient-to-br from-orange-500/20 to-yellow-500/10 rounded-xl p-6 border border-orange-500/20 hover:border-orange-500/50 transition-all text-left"
         >
-          <div className="text-3xl mb-3">📦</div>
-          <h4 className="font-semibold text-lg mb-1">场景模板</h4>
-          <p className="text-sm text-slate-400 mb-3">自媒体日报、邮件助理、客服值班... 一键导入预设工作流</p>
+          <div className="text-3xl mb-3">🎬</div>
+          <h4 className="font-semibold text-lg mb-1">会话回放</h4>
+          <p className="text-sm text-slate-400 mb-3">看看龙虾每一步都在干什么，思考了什么，花了多少钱</p>
           <span className="text-orange-400 text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-            浏览模板 <ArrowRight className="w-4 h-4" />
+            查看回放 <ArrowRight className="w-4 h-4" />
           </span>
         </button>
 

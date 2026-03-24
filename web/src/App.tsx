@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import Dashboard from './pages/Dashboard'
+import Replay from './pages/Replay'
 import CostMonitor from './pages/CostMonitor'
 import SkillManager from './pages/SkillManager'
 import TemplateMarket from './pages/TemplateMarket'
-import { LayoutDashboard, DollarSign, Puzzle, Store, Settings } from 'lucide-react'
+import { LayoutDashboard, Play, DollarSign, Puzzle, Store, Settings } from 'lucide-react'
 
-export type Tab = 'dashboard' | 'cost' | 'skills' | 'templates'
+export type Tab = 'dashboard' | 'replay' | 'cost' | 'skills' | 'templates'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
   const tabs = [
     { id: 'dashboard' as const, name: '仪表盘', icon: LayoutDashboard },
+    { id: 'replay' as const, name: '回放', icon: Play },
     { id: 'cost' as const, name: '费用', icon: DollarSign },
     { id: 'skills' as const, name: 'Skills', icon: Puzzle },
     { id: 'templates' as const, name: '模板', icon: Store },
@@ -29,7 +31,7 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 hidden sm:inline">v0.1.0</span>
+            <span className="text-xs text-slate-500 hidden sm:inline">v0.2.0</span>
             <button type="button" disabled className="p-2 rounded-lg transition-colors opacity-50 cursor-not-allowed" title="设置功能即将上线">
               <Settings className="w-5 h-5 text-slate-400" />
             </button>
@@ -66,6 +68,7 @@ function App() {
 
         <main className="flex-1 p-6 overflow-auto">
           {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
+          {activeTab === 'replay' && <Replay />}
           {activeTab === 'cost' && <CostMonitor />}
           {activeTab === 'skills' && <SkillManager />}
           {activeTab === 'templates' && <TemplateMarket />}

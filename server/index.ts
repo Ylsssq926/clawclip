@@ -6,6 +6,7 @@ import statusRouter from './routes/status.js';
 import costRouter from './routes/cost.js';
 import skillsRouter from './routes/skills.js';
 import templatesRouter from './routes/templates.js';
+import replayRouter from './routes/replay.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -17,6 +18,7 @@ app.use('/api/status', statusRouter);
 app.use('/api/cost', costRouter);
 app.use('/api/skills', skillsRouter);
 app.use('/api/templates', templatesRouter);
+app.use('/api/replay', replayRouter);
 
 // API 404：未匹配的 /api/* 请求返回 JSON 错误而非 index.html
 app.all('/api/*', (_req, res) => {

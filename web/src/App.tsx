@@ -7,15 +7,25 @@ import CostMonitor from './pages/CostMonitor'
 import SkillManager from './pages/SkillManager'
 import TemplateMarket from './pages/TemplateMarket'
 import Knowledge from './pages/Knowledge'
-import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database } from 'lucide-react'
+import Leaderboard from './pages/Leaderboard'
+import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal } from 'lucide-react'
 import { cn } from './lib/cn'
 
-export type Tab = 'dashboard' | 'replay' | 'benchmark' | 'cost' | 'skills' | 'templates' | 'knowledge'
+export type Tab =
+  | 'dashboard'
+  | 'replay'
+  | 'benchmark'
+  | 'leaderboard'
+  | 'cost'
+  | 'skills'
+  | 'templates'
+  | 'knowledge'
 
 const tabs = [
   { id: 'dashboard' as const, name: '仪表盘', icon: LayoutDashboard },
   { id: 'replay' as const, name: '回放', icon: Play },
   { id: 'benchmark' as const, name: '评测', icon: Trophy },
+  { id: 'leaderboard' as const, name: '排行榜', icon: Medal },
   { id: 'cost' as const, name: '费用', icon: DollarSign },
   { id: 'skills' as const, name: 'Skills', icon: Puzzle },
   { id: 'templates' as const, name: '模板', icon: Store },
@@ -92,6 +102,7 @@ function App() {
           {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
           {activeTab === 'replay' && <Replay />}
           {activeTab === 'benchmark' && <Benchmark />}
+          {activeTab === 'leaderboard' && <Leaderboard />}
           {activeTab === 'cost' && <CostMonitor />}
           {activeTab === 'skills' && <SkillManager />}
           {activeTab === 'templates' && <TemplateMarket />}

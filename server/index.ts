@@ -11,6 +11,7 @@ import benchmarkRouter from './routes/benchmark.js';
 import shareRouter from './routes/share.js';
 import analyticsRouter from './routes/analytics.js';
 import knowledgeRouter from './routes/knowledge.js';
+import leaderboardRouter from './routes/leaderboard.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -26,6 +27,7 @@ app.use('/api/replay', replayRouter);
 app.use('/api/benchmark', benchmarkRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/knowledge', knowledgeRouter);
+app.use('/api/leaderboard', leaderboardRouter);
 
 app.use('/share', shareRouter);
 

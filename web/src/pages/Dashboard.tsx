@@ -107,9 +107,9 @@ export default function Dashboard({ onNavigate }: Props) {
       value: `¥${(cost?.totalCost ?? 0).toFixed(2)}`,
       sub: cost ? `${cost.totalTokens.toLocaleString()} tokens` : null,
       icon: DollarSign,
-      variant: 'card-orange',
-      color: 'text-orange-400',
-      iconColor: 'text-orange-400',
+      variant: 'card-cyan',
+      color: 'text-cyan-400',
+      iconColor: 'text-cyan-400',
     },
     {
       label: '已装 Skills',
@@ -163,12 +163,12 @@ export default function Dashboard({ onNavigate }: Props) {
       {/* Quick Actions */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-orange-400" />
+          <Sparkles className="w-4 h-4 text-blue-400" />
           <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">快捷操作</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { tab: 'replay' as const, icon: '🎬', title: '会话回放', desc: '看看龙虾每一步在干什么', color: 'card-orange', textColor: 'text-orange-400' },
+            { tab: 'replay' as const, icon: '🎬', title: '会话回放', desc: '看看龙虾每一步在干什么', color: 'card-blue', textColor: 'text-blue-400' },
             { tab: 'cost' as const, icon: '📊', title: '费用监控', desc: '看看钱都花哪了', color: 'card-blue', textColor: 'text-blue-400' },
             { tab: 'benchmark' as const, icon: '🏆', title: '能力评测', desc: '给龙虾做六维体检', color: 'card-purple', textColor: 'text-violet-400' },
           ].map((item, i) => (
@@ -194,7 +194,7 @@ export default function Dashboard({ onNavigate }: Props) {
         {/* Word Cloud */}
         <div className="lg:col-span-2 card p-6 animate-fade-in" style={{ animationDelay: '350ms' }}>
           <div className="flex items-center gap-2 mb-4">
-            <Cloud className="w-4 h-4 text-orange-400" />
+            <Cloud className="w-4 h-4 text-cyan-400" />
             <h4 className="text-sm font-semibold text-slate-400">热门关键词</h4>
           </div>
           {kwLoading ? (
@@ -215,10 +215,10 @@ export default function Dashboard({ onNavigate }: Props) {
         <div className="lg:col-span-3 card p-6 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-orange-400" />
+              <Clock className="w-4 h-4 text-blue-400" />
               <h4 className="text-sm font-semibold text-slate-400">最近活动</h4>
             </div>
-            <button onClick={() => onNavigate('replay')} className="text-xs text-slate-600 hover:text-orange-400 transition-colors">
+            <button onClick={() => onNavigate('replay')} className="text-xs text-slate-600 hover:text-blue-400 transition-colors">
               查看全部 →
             </button>
           </div>
@@ -236,8 +236,8 @@ export default function Dashboard({ onNavigate }: Props) {
                   onClick={() => onNavigate('replay')}
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-orange-400" />
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <Bot className="w-4 h-4 text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-slate-300 truncate group-hover:text-white transition-colors">
@@ -251,7 +251,7 @@ export default function Dashboard({ onNavigate }: Props) {
                       <span>{formatRelativeTime(s.startTime)}</span>
                     </div>
                   </div>
-                  <span className="text-xs text-orange-400/80 font-mono shrink-0">¥{s.totalCost.toFixed(3)}</span>
+                  <span className="text-xs text-cyan-400/80 font-mono shrink-0">¥{s.totalCost.toFixed(3)}</span>
                 </button>
               ))}
             </div>

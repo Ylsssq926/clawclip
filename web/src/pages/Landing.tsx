@@ -10,33 +10,29 @@ const FEATURES = [
     icon: Play,
     title: '会话回放',
     desc: '把 AI Agent 的 JSONL 日志变成可交互的时间轴——每一步思考、工具调用、结果、花费，一目了然。',
-    color: 'from-orange-500 to-amber-500',
-    iconBg: 'bg-orange-500/10',
-    iconColor: 'text-orange-400',
+    iconBg: 'bg-blue-500/10',
+    iconColor: 'text-blue-400',
   },
   {
     icon: Trophy,
     title: '六维评测',
     desc: '离线分析历史会话，从写作、代码、工具、检索、安全、性价比六个维度给你的 Agent 打分。不调 API，不花钱。',
-    color: 'from-violet-500 to-purple-500',
-    iconBg: 'bg-violet-500/10',
-    iconColor: 'text-violet-400',
+    iconBg: 'bg-cyan-500/10',
+    iconColor: 'text-cyan-400',
   },
   {
     icon: BarChart3,
     title: '成本监控',
     desc: '逐日 Token 趋势、模型费用对比、预算告警、高消耗排行。每分钱花到哪了，清清楚楚。',
-    color: 'from-blue-500 to-cyan-500',
-    iconBg: 'bg-blue-500/10',
-    iconColor: 'text-blue-400',
+    iconBg: 'bg-emerald-500/10',
+    iconColor: 'text-emerald-400',
   },
   {
     icon: Cloud,
     title: '词云与标签',
     desc: '自动提取会话关键词生成词云，按主题/工具/模型着色。会话自动标签，快速筛选。',
-    color: 'from-emerald-500 to-green-500',
-    iconBg: 'bg-emerald-500/10',
-    iconColor: 'text-emerald-400',
+    iconBg: 'bg-violet-500/10',
+    iconColor: 'text-violet-400',
   },
 ]
 
@@ -50,23 +46,17 @@ const HIGHLIGHTS = [
 export default function Landing({ onEnterDemo }: Props) {
   return (
     <div className="min-h-screen bg-[#0b1120] text-slate-200 overflow-hidden">
-      {/* Ambient background */}
+      {/* Ambient orbs */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-orange-500/[0.03] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-500/[0.04] rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-purple-500/[0.02] rounded-full blur-[80px]" />
+        <div className="absolute top-[-10%] left-[15%] w-[700px] h-[700px] bg-blue-500/[0.04] rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-5%] right-[20%] w-[500px] h-[500px] bg-cyan-500/[0.03] rounded-full blur-[100px]" />
+        <div className="absolute top-[40%] right-[5%] w-[300px] h-[300px] bg-emerald-500/[0.02] rounded-full blur-[80px]" />
       </div>
 
       {/* Nav */}
       <nav className="relative z-10 flex items-center justify-between px-6 lg:px-16 py-5 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-xl shadow-lg shadow-orange-500/25">
-            🍤
-          </div>
-          <div>
-            <span className="text-lg font-bold text-white">虾片</span>
-            <span className="text-xs text-slate-500 ml-2">ClawClip</span>
-          </div>
+          <img src="/luelan-logo.png" alt="掠蓝" className="h-8 w-auto" />
         </div>
         <div className="flex items-center gap-3">
           <a
@@ -79,7 +69,7 @@ export default function Landing({ onEnterDemo }: Props) {
           </a>
           <button
             onClick={onEnterDemo}
-            className="text-sm font-medium px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all hover:scale-[1.03] active:scale-[0.98]"
+            className="text-sm font-medium px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/35 transition-all hover:scale-[1.03] active:scale-[0.98]"
           >
             体验 Demo
           </button>
@@ -87,34 +77,33 @@ export default function Landing({ onEnterDemo }: Props) {
       </nav>
 
       {/* Hero */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pt-20 pb-24 lg:pt-32 lg:pb-36">
+      <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pt-20 pb-24 lg:pt-28 lg:pb-32">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           className="max-w-3xl"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/20 bg-orange-500/[0.06] text-xs text-orange-400 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/[0.06] text-xs text-blue-400 mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
             支持 OpenClaw / ZeroClaw 及所有兼容 Agent 框架
           </div>
 
           <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            <span className="text-white">你的龙虾</span>
+            <span className="text-white">你的 AI Agent</span>
             <br />
             <span className="text-gradient">到底干了什么？</span>
           </h1>
 
           <p className="text-lg lg:text-xl text-slate-400 leading-relaxed max-w-2xl mb-10">
-            把无聊的 Agent 日志变成好看的时间轴回放，
-            给你的 AI Agent 做六维体检打分，
-            顺便看看钱都花哪了。
+            虾片 (ClawClip) 把无聊的 Agent 日志变成好看的时间轴回放，
+            给你的龙虾做六维体检打分，顺便看看钱都花哪了。
           </p>
 
           <div className="flex flex-wrap gap-4">
             <button
               onClick={onEnterDemo}
-              className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold text-base shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 transition-all hover:scale-[1.03] active:scale-[0.98]"
+              className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-base shadow-xl shadow-blue-500/20 hover:shadow-blue-500/35 transition-all hover:scale-[1.03] active:scale-[0.98]"
             >
               <Play className="w-5 h-5" />
               体验 Demo
@@ -132,7 +121,7 @@ export default function Landing({ onEnterDemo }: Props) {
           </div>
         </motion.div>
 
-        {/* Floating stats */}
+        {/* Highlights */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -157,7 +146,7 @@ export default function Landing({ onEnterDemo }: Props) {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-2xl lg:text-3xl font-bold text-white mb-3">核心功能</h2>
-          <p className="text-slate-500 mb-12">装好 OpenClaw，打开虾片，一切尽在掌握</p>
+          <p className="text-slate-500 mb-12">装好龙虾，打开虾片，一切尽在掌握</p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -168,7 +157,7 @@ export default function Landing({ onEnterDemo }: Props) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="group card p-6 hover:border-white/[0.15] transition-all"
+              className="card p-6 hover:border-white/[0.15] transition-all"
             >
               <div className="flex items-start gap-4">
                 <div className={`w-11 h-11 rounded-xl ${f.iconBg} flex items-center justify-center shrink-0`}>
@@ -196,24 +185,24 @@ export default function Landing({ onEnterDemo }: Props) {
           <div className="p-8 lg:p-12 text-center">
             <h2 className="text-2xl lg:text-3xl font-bold text-white mb-3">想看看效果？</h2>
             <p className="text-slate-400 mb-8 max-w-md mx-auto">
-              内置 8 条真实场景的 Demo 会话数据——小红书文案、代码调试、竞品分析、翻译……不用安装，直接体验。
+              内置 8 条真实场景的 Demo 会话——小红书文案、代码调试、竞品分析、翻译……不用安装，直接体验。
             </p>
             <button
               onClick={onEnterDemo}
-              className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 transition-all hover:scale-[1.03] active:scale-[0.98]"
+              className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-xl shadow-blue-500/20 hover:shadow-blue-500/35 transition-all hover:scale-[1.03] active:scale-[0.98]"
             >
               <Play className="w-5 h-5" />
               进入 Demo 演示
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
-          {/* Fake dashboard preview */}
+          {/* Fake preview */}
           <div className="px-8 lg:px-12 pb-2">
             <div className="rounded-t-xl border border-white/[0.08] border-b-0 bg-gradient-to-b from-white/[0.03] to-transparent p-6 space-y-4">
               <div className="flex gap-2 mb-4">
-                <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                <div className="w-3 h-3 rounded-full bg-red-500/40" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/40" />
+                <div className="w-3 h-3 rounded-full bg-green-500/40" />
               </div>
               <div className="grid grid-cols-4 gap-3">
                 {['运行中', '¥3.42', '15 技能', '3 平台'].map((t, i) => (
@@ -278,13 +267,7 @@ export default function Landing({ onEnterDemo }: Props) {
       <footer className="relative z-10 border-t border-white/[0.06] py-12 px-6 lg:px-16">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-sm">
-              🍤
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-white">虾片 ClawClip</span>
-              <span className="text-xs text-slate-600 ml-2">v0.8.0</span>
-            </div>
+            <img src="/luelan-logo.png" alt="掠蓝" className="h-6 w-auto opacity-60" />
           </div>
 
           <div className="flex items-center gap-6 text-sm text-slate-500">
@@ -297,7 +280,7 @@ export default function Landing({ onEnterDemo }: Props) {
           </div>
 
           <p className="text-xs text-slate-600">
-            制作: 掠蓝 (Luelan)
+            虾片 ClawClip · 🍤
           </p>
         </div>
       </footer>

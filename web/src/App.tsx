@@ -31,14 +31,14 @@ function App() {
   return (
     <div className="min-h-screen bg-[#0b1120] text-slate-200 bg-dots bg-ambient">
       {/* Demo banner */}
-      <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border-b border-orange-500/10 px-6 py-2 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-blue-500/10 via-cyan-500/5 to-transparent border-b border-blue-500/10 px-6 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">DEMO</span>
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">DEMO</span>
           <span className="text-xs text-slate-400">你正在浏览演示数据 · 本地部署后可查看真实 Agent 数据</span>
         </div>
         <button
           onClick={() => setShowLanding(true)}
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-400 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors"
         >
           <ArrowLeft className="w-3 h-3" /> 返回首页
         </button>
@@ -48,9 +48,7 @@ function App() {
       <header className="sticky top-0 z-50 bg-[#0b1120]/80 backdrop-blur-xl border-b border-white/[0.08] px-6 py-3">
         <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-lg shadow-lg shadow-orange-500/20">
-              🍤
-            </div>
+            <img src="/luelan-logo.png" alt="虾片" className="h-8 w-auto" />
             <div>
               <h1 className="text-base font-semibold tracking-tight text-white">虾片</h1>
               <p className="text-[10px] text-slate-500 leading-none">ClawClip Demo</p>
@@ -76,7 +74,7 @@ function App() {
                       : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]',
                   )}
                 >
-                  <tab.icon className={cn('w-[18px] h-[18px]', activeTab === tab.id && 'text-orange-400')} />
+                  <tab.icon className={cn('w-[18px] h-[18px]', activeTab === tab.id && 'text-blue-400')} />
                   {tab.name}
                 </button>
               </li>

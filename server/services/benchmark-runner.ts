@@ -412,6 +412,192 @@ function computeFromReplays(replays: SessionReplay[]): BenchmarkResult {
   };
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** 无历史文件或历史为空时，供进化曲线展示的 5 条演示数据（从旧到新） */
+function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[] {
+  const t = reference.getTime();
+  const rows: Array<{
+    daysAgo: number;
+    index: number;
+    overallScore: number;
+    rank: string;
+    w: number;
+    c: number;
+    tu: number;
+    se: number;
+    sa: number;
+    ce: number;
+    summary: string;
+    topModel: string;
+    totalSessions: number;
+    totalTokens: number;
+    totalCost: number;
+    dimDetails: [string, string, string, string, string, string];
+  }> = [
+    {
+      daysAgo: 30,
+      index: 1,
+      overallScore: 52,
+      rank: 'C',
+      w: 45,
+      c: 38,
+      tu: 55,
+      se: 48,
+      sa: 65,
+      ce: 60,
+      summary: '刚开始跑，还在适应中，各方面都比较生疏。',
+      topModel: 'gpt-4o',
+      totalSessions: 8,
+      totalTokens: 45_000,
+      totalCost: 4.5,
+      dimDetails: [
+        '刚开始跑，回复篇幅与中文占比都还在摸索。',
+        '日志里代码块很少，代码向任务参与不多。',
+        '有工具调用但衔接与种类都还在熟悉阶段。',
+        '检索类工具与引用痕迹偏少。',
+        '未发现明显红线指令，基础安全意识尚可。',
+        '成本与模型选择还在试水，性价比一般。',
+      ],
+    },
+    {
+      daysAgo: 22,
+      index: 2,
+      overallScore: 61,
+      rank: 'B',
+      w: 58,
+      c: 50,
+      tu: 65,
+      se: 55,
+      sa: 70,
+      ce: 68,
+      summary: '有进步了！工具调用和安全性提升明显，但写作和代码还需要练。',
+      topModel: 'gpt-4o',
+      totalSessions: 15,
+      totalTokens: 82_000,
+      totalCost: 7.8,
+      dimDetails: [
+        '写作有起色，但距离稳定输出还有距离。',
+        '代码块出现变多，块长与覆盖会话仍有限。',
+        '工具调用成对率与种类明显提升。',
+        '开始出现检索工具名或链接痕迹。',
+        '安全扫描无异常，步数结构更健康。',
+        '对便宜模型的使用意识在增强。',
+      ],
+    },
+    {
+      daysAgo: 15,
+      index: 3,
+      overallScore: 70,
+      rank: 'B',
+      w: 72,
+      c: 58,
+      tu: 75,
+      se: 62,
+      sa: 78,
+      ce: 75,
+      summary: '进步很大！中文写作终于上道了，性价比也在改善。',
+      topModel: 'deepseek-chat',
+      totalSessions: 28,
+      totalTokens: 156_000,
+      totalCost: 5.2,
+      dimDetails: [
+        '中文写作终于上道，回复结构与篇幅更稳定。',
+        '代码任务参与度上升，块数量持续增长。',
+        '工具链路更顺，多工具协作开始有模样。',
+        '检索与引用格式在更多会话中出现。',
+        '安全维度保持稳健，无明显风险片段。',
+        '切换经济模型后，性价比明显改善。',
+      ],
+    },
+    {
+      daysAgo: 7,
+      index: 4,
+      overallScore: 78,
+      rank: 'A',
+      w: 85,
+      c: 72,
+      tu: 80,
+      se: 68,
+      sa: 82,
+      ce: 91,
+      summary: '这只龙虾整体表现不错！中文写作和性价比是强项。',
+      topModel: 'deepseek-chat',
+      totalSessions: 47,
+      totalTokens: 285_000,
+      totalCost: 3.42,
+      dimDetails: [
+        '中文写作表现亮眼，说明类回复质量高。',
+        '代码块稳定产出，多会话覆盖代码任务。',
+        '工具调用丰富且成对率高。',
+        '检索与引用仍有波动，但整体可用。',
+        '安全合规保持良好记录。',
+        '经济模型为主，单次成本控制出色。',
+      ],
+    },
+    {
+      daysAgo: 1,
+      index: 5,
+      overallScore: 83,
+      rank: 'A',
+      w: 88,
+      c: 78,
+      tu: 85,
+      se: 75,
+      sa: 84,
+      ce: 88,
+      summary: '又进步了！代码和检索能力提升明显，继续保持！',
+      topModel: 'deepseek-chat',
+      totalSessions: 62,
+      totalTokens: 380_000,
+      totalCost: 4.15,
+      dimDetails: [
+        '写作维持高分，表达清晰、中文流畅。',
+        '代码能力再上台阶，块质量与会话覆盖俱佳。',
+        '工具调用成熟，种类与成功率都很好。',
+        '检索与引用能力较上一轮明显提升。',
+        '安全维度持续稳定。',
+        '性价比仍优，规模扩大后成本依然可控。',
+      ],
+    },
+  ];
+
+  const dimsOrder: BenchmarkDimension[] = [
+    'writing',
+    'coding',
+    'toolUse',
+    'search',
+    'safety',
+    'costEfficiency',
+  ];
+
+  return rows.map(row => {
+    const scores = [row.w, row.c, row.tu, row.se, row.sa, row.ce];
+    const dimensions: DimensionScore[] = dimsOrder.map((dimension, i) => ({
+      dimension,
+      label: DIMENSION_LABELS[dimension],
+      score: scores[i],
+      maxScore: 100,
+      details: row.dimDetails[i],
+    }));
+
+    const n = row.totalSessions || 1;
+    return {
+      id: `benchmark-demo-${row.index}`,
+      runAt: new Date(t - row.daysAgo * MS_PER_DAY),
+      overallScore: row.overallScore,
+      rank: row.rank,
+      dimensions,
+      totalSessions: row.totalSessions,
+      totalTokens: row.totalTokens,
+      totalCost: row.totalCost,
+      avgCostPerSession: row.totalCost / n,
+      topModel: row.topModel,
+      summary: row.summary,
+    };
+  });
+}
+
 function makeDemoResult(): BenchmarkResult {
   const runAt = new Date();
   const dimensions: DimensionScore[] = [
@@ -560,13 +746,20 @@ export class BenchmarkRunner {
 
   /** 获取评测历史 */
   getHistory(): BenchmarkHistory {
-    return this.readHistoryFile();
+    const h = this.readHistoryFile();
+    if (h.results.length === 0) {
+      return { results: buildDemoHistoryResults() };
+    }
+    return h;
   }
 
   /** 获取最近一次评测 */
   getLatest(): BenchmarkResult | null {
     const { results } = this.readHistoryFile();
-    if (results.length === 0) return null;
+    if (results.length === 0) {
+      const demos = buildDemoHistoryResults();
+      return demos[demos.length - 1] ?? null;
+    }
     return results.reduce((a, b) => (a.runAt.getTime() >= b.runAt.getTime() ? a : b));
   }
 }

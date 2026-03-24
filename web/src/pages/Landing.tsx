@@ -56,7 +56,7 @@ export default function Landing({ onEnterDemo }: Props) {
       {/* Nav */}
       <nav className="relative z-10 flex items-center justify-between px-6 lg:px-16 py-5 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <img src="/luelan-logo.png" alt="掠蓝" className="h-8 w-auto" />
+          <img src="/luelan-logo.png" alt="掠蓝" className="h-14 w-auto -my-3 object-contain" />
         </div>
         <div className="flex items-center gap-3">
           <a
@@ -267,7 +267,7 @@ export default function Landing({ onEnterDemo }: Props) {
       <footer className="relative z-10 border-t border-white/[0.06] py-12 px-6 lg:px-16">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <img src="/luelan-logo.png" alt="掠蓝" className="h-6 w-auto opacity-60" />
+            <img src="/luelan-logo.png" alt="掠蓝" className="h-10 w-auto -my-2 opacity-60" />
           </div>
 
           <div className="flex items-center gap-6 text-sm text-slate-500">

@@ -48,7 +48,7 @@ function App() {
       <header className="sticky top-0 z-50 bg-[#0b1120]/80 backdrop-blur-xl border-b border-white/[0.08] px-6 py-3">
         <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3">
-            <img src="/luelan-logo.png" alt="虾片" className="h-8 w-auto" />
+            <img src="/luelan-logo.png" alt="虾片" className="h-12 w-auto -my-2" />
             <div>
               <h1 className="text-base font-semibold tracking-tight text-white">虾片</h1>
               <p className="text-[10px] text-slate-500 leading-none">ClawClip Demo</p>

@@ -34,6 +34,12 @@ function reviveMeta(raw: Record<string, unknown>): SessionMeta | null {
     modelUsed: Array.isArray(raw.modelUsed) ? raw.modelUsed.map(String) : [],
     stepCount: Number(raw.stepCount) || 0,
     summary: typeof raw.summary === 'string' ? raw.summary : '',
+    sessionLabel: typeof raw.sessionLabel === 'string' ? raw.sessionLabel : undefined,
+    sessionKey: typeof raw.sessionKey === 'string' ? raw.sessionKey : undefined,
+    storeUpdatedAt:
+      typeof raw.storeUpdatedAt === 'number' && Number.isFinite(raw.storeUpdatedAt)
+        ? raw.storeUpdatedAt
+        : undefined,
   };
 }
 

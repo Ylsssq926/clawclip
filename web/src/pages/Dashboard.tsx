@@ -36,6 +36,9 @@ interface SessionMeta {
   id: string
   agentName: string
   dataSource?: string
+  sessionLabel?: string
+  sessionKey?: string
+  storeUpdatedAt?: number
   startTime: string
   durationMs: number
   totalCost: number
@@ -43,6 +46,14 @@ interface SessionMeta {
   modelUsed: string[]
   stepCount: number
   summary: string
+}
+
+function sessionListTitle(s: SessionMeta, locale: Locale): string {
+  const fromStore = s.sessionLabel?.trim()
+  const fromTranscript = s.summary?.trim()
+  const t = (fromStore || fromTranscript || '').slice(0, 80)
+  if (t) return t
+  return locale === 'en' ? 'Session' : '会话'
 }
 
 interface Props {
@@ -355,7 +366,7 @@ export default function Dashboard({ onNavigate }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-slate-300 truncate group-hover:text-white transition-colors">
-                      {s.summary?.slice(0, 50) || (locale === 'en' ? 'Session' : '会话')}
+                      {sessionListTitle(s, locale).slice(0, 50)}
                     </p>
                     <div className="flex items-center gap-2 text-[11px] text-slate-600 mt-0.5">
                       <span>{s.agentName}</span>

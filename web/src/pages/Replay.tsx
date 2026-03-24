@@ -9,6 +9,9 @@ interface SessionMeta {
   id: string
   agentName: string
   dataSource?: string
+  sessionLabel?: string
+  sessionKey?: string
+  storeUpdatedAt?: number
   startTime: string
   endTime: string
   durationMs: number
@@ -17,6 +20,10 @@ interface SessionMeta {
   modelUsed: string[]
   stepCount: number
   summary: string
+}
+
+function replaySessionTitle(m: SessionMeta): string {
+  return (m.sessionLabel?.trim() || m.summary?.trim() || '').slice(0, 120) || '无标题会话'
 }
 
 function dataSourceBadge(src?: string): string {
@@ -430,11 +437,16 @@ export default function Replay() {
           <>
             <div className="glass-raised rounded-2xl p-6 mb-6 border border-surface-border border-accent/20">
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <h2 className="text-lg font-bold truncate min-w-0 flex-1">{replay.meta.summary}</h2>
+                <h2 className="text-lg font-bold truncate min-w-0 flex-1">{replaySessionTitle(replay.meta)}</h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/20 font-medium shrink-0">
                   {dataSourceBadge(replay.meta.dataSource)}
                 </span>
               </div>
+              {replay.meta.sessionKey && (
+                <p className="text-[10px] text-slate-600 font-mono truncate mb-3" title={replay.meta.sessionKey}>
+                  {replay.meta.sessionKey}
+                </p>
+              )}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-slate-500">Agent</span>
@@ -612,7 +624,7 @@ export default function Replay() {
                 >
                   <div className="flex items-start justify-between mb-2 gap-2">
                     <h3 className="font-medium text-white group-hover:text-accent transition-colors truncate pr-4 min-w-0">
-                      {session.summary || '无标题会话'}
+                      {replaySessionTitle(session)}
                     </h3>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300/90 border border-blue-500/20 font-medium">

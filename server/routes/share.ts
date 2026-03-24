@@ -215,6 +215,10 @@ function footerBlock(): string {
 
 function renderReplayHtml(replay: SessionReplay): string {
   const { meta, steps } = replay;
+  const headline =
+    (typeof meta.sessionLabel === 'string' && meta.sessionLabel.trim()) ||
+    (typeof meta.summary === 'string' && meta.summary.trim()) ||
+    '（无摘要）';
   const models = meta.modelUsed?.length ? meta.modelUsed : [];
   const badgeAgent = `<span class="badge">${escapeHtml(meta.agentName || 'Agent')}</span>`;
   const badgeModels = models
@@ -237,7 +241,7 @@ function renderReplayHtml(replay: SessionReplay): string {
         <span class="brand-sub">会话回放分享</span>
       </div>
     </div>
-    <p class="summary">${escapeHtml(meta.summary || '（无摘要）')}</p>
+    <p class="summary">${escapeHtml(headline)}</p>
     <div class="badges">${badgeAgent}${badgeModels}</div>
     <div class="metrics">
       <div class="metric"><div class="metric-label">步骤数</div><div class="metric-value">${meta.stepCount}</div></div>

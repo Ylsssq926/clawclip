@@ -8,6 +8,7 @@ import {
   listAgentSessionEntries,
   readJsonlFileSafe,
 } from './agent-data-root.js';
+import { enrichSessionMetaFromStore, loadOpenclawSessionStore } from './session-store.js';
 
 function priceFor(model?: string): number {
   if (model && DEFAULT_MODEL_PRICING[model] != null) return DEFAULT_MODEL_PRICING[model];
@@ -470,6 +471,7 @@ function loadRealReplays(): SessionReplay[] {
   for (const root of roots) {
     const entries = listAgentSessionEntries(root);
     for (const e of entries) {
+      const storeRows = loadOpenclawSessionStore(e.sessionsDir);
       let files: string[];
       try {
         files = fs.readdirSync(e.sessionsDir);
@@ -480,7 +482,10 @@ function loadRealReplays(): SessionReplay[] {
         if (!f.endsWith('.jsonl')) continue;
         const baseName = f.slice(0, -'.jsonl'.length);
         const replay = parseJsonlFile(e.sourceId, e.agentName, path.join(e.sessionsDir, f), baseName);
-        if (replay) out.push(replay);
+        if (replay) {
+          enrichSessionMetaFromStore(replay.meta, storeRows, baseName);
+          out.push(replay);
+        }
       }
     }
   }
@@ -508,7 +513,12 @@ export class SessionParser {
     const list: SessionMeta[] =
       real.length === 0 ? DEMO_SESSIONS.map(d => d.meta) : real.map(r => r.meta);
 
-    list.sort((a, b) => b.endTime.getTime() - a.endTime.getTime());
+    list.sort((a, b) => {
+      const sa = a.storeUpdatedAt ?? a.endTime.getTime();
+      const sb = b.storeUpdatedAt ?? b.endTime.getTime();
+      if (sb !== sa) return sb - sa;
+      return b.endTime.getTime() - a.endTime.getTime();
+    });
 
     if (limit != null && limit > 0) {
       return list.slice(0, limit);

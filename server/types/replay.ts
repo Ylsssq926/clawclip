@@ -11,6 +11,12 @@ export interface SessionMeta {
   modelUsed: string[];
   stepCount: number;
   summary: string;
+  /** OpenClaw sessions.json 匹配到的展示名 */
+  sessionLabel?: string;
+  /** 如 agent:main:telegram:... */
+  sessionKey?: string;
+  /** sessions.json 的 updatedAt（ms），用于列表排序贴近 Gateway */
+  storeUpdatedAt?: number;
 }
 
 export interface SessionStep {

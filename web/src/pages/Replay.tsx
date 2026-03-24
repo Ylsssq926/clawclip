@@ -8,6 +8,7 @@ import { cn } from '../lib/cn'
 interface SessionMeta {
   id: string
   agentName: string
+  dataSource?: string
   startTime: string
   endTime: string
   durationMs: number
@@ -16,6 +17,16 @@ interface SessionMeta {
   modelUsed: string[]
   stepCount: number
   summary: string
+}
+
+function dataSourceBadge(src?: string): string {
+  if (!src || src === 'demo') return 'Demo'
+  const map: Record<string, string> = {
+    openclaw: 'OpenClaw',
+    zeroclaw: 'ZeroClaw',
+    claw: 'Claw',
+  }
+  return map[src] ?? src
 }
 
 interface SessionStep {
@@ -418,7 +429,12 @@ export default function Replay() {
         {replay && (
           <>
             <div className="glass-raised rounded-2xl p-6 mb-6 border border-surface-border border-accent/20">
-              <h2 className="text-lg font-bold mb-3 truncate">{replay.meta.summary}</h2>
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <h2 className="text-lg font-bold truncate min-w-0 flex-1">{replay.meta.summary}</h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/20 font-medium shrink-0">
+                  {dataSourceBadge(replay.meta.dataSource)}
+                </span>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-slate-500">Agent</span>
@@ -576,7 +592,7 @@ export default function Replay() {
         <div className="text-center py-12 text-slate-500">
           <span className="text-4xl mb-3 block">🎬</span>
           <p className="text-lg mb-1">暂无会话记录</p>
-          <p className="text-sm">启动 OpenClaw 执行几个任务后，这里就会出现精彩回放！</p>
+          <p className="text-sm">启动 OpenClaw / ZeroClaw 跑几个任务，或配置 CLAWCLIP_LOBSTER_DIRS 指向数据目录。</p>
         </div>
       )}
 
@@ -594,11 +610,16 @@ export default function Replay() {
                   onClick={() => openSession(session.id)}
                   className="w-full rounded-xl p-5 text-left group bg-transparent border-0 text-inherit cursor-pointer"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-medium text-white group-hover:text-accent transition-colors truncate pr-4">
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <h3 className="font-medium text-white group-hover:text-accent transition-colors truncate pr-4 min-w-0">
                       {session.summary || '无标题会话'}
                     </h3>
-                    <span className="text-xs text-slate-500 shrink-0">{formatRelativeTime(session.startTime)}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300/90 border border-blue-500/20 font-medium">
+                        {dataSourceBadge(session.dataSource)}
+                      </span>
+                      <span className="text-xs text-slate-500">{formatRelativeTime(session.startTime)}</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
                     <span className="flex items-center gap-1"><Bot className="w-3 h-3" />{session.agentName}</span>

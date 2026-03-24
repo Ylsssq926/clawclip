@@ -58,6 +58,14 @@ const zh: Record<string, string> = {
   'dashboard.keywords': '热门关键词',
   'dashboard.recent': '最近活动',
   'dashboard.recent.all': '查看全部 →',
+  'dashboard.stat.cli': '龙虾 CLI',
+  'dashboard.stat.cli.sub': '命令行探测',
+  'compat.panel.title': '数据兼容',
+  'compat.data.real': '已接入真实会话 JSONL',
+  'compat.data.demo': '当前为内置演示数据',
+  'compat.cli.none': '未探测到',
+  'compat.sessions': '会话 JSONL',
+  'compat.roots': '数据根',
 }
 
 const en: Record<string, string> = {
@@ -116,6 +124,14 @@ const en: Record<string, string> = {
   'dashboard.keywords': 'Trending Keywords',
   'dashboard.recent': 'Recent Activity',
   'dashboard.recent.all': 'View all →',
+  'dashboard.stat.cli': 'Agent CLI',
+  'dashboard.stat.cli.sub': 'CLI probe',
+  'compat.panel.title': 'Data compatibility',
+  'compat.data.real': 'Real session JSONL detected',
+  'compat.data.demo': 'Showing built-in demo data',
+  'compat.cli.none': 'Not detected',
+  'compat.sessions': 'Session JSONL files',
+  'compat.roots': 'Data roots',
 }
 
 const ja: Record<string, string> = {
@@ -174,6 +190,14 @@ const ja: Record<string, string> = {
   'dashboard.keywords': '注目キーワード',
   'dashboard.recent': '最近のアクティビティ',
   'dashboard.recent.all': 'すべて表示 →',
+  'dashboard.stat.cli': 'Agent CLI',
+  'dashboard.stat.cli.sub': 'CLI probe',
+  'compat.panel.title': 'Data compatibility',
+  'compat.data.real': 'Real session JSONL detected',
+  'compat.data.demo': 'Showing built-in demo data',
+  'compat.cli.none': 'Not detected',
+  'compat.sessions': 'Session JSONL files',
+  'compat.roots': 'Data roots',
 }
 
 const ko: Record<string, string> = {
@@ -232,6 +256,14 @@ const ko: Record<string, string> = {
   'dashboard.keywords': '인기 키워드',
   'dashboard.recent': '최근 활동',
   'dashboard.recent.all': '전체 보기 →',
+  'dashboard.stat.cli': 'Agent CLI',
+  'dashboard.stat.cli.sub': 'CLI probe',
+  'compat.panel.title': 'Data compatibility',
+  'compat.data.real': 'Real session JSONL detected',
+  'compat.data.demo': 'Showing built-in demo data',
+  'compat.cli.none': 'Not detected',
+  'compat.sessions': 'Session JSONL files',
+  'compat.roots': 'Data roots',
 }
 
 const es: Record<string, string> = {
@@ -290,6 +322,14 @@ const es: Record<string, string> = {
   'dashboard.keywords': 'Palabras clave populares',
   'dashboard.recent': 'Actividad reciente',
   'dashboard.recent.all': 'Ver todo →',
+  'dashboard.stat.cli': 'Agent CLI',
+  'dashboard.stat.cli.sub': 'CLI probe',
+  'compat.panel.title': 'Data compatibility',
+  'compat.data.real': 'Real session JSONL detected',
+  'compat.data.demo': 'Showing built-in demo data',
+  'compat.cli.none': 'Not detected',
+  'compat.sessions': 'Session JSONL files',
+  'compat.roots': 'Data roots',
 }
 
 const fr: Record<string, string> = {
@@ -348,6 +388,14 @@ const fr: Record<string, string> = {
   'dashboard.keywords': 'Mots-clés tendance',
   'dashboard.recent': 'Activité récente',
   'dashboard.recent.all': 'Tout voir →',
+  'dashboard.stat.cli': 'Agent CLI',
+  'dashboard.stat.cli.sub': 'CLI probe',
+  'compat.panel.title': 'Data compatibility',
+  'compat.data.real': 'Real session JSONL detected',
+  'compat.data.demo': 'Showing built-in demo data',
+  'compat.cli.none': 'Not detected',
+  'compat.sessions': 'Session JSONL files',
+  'compat.roots': 'Data roots',
 }
 
 const de: Record<string, string> = {
@@ -406,6 +454,14 @@ const de: Record<string, string> = {
   'dashboard.keywords': 'Trend-Keywords',
   'dashboard.recent': 'Letzte Aktivität',
   'dashboard.recent.all': 'Alles anzeigen →',
+  'dashboard.stat.cli': 'Agent CLI',
+  'dashboard.stat.cli.sub': 'CLI probe',
+  'compat.panel.title': 'Data compatibility',
+  'compat.data.real': 'Real session JSONL detected',
+  'compat.data.demo': 'Showing built-in demo data',
+  'compat.cli.none': 'Not detected',
+  'compat.sessions': 'Session JSONL files',
+  'compat.roots': 'Data roots',
 }
 
 const LOCALE_LABELS: Record<Locale, string> = {

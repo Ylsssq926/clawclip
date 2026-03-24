@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { getClawclipStateDir } from '../services/agent-data-root.js';
 import { benchmarkRunner } from '../services/benchmark-runner.js';
 
 const router = Router();
@@ -81,7 +81,9 @@ function validateLatestForSubmit(latest: {
   return null;
 }
 
-const LEADERBOARD_PATH = path.join(os.homedir(), '.openclaw', 'cost-monitor', 'leaderboard.json');
+function leaderboardPath(): string {
+  return path.join(getClawclipStateDir(), 'leaderboard.json');
+}
 
 export interface LeaderboardEntry {
   id: string;
@@ -105,7 +107,7 @@ function distinctNicknamesForIp(entries: LeaderboardEntry[], ip: string): Set<st
 }
 
 function ensureLeaderboardDir(): void {
-  fs.mkdirSync(path.dirname(LEADERBOARD_PATH), { recursive: true });
+  fs.mkdirSync(path.dirname(leaderboardPath()), { recursive: true });
 }
 
 function newEntryId(): string {
@@ -287,9 +289,9 @@ const DEMO_ENTRIES: LeaderboardEntry[] = [
 ];
 
 function readStored(): LeaderboardEntry[] | null {
-  if (!fs.existsSync(LEADERBOARD_PATH)) return null;
+  if (!fs.existsSync(leaderboardPath())) return null;
   try {
-    const raw = fs.readFileSync(LEADERBOARD_PATH, 'utf-8');
+    const raw = fs.readFileSync(leaderboardPath(), 'utf-8');
     const data = JSON.parse(raw) as unknown;
     if (!Array.isArray(data)) return [];
     return data as LeaderboardEntry[];
@@ -300,7 +302,7 @@ function readStored(): LeaderboardEntry[] | null {
 
 function writeStored(entries: LeaderboardEntry[]): void {
   ensureLeaderboardDir();
-  fs.writeFileSync(LEADERBOARD_PATH, JSON.stringify(entries, null, 2), 'utf-8');
+  fs.writeFileSync(leaderboardPath(), JSON.stringify(entries, null, 2), 'utf-8');
 }
 
 function sortByScoreDesc(entries: LeaderboardEntry[]): LeaderboardEntry[] {

@@ -70,6 +70,17 @@ export const DEFAULT_BUDGET_CONFIG: BudgetConfig = {
   currency: 'CNY',
 };
 
+/** 单个「龙虾」数据根在本机的探测结果（用于兼容多框架/多路径） */
+export interface LobsterDataRootStatus {
+  id: string;
+  label: string;
+  homeDir: string;
+  sessionJsonlFiles: number;
+  hasConfig: boolean;
+  configPath: string;
+  skillsCount: number;
+}
+
 export interface OpenClawStatus {
   running: boolean;
   version: string;
@@ -77,6 +88,12 @@ export interface OpenClawStatus {
   configPath: string;
   skillCount: number;
   channels: string[];
+  /** 探测到的 CLI：openclaw / zeroclaw，均未找到则为 null */
+  cliCommand: 'openclaw' | 'zeroclaw' | null;
+  dataRoots: LobsterDataRootStatus[];
+  totalSessionFiles: number;
+  /** 是否已读取到真实会话 JSONL（非内置 Demo） */
+  hasRealSessionData: boolean;
 }
 
 export interface SkillInfo {

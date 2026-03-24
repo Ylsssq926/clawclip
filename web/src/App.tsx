@@ -70,7 +70,7 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
-            <span className="text-[10px] text-slate-600 font-mono">v0.8.0</span>
+            <span className="text-[10px] text-slate-600 font-mono">v0.8.1</span>
           </div>
         </div>
       </header>

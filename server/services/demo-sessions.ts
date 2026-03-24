@@ -32,6 +32,7 @@ function finalizeReplay(partial: { meta: Omit<SessionMeta, 'totalCost' | 'totalT
   return {
     meta: {
       ...partial.meta,
+      dataSource: partial.meta.dataSource ?? 'demo',
       summary,
       startTime,
       endTime,

@@ -3,12 +3,27 @@ import { useState, useEffect } from 'react'
 import type { Tab } from '../App'
 import WordCloud, { type KeywordItem } from '../components/WordCloud'
 import { useI18n, type Locale } from '../lib/i18n'
+import { cn } from '../lib/cn'
+
+interface LobsterDataRootStatus {
+  id: string
+  label: string
+  homeDir: string
+  sessionJsonlFiles: number
+  hasConfig: boolean
+  configPath: string
+  skillsCount: number
+}
 
 interface StatusData {
   running: boolean
   version: string
   skillCount: number
   channels: string[]
+  cliCommand?: 'openclaw' | 'zeroclaw' | null
+  dataRoots?: LobsterDataRootStatus[]
+  totalSessionFiles?: number
+  hasRealSessionData?: boolean
 }
 
 interface CostSummary {
@@ -20,6 +35,7 @@ interface CostSummary {
 interface SessionMeta {
   id: string
   agentName: string
+  dataSource?: string
   startTime: string
   durationMs: number
   totalCost: number
@@ -117,9 +133,20 @@ export default function Dashboard({ onNavigate }: Props) {
 
   const statCards = [
     {
-      label: 'OpenClaw 状态',
-      value: loading ? t('dashboard.status.checking') : status?.running ? t('dashboard.status.running') : t('dashboard.status.offline'),
-      sub: status?.version && status.version !== 'unknown' ? `v${status.version}` : null,
+      label: t('dashboard.stat.cli'),
+      value: loading
+        ? t('dashboard.status.checking')
+        : status?.cliCommand
+          ? status.cliCommand
+          : t('compat.cli.none'),
+      sub: loading
+        ? t('dashboard.stat.cli.sub')
+        : [
+            status?.running ? t('dashboard.status.running') : t('dashboard.status.offline'),
+            status?.version && status.version !== 'unknown' ? `v${status.version}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || null,
       icon: status?.running ? Wifi : WifiOff,
       variant: status?.running ? 'card-green' : 'card',
       color: status?.running ? 'text-emerald-400' : 'text-slate-500',
@@ -168,10 +195,49 @@ export default function Dashboard({ onNavigate }: Props) {
               ? `Your lobster is working, ${status.skillCount} skills equipped`
               : `你的龙虾正在工作中，已装备 ${status.skillCount} 个技能`
             : locale === 'en'
-              ? 'Your lobster is offline — start OpenClaw and I can help'
-              : '你的龙虾还没上线，启动 OpenClaw 后我就能帮你干活了'}
+              ? 'Your lobster is offline — start OpenClaw / ZeroClaw (or compatible CLI) and refresh'
+              : '你的龙虾还没上线，启动 OpenClaw / ZeroClaw（或兼容 CLI）后刷新即可'}
         </p>
       </div>
+
+      {!loading && status && (
+        <div
+          className={cn(
+            'rounded-xl border px-4 py-3 text-sm animate-fade-in',
+            status.hasRealSessionData
+              ? 'border-emerald-500/25 bg-emerald-500/[0.06]'
+              : 'border-amber-500/25 bg-amber-500/[0.06]',
+          )}
+        >
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-between">
+            <span className={status.hasRealSessionData ? 'text-emerald-300/90' : 'text-amber-200/90'}>
+              {status.hasRealSessionData ? t('compat.data.real') : t('compat.data.demo')}
+            </span>
+            <span className="text-xs text-slate-500">
+              {t('compat.sessions')}: <span className="text-slate-400 font-mono">{status.totalSessionFiles ?? 0}</span>
+            </span>
+          </div>
+          {(status.dataRoots?.length ?? 0) > 0 && (
+            <div className="mt-2 pt-2 border-t border-white/[0.06]">
+              <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{t('compat.roots')}</p>
+              <div className="flex flex-wrap gap-2">
+                {status.dataRoots!.map(r => (
+                  <span
+                    key={r.id}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white/[0.04] text-slate-400 border border-white/[0.06]"
+                    title={r.homeDir}
+                  >
+                    <span className="text-slate-300">{r.label}</span>
+                    <span className="text-slate-600 mx-1">·</span>
+                    {r.sessionJsonlFiles} jsonl
+                    {r.hasConfig ? <span className="text-emerald-500/80 ml-1">●</span> : <span className="text-slate-600 ml-1">○</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

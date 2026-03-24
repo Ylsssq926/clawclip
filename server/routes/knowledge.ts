@@ -1,18 +1,15 @@
 import { Router } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { getClawclipStateDir } from '../services/agent-data-root.js';
 import { sessionParser, normalizeSessionId } from '../services/session-parser.js';
 import type { SessionMeta, SessionReplay, SessionStep } from '../types/replay.js';
 
 const router = Router();
 
-const IMPORTED_SESSIONS_PATH = path.join(
-  os.homedir(),
-  '.openclaw',
-  'cost-monitor',
-  'imported-sessions.json',
-);
+function importedSessionsPath(): string {
+  return path.join(getClawclipStateDir(), 'imported-sessions.json');
+}
 
 function toDate(v: unknown): Date {
   if (v instanceof Date && !Number.isNaN(v.getTime())) return v;
@@ -28,6 +25,7 @@ function reviveMeta(raw: Record<string, unknown>): SessionMeta | null {
   return {
     id: raw.id,
     agentName: raw.agentName,
+    dataSource: typeof raw.dataSource === 'string' ? raw.dataSource : undefined,
     startTime: toDate(raw.startTime),
     endTime: toDate(raw.endTime),
     durationMs: Number(raw.durationMs) || 0,
@@ -85,8 +83,8 @@ function parseSessionReplay(data: unknown): SessionReplay | null {
 
 function loadImportedSessions(): SessionReplay[] {
   try {
-    if (!fs.existsSync(IMPORTED_SESSIONS_PATH)) return [];
-    const text = fs.readFileSync(IMPORTED_SESSIONS_PATH, 'utf-8');
+    if (!fs.existsSync(importedSessionsPath())) return [];
+    const text = fs.readFileSync(importedSessionsPath(), 'utf-8');
     const parsed = JSON.parse(text) as unknown;
     const arr = Array.isArray(parsed) ? parsed : [parsed];
     const out: SessionReplay[] = [];
@@ -101,9 +99,9 @@ function loadImportedSessions(): SessionReplay[] {
 }
 
 function saveImportedSessions(replays: SessionReplay[]): void {
-  const dir = path.dirname(IMPORTED_SESSIONS_PATH);
+  const dir = path.dirname(importedSessionsPath());
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(IMPORTED_SESSIONS_PATH, JSON.stringify(replays, null, 2), 'utf-8');
+  fs.writeFileSync(importedSessionsPath(), JSON.stringify(replays, null, 2), 'utf-8');
 }
 
 function getMergedReplays(): SessionReplay[] {

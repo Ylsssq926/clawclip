@@ -1,6 +1,8 @@
 export interface SessionMeta {
   id: string;
   agentName: string;
+  /** 数据根标识：openclaw / zeroclaw / env-0 / demo 等，便于多框架并存时区分 */
+  dataSource?: string;
   startTime: Date;
   endTime: Date;
   durationMs: number;

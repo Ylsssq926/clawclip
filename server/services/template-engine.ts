@@ -1,14 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import type { TemplateInfo } from '../types/index.js';
+import { getPrimaryLobsterHome } from './agent-data-root.js';
 
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const OPENCLAW_DIR = path.join(os.homedir(), '.openclaw');
 // 从当前文件位置推算：server/services/ → server/ → 项目根/
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
@@ -61,7 +59,7 @@ export class TemplateEngine {
       return { success: false, message: `模板 ${id} 缺少 SKILL.md` };
     }
 
-    const targetDir = path.join(OPENCLAW_DIR, 'skills', id);
+    const targetDir = path.join(getPrimaryLobsterHome(), 'skills', id);
     try {
       fs.mkdirSync(targetDir, { recursive: true });
       fs.copyFileSync(skillMd, path.join(targetDir, 'SKILL.md'));

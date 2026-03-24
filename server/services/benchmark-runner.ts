@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { getClawclipStateDir } from './agent-data-root.js';
 import { sessionParser } from './session-parser.js';
 import type { SessionMeta, SessionReplay, SessionStep } from '../types/replay.js';
 import type {
@@ -11,8 +11,9 @@ import type {
 } from '../types/benchmark.js';
 import { DIMENSION_LABELS } from '../types/benchmark.js';
 
-const HOME = os.homedir();
-const HISTORY_PATH = path.join(HOME, '.openclaw', 'cost-monitor', 'benchmark-history.json');
+function historyPath(): string {
+  return path.join(getClawclipStateDir(), 'benchmark-history.json');
+}
 
 const WEIGHTS: Record<BenchmarkDimension, number> = {
   writing: 0.2,
@@ -678,7 +679,7 @@ function makeDemoResult(): BenchmarkResult {
 }
 
 function ensureHistoryDir(): void {
-  const dir = path.dirname(HISTORY_PATH);
+  const dir = path.dirname(historyPath());
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -718,8 +719,9 @@ function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
 export class BenchmarkRunner {
   private readHistoryFile(): BenchmarkHistory {
     try {
-      if (!fs.existsSync(HISTORY_PATH)) return { results: [] };
-      const raw = fs.readFileSync(HISTORY_PATH, 'utf-8');
+      const hp = historyPath();
+      if (!fs.existsSync(hp)) return { results: [] };
+      const raw = fs.readFileSync(hp, 'utf-8');
       const data = JSON.parse(raw) as { results?: Record<string, unknown>[] };
       const list = Array.isArray(data.results) ? data.results : [];
       return { results: list.map(resultFromJSON) };
@@ -733,7 +735,7 @@ export class BenchmarkRunner {
     const payload = {
       results: h.results.map(resultToJSON),
     };
-    fs.writeFileSync(HISTORY_PATH, JSON.stringify(payload, null, 2), 'utf-8');
+    fs.writeFileSync(historyPath(), JSON.stringify(payload, null, 2), 'utf-8');
   }
 
   /** 执行一次评测，基于现有日志数据 */

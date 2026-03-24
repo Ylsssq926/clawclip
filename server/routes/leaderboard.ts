@@ -1,10 +1,85 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { benchmarkRunner } from '../services/benchmark-runner.js';
 
 const router = Router();
+
+const submitRateLimit = new Map<string, { count: number; resetAt: number }>();
+const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 小时
+const RATE_MAX_SUBMITS = 3; // 每小时最多 3 次
+
+const MAX_NICKNAMES_PER_IP = 3;
+
+function getClientIP(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') return forwarded.split(',')[0]!.trim();
+  return req.socket.remoteAddress || 'unknown';
+}
+
+type RateLimitResult = { ok: true } | { ok: false; retryAfterMs: number };
+
+function checkRateLimit(ip: string): RateLimitResult {
+  const now = Date.now();
+  const entry = submitRateLimit.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    submitRateLimit.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return { ok: true };
+  }
+  if (entry.count >= RATE_MAX_SUBMITS) {
+    return { ok: false, retryAfterMs: Math.max(0, entry.resetAt - now) };
+  }
+  entry.count++;
+  return { ok: true };
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of submitRateLimit) {
+    if (now >= entry.resetAt) submitRateLimit.delete(ip);
+  }
+}, 10 * 60 * 1000);
+
+function sanitizeNickname(raw: string): string | null {
+  let s = raw.trim().replace(/<[^>]*>/g, '');
+  s = s.replace(/[\x00-\x1F\x7F]/g, '');
+  if (s.length < 1 || s.length > 20) return null;
+  return s;
+}
+
+function rankMatchesOverall(rank: string, overallScore: number): boolean {
+  if (overallScore < 0 || overallScore > 100) return false;
+  if (rank === 'S') return overallScore >= 90;
+  if (rank === 'A') return overallScore >= 75 && overallScore < 90;
+  if (rank === 'B') return overallScore >= 60 && overallScore < 75;
+  if (rank === 'C') return overallScore >= 45 && overallScore < 60;
+  if (rank === 'D') return overallScore < 45;
+  return false;
+}
+
+function validateLatestForSubmit(latest: {
+  overallScore: number;
+  rank: string;
+  dimensions: { score: number }[];
+  totalSessions: number;
+}): string | null {
+  const { overallScore, rank, dimensions, totalSessions } = latest;
+  if (typeof overallScore !== 'number' || Number.isNaN(overallScore)) return '分数无效';
+  if (overallScore < 0 || overallScore > 100) return '总分须在 0–100 之间';
+  if (!['S', 'A', 'B', 'C', 'D'].includes(rank)) return '段位无效';
+  if (!rankMatchesOverall(rank, overallScore)) return '段位与总分不一致';
+  if (typeof totalSessions !== 'number' || !Number.isFinite(totalSessions) || totalSessions <= 0) {
+    return '会话数须大于 0';
+  }
+  if (!Array.isArray(dimensions) || dimensions.length !== 6) return '须包含 6 个维度分数';
+  for (const d of dimensions) {
+    if (typeof d.score !== 'number' || Number.isNaN(d.score) || d.score < 0 || d.score > 100) {
+      return '维度分数须在 0–100 之间';
+    }
+  }
+  return null;
+}
 
 const LEADERBOARD_PATH = path.join(os.homedir(), '.openclaw', 'cost-monitor', 'leaderboard.json');
 
@@ -17,6 +92,16 @@ export interface LeaderboardEntry {
   totalSessions: number;
   dimensions: { dimension: string; score: number }[];
   submittedAt: string;
+  /** 内部字段，GET 响应时剔除 */
+  _ip?: string;
+}
+
+function distinctNicknamesForIp(entries: LeaderboardEntry[], ip: string): Set<string> {
+  const set = new Set<string>();
+  for (const e of entries) {
+    if (e._ip === ip) set.add(e.nickname);
+  }
+  return set;
 }
 
 function ensureLeaderboardDir(): void {
@@ -248,8 +333,9 @@ router.get('/', (req, res) => {
     const stored = readStored();
     const source = stored === null ? DEMO_ENTRIES : stored;
     const sorted = sortByScoreDesc(source);
+    const sanitized = sorted.map(({ _ip, ...rest }) => rest);
     res.json({
-      entries: sorted.slice(0, limit),
+      entries: sanitized.slice(0, limit),
       isDemo: stored === null,
     });
   } catch (e) {
@@ -259,17 +345,43 @@ router.get('/', (req, res) => {
 
 router.post('/submit', (req, res) => {
   try {
+    const ip = getClientIP(req);
+    const rl = checkRateLimit(ip);
+    if (!rl.ok) {
+      res.status(429).json({
+        error: '提交太频繁，每小时最多 3 次',
+        retryAfterMs: rl.retryAfterMs,
+      });
+      return;
+    }
+
     const raw = req.body?.nickname;
-    const nickname = typeof raw === 'string' ? raw.trim() : '';
-    if (nickname.length < 1 || nickname.length > 20) {
+    const nickname =
+      typeof raw === 'string' ? sanitizeNickname(raw) : null;
+    if (nickname === null) {
       res.status(400).json({ error: '昵称长度须为 1–20 个字符' });
       return;
     }
+
     const latest = benchmarkRunner.getLatest();
     if (!latest) {
       res.status(400).json({ error: '暂无评测结果，请先运行评测' });
       return;
     }
+    const invalidReason = validateLatestForSubmit(latest);
+    if (invalidReason) {
+      res.status(400).json({ error: invalidReason });
+      return;
+    }
+
+    const prevStored = readStored();
+    const base = prevStored === null ? [] : [...prevStored];
+    const nicksForIp = distinctNicknamesForIp(base, ip);
+    if (!nicksForIp.has(nickname) && nicksForIp.size >= MAX_NICKNAMES_PER_IP) {
+      res.status(400).json({ error: '同一 IP 在榜上最多使用 3 个不同昵称' });
+      return;
+    }
+
     const newEntry: LeaderboardEntry = {
       id: newEntryId(),
       nickname,
@@ -279,9 +391,8 @@ router.post('/submit', (req, res) => {
       totalSessions: latest.totalSessions,
       dimensions: latest.dimensions.map(d => ({ dimension: d.dimension, score: d.score })),
       submittedAt: new Date().toISOString(),
+      _ip: ip,
     };
-    const prevStored = readStored();
-    const base = prevStored === null ? [] : [...prevStored];
     base.push(newEntry);
     const merged = dedupeNicknameKeepBest(base);
     writeStored(merged);

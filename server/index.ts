@@ -8,6 +8,7 @@ import skillsRouter from './routes/skills.js';
 import templatesRouter from './routes/templates.js';
 import replayRouter from './routes/replay.js';
 import benchmarkRouter from './routes/benchmark.js';
+import shareRouter from './routes/share.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -22,6 +23,8 @@ app.use('/api/templates', templatesRouter);
 app.use('/api/replay', replayRouter);
 app.use('/api/benchmark', benchmarkRouter);
 
+app.use('/share', shareRouter);
+
 // API 404：未匹配的 /api/* 请求返回 JSON 错误而非 index.html
 app.all('/api/*', (_req, res) => {
   res.status(404).json({ error: '接口不存在' });
@@ -30,7 +33,12 @@ app.all('/api/*', (_req, res) => {
 // 生产环境：托管前端静态文件
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const webDist = path.resolve(__dirname, '..', 'web', 'dist');
+// tsx 直跑 server/index.ts 时 __dirname 为 server/；node server/dist/index.js 时为 server/dist/
+const projectRoot =
+  path.basename(__dirname) === 'dist'
+    ? path.resolve(__dirname, '..', '..')
+    : path.resolve(__dirname, '..');
+const webDist = path.join(projectRoot, 'web', 'dist');
 app.use(express.static(webDist));
 app.get('*', (_req, res) => {
   const indexPath = path.join(webDist, 'index.html');

@@ -1,0 +1,10 @@
+services:
+  clawclip:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ~/.openclaw:/root/.openclaw:ro
+    environment:
+      - PORT=8080
+    restart: unless-stopped

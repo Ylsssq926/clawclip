@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Play, Brain, Wrench, CheckCircle, Bot, MessageSquare, Settings, Clock, ChevronDown, ChevronUp, Zap, Share2 } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Brain, Wrench, CheckCircle, Bot, MessageSquare, Settings, Clock, ChevronDown, ChevronUp, Zap, Share2 } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import { cn } from '../lib/cn'
@@ -167,6 +167,8 @@ function ListSkeleton() {
   )
 }
 
+const SPEED_MAP = { slow: 2000, normal: 1000, fast: 500 } as const
+
 function DetailSkeleton() {
   return (
     <div className="space-y-4">
@@ -207,6 +209,14 @@ export default function Replay() {
   const [replay, setReplay] = useState<SessionReplay | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [autoPlay, setAutoPlay] = useState(false)
+  /** 自动播放模式下已展示的步数（1..n）；手动「查看全部」时不用 slice */
+  const [visibleSteps, setVisibleSteps] = useState(0)
+  const [currentStep, setCurrentStep] = useState(0)
+  const [speed, setSpeed] = useState<'slow' | 'normal' | 'fast'>('normal')
+  const [showAllSteps, setShowAllSteps] = useState(false)
+  const lastStepRef = useRef<HTMLDivElement | null>(null)
 
   const tagColorByTag = useMemo(() => {
     const m = new Map<string, string>()
@@ -254,6 +264,62 @@ export default function Replay() {
       .finally(() => setLoading(false))
   }, [view])
 
+  useEffect(() => {
+    if (view !== 'detail') return
+    if (!replay) {
+      setAutoPlay(false)
+      setVisibleSteps(0)
+      setCurrentStep(0)
+      setShowAllSteps(false)
+      return
+    }
+    if (!replay.steps.length) {
+      setShowAllSteps(false)
+      setAutoPlay(false)
+      setVisibleSteps(0)
+      setCurrentStep(0)
+      return
+    }
+    setShowAllSteps(false)
+    setAutoPlay(true)
+    setVisibleSteps(1)
+    setCurrentStep(1)
+    setSpeed('normal')
+  }, [view, replay])
+
+  useEffect(() => {
+    if (view !== 'detail' || !replay || showAllSteps || !autoPlay) return
+    const total = replay.steps.length
+    if (total === 0) return
+    if (visibleSteps >= total) {
+      setAutoPlay(false)
+      setCurrentStep(total)
+      return
+    }
+    const ms = SPEED_MAP[speed]
+    const id = window.setInterval(() => {
+      setVisibleSteps(v => {
+        const next = v + 1
+        if (next >= total) {
+          setCurrentStep(total)
+          setAutoPlay(false)
+          return total
+        }
+        setCurrentStep(next)
+        return next
+      })
+    }, ms)
+    return () => window.clearInterval(id)
+  }, [view, replay?.meta.id, replay?.steps.length, showAllSteps, autoPlay, speed, visibleSteps])
+
+  useEffect(() => {
+    if (view !== 'detail' || !replay || showAllSteps) return
+    if (!autoPlay) return
+    const el = lastStepRef.current
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [view, replay?.meta.id, visibleSteps, autoPlay, showAllSteps])
+
   const openSession = (id: string) => {
     setView('detail')
     setLoading(true)
@@ -267,6 +333,51 @@ export default function Replay() {
   }
 
   if (view === 'detail') {
+    const totalSteps = replay?.steps.length ?? 0
+    const progressStep =
+      showAllSteps || totalSteps === 0
+        ? totalSteps
+        : Math.min(Math.max(visibleSteps, currentStep, 1), totalSteps)
+    const progressPct = totalSteps > 0 ? (progressStep / totalSteps) * 100 : 0
+    const displayedSteps =
+      showAllSteps || totalSteps === 0 ? (replay?.steps ?? []) : replay!.steps.slice(0, Math.max(visibleSteps, 1))
+    const playbackComplete =
+      totalSteps > 0 && (showAllSteps || (!autoPlay && visibleSteps >= totalSteps))
+
+    const togglePlay = () => {
+      if (!replay || totalSteps === 0) return
+      if (showAllSteps) {
+        setShowAllSteps(false)
+        setVisibleSteps(1)
+        setCurrentStep(1)
+        setAutoPlay(true)
+        return
+      }
+      if (!autoPlay && visibleSteps >= totalSteps) {
+        setVisibleSteps(1)
+        setCurrentStep(1)
+        setAutoPlay(true)
+        return
+      }
+      setAutoPlay(a => !a)
+    }
+
+    const restartPlayback = () => {
+      if (!replay || totalSteps === 0) return
+      setShowAllSteps(false)
+      setVisibleSteps(1)
+      setCurrentStep(1)
+      setAutoPlay(true)
+    }
+
+    const showAll = () => {
+      if (!replay || totalSteps === 0) return
+      setShowAllSteps(true)
+      setAutoPlay(false)
+      setVisibleSteps(totalSteps)
+      setCurrentStep(totalSteps)
+    }
+
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -317,20 +428,92 @@ export default function Replay() {
               </div>
             </div>
 
+            {totalSteps > 0 && (
+              <div className="glass-raised rounded-xl p-4 mb-6 border border-surface-border flex flex-wrap items-center gap-3 md:gap-4">
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  className="shrink-0 p-2 rounded-lg text-blue-400 hover:bg-blue-500/10 transition-colors"
+                  aria-label={autoPlay && !showAllSteps ? '暂停' : '播放'}
+                >
+                  {autoPlay && !showAllSteps ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                </button>
+
+                <div className="flex-1 min-w-[120px] h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                    animate={{ width: `${progressPct}%` }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                  />
+                </div>
+
+                <span className="text-xs text-slate-500 tabular-nums shrink-0">
+                  {progressStep}/{totalSteps}
+                </span>
+
+                <div className="flex gap-1 shrink-0">
+                  {(['slow', 'normal', 'fast'] as const).map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSpeed(s)}
+                      className={cn(
+                        'text-[10px] px-2 py-1 rounded transition-colors',
+                        speed === s ? 'bg-blue-500/20 text-blue-400' : 'text-slate-600 hover:text-slate-400',
+                      )}
+                    >
+                      {s === 'slow' ? '0.5x' : s === 'normal' ? '1x' : '2x'}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={restartPlayback}
+                  className="text-xs text-slate-500 hover:text-blue-400 transition-colors shrink-0"
+                >
+                  重新播放
+                </button>
+
+                <button type="button" onClick={showAll} className="text-xs text-slate-500 hover:text-blue-400 transition-colors shrink-0">
+                  查看全部
+                </button>
+              </div>
+            )}
+
             <div className="mb-4">
-              {replay.steps.map(step => (
-                <StepCard key={step.index} step={step} startTime={replay.meta.startTime} />
-              ))}
+              {displayedSteps.map((step, idx) => {
+                const isLast = idx === displayedSteps.length - 1
+                const useStepMotion = !showAllSteps && totalSteps > 0
+
+                return (
+                  <div key={step.index} ref={isLast ? lastStepRef : undefined}>
+                    {useStepMotion ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
+                      >
+                        <StepCard step={step} startTime={replay.meta.startTime} />
+                      </motion.div>
+                    ) : (
+                      <StepCard step={step} startTime={replay.meta.startTime} />
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
-            <div className="glass-raised rounded-xl p-5 border border-surface-border text-center">
-              <Zap className="w-5 h-5 text-accent mx-auto mb-2" />
-              <p className="text-sm text-slate-400">
-                本次会话共 <span className="text-white font-medium">{replay.meta.stepCount} 步</span>，
-                用时 <span className="text-white font-medium">{formatDuration(replay.meta.durationMs)}</span>，
-                花费 <span className="text-accent font-medium">¥{replay.meta.totalCost.toFixed(4)}</span>
-              </p>
-            </div>
+            {playbackComplete && (
+              <div className="glass-raised rounded-xl p-5 border border-surface-border text-center border-cyan-500/20">
+                <Zap className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
+                <p className="text-sm text-slate-400">
+                  本次会话共 <span className="text-white font-medium">{replay.meta.stepCount} 步</span>，
+                  用时 <span className="text-white font-medium">{formatDuration(replay.meta.durationMs)}</span>，
+                  花费 <span className="text-emerald-400 font-medium">¥{replay.meta.totalCost.toFixed(4)}</span>
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>

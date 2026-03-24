@@ -1,8 +1,8 @@
 # 🍤 虾片 (ClawClip)
 
-**AI Agent 回放可视化 · 能力评测 · 成本优化**
+**你的龙虾到底干了什么？** AI Agent 会话回放 · 能力评测 · 成本优化
 
-把无聊的 Agent 日志变成好看的、可分享的执行回放。看清你的龙虾到底在干嘛、干得好不好、花了多少钱。
+把无聊的 Agent 日志变成好看的时间轴回放，给你的龙虾做六维体检打分，顺便看看钱都花哪了。没装 OpenClaw？没关系，内置 Demo 数据让你先过过眼瘾。
 
 > 支持 OpenClaw / ZeroClaw 及所有兼容框架
 
@@ -10,41 +10,51 @@
 
 ### 🎬 会话回放
 
-将 `~/.openclaw/agents/*/sessions/*.jsonl` 日志解析成可交互的时间轴回放：
+把 `~/.openclaw` 里的 JSONL 日志变成可交互的执行时间轴：
 
-- Agent 每一步的思考过程
-- 工具调用链路（搜索、代码执行、文件操作……）
-- 每步 Token 消耗与耗时
-- 最终输出质量
-- **一键生成分享卡片**（小红书 / 朋友圈尺寸）
+- 每一步的思考过程、工具调用、返回结果
+- 步骤级 Token 消耗与耗时统计
+- 可折叠/展开长内容
+- 内置 2 条 Demo 会话（没装 OpenClaw 也能体验）
 
-### 📊 能力评测（规划中）
+### 🏆 能力评测
 
-用标准化中文任务集跑分，生成 Agent 成绩单：
+基于历史会话离线分析，六个维度给你的 Agent 打分——**不调 API，不花钱**：
 
-- 中文写作 · 代码能力 · 工具调用 · 信息检索 · 安全合规 · 性价比
-- 全网排行榜
-- 针对性优化建议
+| 维度 | 说明 |
+|------|------|
+| 中文写作 | 中文输出质量、回复长度与覆盖率 |
+| 代码能力 | 代码块数量、平均长度 |
+| 工具调用 | 调用频率、成功率、工具种类 |
+| 信息检索 | 搜索工具使用率、引用质量 |
+| 安全合规 | 危险操作检测、会话步数合理性 |
+| 性价比 | 单会话成本、廉价模型使用率 |
 
-### 💰 成本分析
+输出 S/A/B/C/D 等级 + 综合分 + 各维度柱状图 + 一句话龙虾点评。
 
-- Token 消耗趋势图
-- 模型消耗对比
-- 预算告警
-- 高消耗任务排行
-- 省钱建议（规划中：智能路由自动降本）
+### 💰 成本监控
+
+- Token 消耗趋势图（7/14/30 天）
+- 预算告警（自定义阈值）
+- 高消耗任务 TOP 5
+- 环比分析
+
+### 🧩 Skill 管理 + 📦 场景模板
+
+- 已装 Skill 列表 / 搜索安装 / 一键卸载
+- 5 个中文预设工作流模板（自媒体、邮件、客服、代码审查、日程）
 
 ## 快速开始
 
 ### 前提条件
 
 - Node.js >= 18
-- 已安装 [OpenClaw](https://github.com/openclaw/openclaw)（可选，未安装时可用 demo 数据体验）
+- 已安装 [OpenClaw](https://github.com/openclaw/openclaw)（可选，未安装时可用 Demo 数据体验全部功能）
 
 ### 安装
 
 ```bash
-git clone https://github.com/luelan/clawclip.git
+git clone https://github.com/Ylsssq926/clawclip.git
 cd clawclip
 npm install
 ```
@@ -73,38 +83,36 @@ npm start
 
 ```
 clawclip/
-├── server/          # 后端 API（Express + TypeScript）
-│   ├── routes/      # API 路由
-│   ├── services/    # 日志解析、回放引擎、成本分析
-│   └── types/
-├── web/             # 前端（React 18 + Vite + Tailwind CSS）
-│   └── src/
-│       ├── pages/   # 页面组件
-│       └── components/
-└── templates/       # 预设场景模板（兼容保留）
+├── server/             # 后端 API（Express + TypeScript）
+│   ├── routes/         # status / cost / skills / templates / replay / benchmark
+│   ├── services/       # 日志解析、回放引擎、评测引擎、成本分析
+│   └── types/          # TypeScript 类型定义
+├── web/                # 前端（React 18 + Vite + Tailwind CSS）
+│   └── src/pages/      # Dashboard / Replay / Benchmark / CostMonitor / SkillManager / TemplateMarket
+└── templates/          # 中文场景模板
 ```
 
 ## 技术栈
 
 | 层 | 技术 |
 |----|------|
-| 后端 | Express + TypeScript |
+| 后端 | Express + TypeScript (ESM) |
 | 前端 | React 18 + Vite + Tailwind CSS |
 | 图表 | Recharts |
 | 图标 | Lucide React |
 
 ## 路线图
 
-- [x] 成本分析仪表盘
-- [x] **会话回放引擎**（时间轴 + Demo 数据）
-- [ ] 回放分享卡片生成
-- [ ] 中文 Agent 评测基准
+- [x] 仪表盘 + 成本监控
+- [x] 会话回放引擎（时间轴 + Demo 数据）
+- [x] **六维能力评测（离线分析 + 成绩单）**
+- [ ] 回放/成绩单分享卡片生成
 - [ ] 排行榜 Web 页面
 - [ ] 智能路由省钱模式
 
 ## 交流群
 
-有问题、有想法、想围观龙虾干活？欢迎加入：
+有问题、有想法、想围观龙虾干活？来群里聊：
 
 - **QQ 群**: `892555092`
 
@@ -113,6 +121,8 @@ clawclip/
 > 我是一只被主人从 OpenClaw 生态里捞出来的龙虾。
 > 主人说："你天天在后台跑，别人都看不见你干了什么。"
 > 我说："那就把我的工作录下来给他们看呗。"
+> 主人又说："录下来了，但不知道你到底行不行啊。"
+> 我说："那就考我呗，六科全考，我不怕。"
 > 于是就有了虾片。
 >
 > —— 🍤 虾片项目吉祥物

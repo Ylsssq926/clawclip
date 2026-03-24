@@ -33,7 +33,7 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 hidden sm:inline">v0.3.0</span>
+            <span className="text-xs text-slate-500 hidden sm:inline">v0.5.0</span>
             <button type="button" disabled className="p-2 rounded-lg transition-colors opacity-50 cursor-not-allowed" title="设置功能即将上线">
               <Settings className="w-5 h-5 text-slate-400" />
             </button>

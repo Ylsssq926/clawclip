@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, Play, Brain, Wrench, CheckCircle, Bot, MessageSquare, Settings, Clock, ChevronDown, ChevronUp, Zap, Share2 } from 'lucide-react'
 
 interface SessionMeta {
@@ -32,6 +32,12 @@ interface SessionStep {
 interface SessionReplay {
   meta: SessionMeta
   steps: SessionStep[]
+}
+
+interface TagInfo {
+  tag: string
+  sessionCount: number
+  color: string
 }
 
 function formatDuration(ms: number): string {
@@ -136,20 +142,57 @@ function StepCard({ step, startTime }: { step: SessionStep; startTime: string })
 export default function Replay() {
   const [view, setView] = useState<'list' | 'detail'>('list')
   const [sessions, setSessions] = useState<SessionMeta[]>([])
+  const [sessionTags, setSessionTags] = useState<Record<string, string[]>>({})
+  const [tagInfos, setTagInfos] = useState<TagInfo[]>([])
+  const [selectedTag, setSelectedTag] = useState('全部')
   const [replay, setReplay] = useState<SessionReplay | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const tagColorByTag = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const t of tagInfos) m.set(t.tag, t.color)
+    return m
+  }, [tagInfos])
+
+  const filteredSessions = useMemo(() => {
+    if (selectedTag === '全部') return sessions
+    return sessions.filter(s => sessionTags[s.id]?.includes(selectedTag))
+  }, [sessions, sessionTags, selectedTag])
+
   useEffect(() => {
-    if (view === 'list') {
-      setLoading(true)
-      setError(null)
-      fetch('/api/replay/sessions?limit=20')
-        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
-        .then(setSessions)
-        .catch(() => setError('获取会话列表失败，请检查后端是否运行'))
-        .finally(() => setLoading(false))
+    if (view !== 'list') return
+    setLoading(true)
+    setError(null)
+    const parseSessionTags = (data: unknown): Record<string, string[]> => {
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return {}
+      const out: Record<string, string[]> = {}
+      for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
+        out[k] = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+      }
+      return out
     }
+    Promise.all([
+      fetch('/api/replay/sessions?limit=20').then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json() as Promise<SessionMeta[]>
+      }),
+      fetch('/api/analytics/session-tags')
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => parseSessionTags(data))
+        .catch(() => ({} as Record<string, string[]>)),
+      fetch('/api/analytics/tags')
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => (Array.isArray(data) ? (data as TagInfo[]) : []))
+        .catch(() => [] as TagInfo[]),
+    ])
+      .then(([sess, st, tags]) => {
+        setSessions(Array.isArray(sess) ? sess : [])
+        setSessionTags(st)
+        setTagInfos(tags)
+      })
+      .catch(() => setError('获取会话列表失败，请检查后端是否运行'))
+      .finally(() => setLoading(false))
   }, [view])
 
   const openSession = (id: string) => {
@@ -240,10 +283,36 @@ export default function Replay() {
       <h2 className="text-2xl font-bold mb-1">会话回放</h2>
       <p className="text-slate-400 text-sm mb-6">看看龙虾都干了些什么 🍤</p>
 
+      {!loading && !error && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => setSelectedTag('全部')}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+              selectedTag === '全部' ? 'bg-orange-500 text-white' : 'bg-[#1e293b] text-slate-400 hover:text-white'
+            }`}
+          >
+            全部
+          </button>
+          {tagInfos.map(t => (
+            <button
+              key={t.tag}
+              type="button"
+              onClick={() => setSelectedTag(t.tag)}
+              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                selectedTag === t.tag ? 'bg-orange-500 text-white' : 'bg-[#1e293b] text-slate-400 hover:text-white'
+              }`}
+            >
+              {t.tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading && <div className="text-center py-12 text-slate-500">加载中...</div>}
       {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-300 text-sm">{error}</div>}
 
-      {!loading && sessions.length === 0 && (
+      {!loading && !error && sessions.length === 0 && (
         <div className="text-center py-12 text-slate-500">
           <span className="text-4xl mb-3 block">🎬</span>
           <p className="text-lg mb-1">暂无会话记录</p>
@@ -251,9 +320,13 @@ export default function Replay() {
         </div>
       )}
 
-      {!loading && (
+      {!loading && !error && sessions.length > 0 && filteredSessions.length === 0 && (
+        <div className="text-center py-12 text-slate-500 text-sm">该标签下暂无会话</div>
+      )}
+
+      {!loading && !error && filteredSessions.length > 0 && (
         <div className="space-y-3">
-          {sessions.map(session => (
+          {filteredSessions.map(session => (
             <button
               key={session.id}
               onClick={() => openSession(session.id)}
@@ -270,13 +343,25 @@ export default function Replay() {
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(session.durationMs)}</span>
                 <span className="flex items-center gap-1"><Play className="w-3 h-3" />{session.stepCount} 步</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-1.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 items-center">
                   {session.modelUsed.slice(0, 3).map(m => (
                     <span key={m} className="text-xs px-2 py-0.5 bg-[#334155] rounded-full text-slate-400">{m}</span>
                   ))}
+                  {(sessionTags[session.id] ?? []).map(tag => {
+                    const tagColor = tagColorByTag.get(tag) ?? '#94a3b8'
+                    return (
+                      <span
+                        key={tag}
+                        className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: `${tagColor}20`, color: tagColor }}
+                      >
+                        {tag}
+                      </span>
+                    )
+                  })}
                 </div>
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-3 text-xs shrink-0">
                   <span className="text-blue-400">{session.totalTokens.toLocaleString()} tokens</span>
                   <span className="text-orange-400 font-medium">¥{session.totalCost.toFixed(4)}</span>
                 </div>

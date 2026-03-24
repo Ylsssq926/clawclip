@@ -1,6 +1,7 @@
-import { Activity, DollarSign, Puzzle, Wifi, WifiOff, ArrowRight, Sparkles } from 'lucide-react'
+import { Activity, DollarSign, Puzzle, Wifi, WifiOff, ArrowRight, Sparkles, Cloud } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { Tab } from '../App'
+import WordCloud, { type KeywordItem } from '../components/WordCloud'
 
 interface StatusData {
   running: boolean
@@ -23,6 +24,9 @@ export default function Dashboard({ onNavigate }: Props) {
   const [status, setStatus] = useState<StatusData | null>(null)
   const [cost, setCost] = useState<CostSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [keywords, setKeywords] = useState<KeywordItem[]>([])
+  const [kwLoading, setKwLoading] = useState(true)
+  const [kwError, setKwError] = useState<string | null>(null)
 
   useEffect(() => {
     const safeFetch = async (url: string) => {
@@ -44,6 +48,33 @@ export default function Dashboard({ onNavigate }: Props) {
     }).finally(() => {
       setLoading(false)
     })
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setKwLoading(true)
+    setKwError(null)
+    fetch('/api/analytics/keywords?days=30&limit=40')
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json() as Promise<{ keywords?: KeywordItem[] }>
+      })
+      .then(data => {
+        if (cancelled) return
+        setKeywords(Array.isArray(data.keywords) ? data.keywords : [])
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setKwError('关键词加载失败')
+          setKeywords([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setKwLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const hour = new Date().getHours()
@@ -160,27 +191,27 @@ export default function Dashboard({ onNavigate }: Props) {
         </button>
       </div>
 
-      {/* 小贴士 */}
-      <div className="bg-[#1e293b] rounded-xl p-5 border border-[#334155]">
-        <h4 className="font-medium mb-3 text-slate-300">💡 小贴士</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-400">
-          <div className="flex gap-2">
-            <span className="text-orange-400 shrink-0">·</span>
-            <span>混合使用国产模型（DeepSeek/Qwen）和海外模型，可以节省 40-60% 费用</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-orange-400 shrink-0">·</span>
-            <span>给龙虾装备"场景模板"后，它就知道怎么帮你处理特定任务了</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-orange-400 shrink-0">·</span>
-            <span>设置月预算告警，避免 Token 消耗失控（费用页可配置）</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-orange-400 shrink-0">·</span>
-            <span>定期检查已装 Skills，卸掉不用的可以减少龙虾的上下文负担</span>
-          </div>
-        </div>
+      {/* 词云 - 龙虾最近都在忙什么 */}
+      <div className="bg-[#1e293b] rounded-xl p-6 border border-[#334155]">
+        <h4 className="font-semibold mb-4 text-slate-300 flex items-center gap-2">
+          <Cloud className="w-5 h-5 text-orange-400" />
+          龙虾最近都在忙什么
+        </h4>
+        {kwLoading && (
+          <div className="flex items-center justify-center min-h-[200px] text-sm text-slate-500">加载中...</div>
+        )}
+        {!kwLoading && kwError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-sm text-red-300">{kwError}</div>
+        )}
+        {!kwLoading && !kwError && (
+          <WordCloud
+            keywords={keywords}
+            onWordClick={word => {
+              console.log('replay search (reserved):', word)
+              onNavigate('replay')
+            }}
+          />
+        )}
       </div>
     </div>
   )

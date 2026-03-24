@@ -55,6 +55,7 @@ _remote.py
 _deploy*.py
 _ssh*.py
 _verify.py
+_qa*.py
 
 # Misc cache
 .cache/

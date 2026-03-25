@@ -7,6 +7,19 @@ Version scheme: `YYYY.MM.DD` (CalVer, daily). Patch suffix `.N` for same-day rel
 
 ---
 
+## [2026.03.25.1] — 2026-03-25
+
+### Improved
+- Landing page interaction polish and runtime error productization
+- Real data compatibility: better CLI detection, graceful fallbacks
+- Production deployment documentation (docs/DEPLOYMENT.md)
+- Skills/templates routes enhanced with better validation and error messages
+- Status API enhanced with more detailed system info
+
+[2026.03.25.1]: https://github.com/Ylsssq926/clawclip/compare/2026.03.25...2026.03.25.1
+
+---
+
 ## [2026.03.25] — 2026-03-25
 
 ### Added

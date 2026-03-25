@@ -59,6 +59,7 @@ export default function Dashboard({ onNavigate }: Props) {
   const [status, setStatus] = useState<StatusData | null>(null)
   const [cost, setCost] = useState<CostSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [keywords, setKeywords] = useState<KeywordItem[]>([])
   const [kwLoading, setKwLoading] = useState(true)
   const [sessions, setSessions] = useState<SessionMeta[]>([])
@@ -73,7 +74,10 @@ export default function Dashboard({ onNavigate }: Props) {
       } catch { return null }
     }
     Promise.all([safeFetch('/api/status'), safeFetch('/api/cost/summary?days=30')])
-      .then(([s, c]) => { setStatus(s); setCost(c) })
+      .then(([s, c]) => {
+        setStatus(s); setCost(c)
+        if (!s && !c) setFetchError(true)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -227,6 +231,12 @@ export default function Dashboard({ onNavigate }: Props) {
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {fetchError && (
+        <div className="text-xs text-amber-400/80 bg-amber-400/5 border border-amber-400/10 rounded-lg px-4 py-2 animate-fade-in">
+          {locale === 'en' ? 'Could not connect to backend — stats may be stale or unavailable.' : '无法连接后端服务，统计数据可能不可用。'}
         </div>
       )}
 

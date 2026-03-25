@@ -758,7 +758,7 @@ export class BenchmarkRunner {
       result = makeDemoResult();
     } else {
       const replays = loadAllReplays();
-      result = replays.length ? computeFromReplays(replays) : makeDemoResult();
+      result = computeFromReplays(replays.length ? replays : []);
     }
 
     if (!demoOnly) {

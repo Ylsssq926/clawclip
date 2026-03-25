@@ -19,7 +19,7 @@ export default function SkillManager() {
   useEffect(() => {
     fetch('/api/skills')
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(setSkills)
+      .then(d => setSkills(Array.isArray(d) ? d : []))
       .catch(() => { setError(t('skills.error.network')) })
   }, [])
 

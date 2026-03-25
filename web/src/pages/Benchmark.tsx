@@ -187,7 +187,7 @@ export default function Benchmark() {
   const dimKeys = useMemo(() => {
     const first = timeline[0]
     if (!first) return [] as string[]
-    return first.dimensions.map(d => d.dimension)
+    return (first.dimensions ?? []).map(d => d.dimension)
   }, [timeline])
 
   const dimTrendData = useMemo(() => {
@@ -202,8 +202,8 @@ export default function Benchmark() {
 
   const radarData = useMemo(() => {
     if (!result) return []
-    return result.dimensions.map(d => {
-      const other = compareResult?.dimensions.find(x => x.dimension === d.dimension)
+    return (result.dimensions ?? []).map(d => {
+      const other = compareResult?.dimensions?.find(x => x.dimension === d.dimension)
       return {
         subject: d.label,
         score: d.score,
@@ -441,8 +441,8 @@ export default function Benchmark() {
 
             {compareResult && (
               <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-surface-border">
-                {result.dimensions.map(d => {
-                  const other = compareResult.dimensions.find(x => x.dimension === d.dimension)
+                {(result.dimensions ?? []).map(d => {
+                  const other = (compareResult.dimensions ?? []).find(x => x.dimension === d.dimension)
                   const prev = other?.score ?? d.score
                   const diff = d.score - prev
                   const label = `${d.label} ${diff > 0 ? '+' : ''}${diff}`
@@ -470,7 +470,7 @@ export default function Benchmark() {
             )}
 
             <div className="space-y-4">
-              {result.dimensions.map(dim => {
+              {(result.dimensions ?? []).map(dim => {
                 const Icon = DIMENSION_ICONS[dim.dimension] || Zap
                 const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-400'
                 return (

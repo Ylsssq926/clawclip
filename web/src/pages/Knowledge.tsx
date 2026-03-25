@@ -221,7 +221,7 @@ export default function Knowledge() {
                 <p className="text-sm font-medium text-slate-200 mb-2">{highlightText(item.summary || t('knowledge.noSummary'), activeQuery)}</p>
                 <p className="text-[11px] text-slate-600 font-mono mb-2">{item.sessionId}</p>
                 <ul className="space-y-2">
-                  {item.matches.map((m, idx) => (
+                  {(item.matches ?? []).map((m, idx) => (
                     <li key={`${m.stepIndex}-${idx}`} className="text-xs text-slate-400 border-l-2 border-cyan-500/40 pl-3">
                       <span className="text-cyan-500/80 mr-2">#{m.stepIndex}</span>
                       <span className="text-slate-500">{m.type}</span>

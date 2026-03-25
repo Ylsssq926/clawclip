@@ -470,11 +470,17 @@ export default function Replay() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
-                {replay.meta.modelUsed.map(m => (
+                {(replay.meta.modelUsed ?? []).map(m => (
                   <span key={m} className="text-xs px-2 py-1 bg-surface-overlay rounded-full text-slate-300 border border-surface-border">{m}</span>
                 ))}
               </div>
             </div>
+
+            {totalSteps === 0 && (
+              <div className="text-center py-12 text-slate-500 text-sm">
+                {locale === 'en' ? 'No steps found in this session. The log file may be empty or in an unrecognized format.' : '未找到会话步骤，日志文件可能为空或格式不兼容。'}
+              </div>
+            )}
 
             {totalSteps > 0 && (
               <div className="glass-raised rounded-xl p-4 mb-6 border border-surface-border flex flex-wrap items-center gap-3 md:gap-4">
@@ -658,7 +664,7 @@ export default function Replay() {
                   </div>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex flex-wrap gap-1.5 items-center">
-                      {session.modelUsed.slice(0, 3).map(m => (
+                      {(session.modelUsed ?? []).slice(0, 3).map(m => (
                         <span key={m} className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-400 border border-surface-border">{m}</span>
                       ))}
                       {(sessionTags[session.id] ?? []).map(tag => {

@@ -49,6 +49,7 @@ export class CostParser {
 
   private config: BudgetConfig;
   private usageCache: { at: number; data: TokenUsage[] } | null = null;
+  private logDedupeKeys = new Set<string>();
   private static readonly CACHE_MS = 3500;
 
   private get modelPricing(): Record<string, number> {
@@ -108,10 +109,13 @@ export class CostParser {
 
   parseLogFiles(): TokenUsage[] {
     const usages: TokenUsage[] = [];
+    const seen = new Set<string>();
     const replays = sessionParser.getRealReplays();
     for (const replay of replays) {
       for (const step of replay.steps) {
         if (step.inputTokens === 0 && step.outputTokens === 0) continue;
+        const key = `${replay.meta.id}|${step.model || ''}|${step.timestamp.getTime()}`;
+        seen.add(key);
         usages.push({
           timestamp: step.timestamp,
           taskId: replay.meta.id,
@@ -124,6 +128,7 @@ export class CostParser {
       }
     }
 
+    this.logDedupeKeys = seen;
     const roots = getLobsterDataRoots();
     if (roots.length === 0) {
       const fallbackLogs = path.join(os.homedir(), '.openclaw', 'logs');
@@ -177,10 +182,10 @@ export class CostParser {
           if (!usage) continue;
           const model = (parsed.model as string) || 'unknown';
           const inputTokens = Number(
-            usage.input_tokens ?? usage.prompt_tokens ?? usage.inputTokens ?? 0,
+            usage.input_tokens ?? usage.prompt_tokens ?? usage.inputTokens ?? usage.promptTokens ?? 0,
           );
           const outputTokens = Number(
-            usage.output_tokens ?? usage.completion_tokens ?? usage.outputTokens ?? 0,
+            usage.output_tokens ?? usage.completion_tokens ?? usage.outputTokens ?? usage.completionTokens ?? 0,
           );
           if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) continue;
           const price = this.modelPricing[model] || 2.0;
@@ -195,9 +200,13 @@ export class CostParser {
           }
           if (Number.isNaN(ts.getTime())) ts = new Date();
 
+          const sid = (parsed.session_id as string) || '';
+          const dedupeKey = `${sid}|${model}|${ts.getTime()}`;
+          if (this.logDedupeKeys.has(dedupeKey)) continue;
+
           usages.push({
             timestamp: ts,
-            taskId: (parsed.task_id as string) || (parsed.session_id as string) || file,
+            taskId: (parsed.task_id as string) || sid || file,
             model,
             inputTokens,
             outputTokens,

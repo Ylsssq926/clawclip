@@ -35,7 +35,7 @@ export default function TemplateMarket() {
   useEffect(() => {
     fetch('/api/templates')
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(setTemplates)
+      .then(d => setTemplates(Array.isArray(d) ? d : []))
       .catch(() => { setError(t('templates.error.network')) })
       .finally(() => setLoading(false))
   }, [])
@@ -127,7 +127,7 @@ export default function TemplateMarket() {
             <h3 className="font-semibold text-lg mb-2 text-white">{template.name}</h3>
             <p className="text-sm text-slate-400 mb-4 leading-relaxed">{template.description}</p>
             <div className="flex flex-wrap gap-1 mb-4">
-              {template.skills.map(s => (
+              {(template.skills ?? []).map(s => (
                 <span key={s} className="text-xs px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded">{s}</span>
               ))}
             </div>

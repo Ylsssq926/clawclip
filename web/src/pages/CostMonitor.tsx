@@ -104,7 +104,7 @@ export default function CostMonitor() {
       safeFetch(`/api/cost/savings?days=${days}`).catch(() => null as SavingsReport | null),
     ])
       .then(([d, s, isDemo, ins, sav]) => {
-        setDaily(d)
+        setDaily(Array.isArray(d) ? d : [])
         setSummary(s)
         setDemoCostHint(Boolean(isDemo))
         setInsights(Array.isArray(ins) ? ins : [])

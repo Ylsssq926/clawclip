@@ -81,11 +81,11 @@ function validateLatestForSubmit(latest: {
     dimSum += d.score;
   }
   const dimAvg = dimSum / dimensions.length;
-  if (Math.abs(dimAvg - overallScore) > 8) {
-    return '维度均分与总分差距过大 / Dimension average diverges from overall score';
+  if (Math.abs(dimAvg - overallScore) > 15) {
+    return '维度均分与总分差距过大 / Dimension average diverges too far from overall score';
   }
-  if (totalSessions < 3) {
-    return '至少需要 3 条会话 / At least 3 sessions required';
+  if (totalSessions < 2) {
+    return '至少需要 2 条会话 / At least 2 sessions required';
   }
   return null;
 }

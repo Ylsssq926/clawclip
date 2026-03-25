@@ -232,7 +232,7 @@ export default function Dashboard({ onNavigate }: Props) {
 
       {fetchError && (
         <div className="text-xs text-amber-400/80 bg-amber-400/5 border border-amber-400/10 rounded-lg px-4 py-2 animate-fade-in">
-          {locale === 'en' ? 'Could not connect to backend — stats may be stale or unavailable.' : '无法连接后端服务，统计数据可能不可用。'}
+          {t('dashboard.error.backend')}
         </div>
       )}
 

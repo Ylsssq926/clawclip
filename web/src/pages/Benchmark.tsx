@@ -238,9 +238,13 @@ export default function Benchmark() {
 
   if (loading) {
     return (
-      <div>
-        <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
-        <div className="text-center py-12 text-slate-500">{t('benchmark.loading')}</div>
+      <div className="space-y-6">
+        <div className="skeleton h-8 w-48 rounded-lg" />
+        <div className="skeleton h-48 rounded-xl" />
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3].map(i => <div key={i} className="skeleton h-24 rounded-xl" />)}
+        </div>
+        <div className="skeleton h-64 rounded-xl" />
       </div>
     )
   }

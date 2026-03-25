@@ -471,7 +471,7 @@ export default function Replay() {
 
             {totalSteps === 0 && (
               <div className="text-center py-12 text-slate-500 text-sm">
-                {locale === 'en' ? 'No steps found in this session. The log file may be empty or in an unrecognized format.' : '未找到会话步骤，日志文件可能为空或格式不兼容。'}
+                {t('replay.empty.steps')}
               </div>
             )}
 

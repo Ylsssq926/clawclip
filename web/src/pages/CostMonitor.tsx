@@ -310,16 +310,8 @@ export default function CostMonitor() {
 
       {/* Pricing disclaimer */}
       <div className="text-[11px] text-slate-600 leading-relaxed mt-4 px-1 space-y-1">
-        <p>
-          {locale === 'en'
-            ? 'Cost estimates use output token pricing as a proxy (applying the same rate to both input and output tokens). Actual costs may differ as input tokens are typically 3-10× cheaper. For exact billing, refer to your provider dashboard.'
-            : '费用估算以 output token 单价为参考（对 input 和 output 统一计价），实际费用可能偏低（input 通常便宜 3-10 倍）。精确账单请查看各厂商控制台。'}
-        </p>
-        <p>
-          {locale === 'en'
-            ? 'Pricing data: static fallback verified 2026-03-25 from official provider pages; live data via PriceToken API (pricetoken.ai) when available.'
-            : '定价来源：静态兜底表于 2026-03-25 从各厂商官方页校验；在线时通过 PriceToken API (pricetoken.ai) 自动获取最新价格。'}
-        </p>
+        <p>{t('cost.disclaimer.estimate')}</p>
+        <p>{t('cost.disclaimer.source')}</p>
       </div>
     </div>
   )

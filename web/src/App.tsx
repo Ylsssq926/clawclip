@@ -102,6 +102,15 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
     else setTourStep(s => s + 1)
   }
 
+  useEffect(() => {
+    if (!showTour) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') finishTour()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showTour, finishTour])
+
   return (
     <div className="min-h-screen bg-[#0b1120] text-slate-200 bg-dots bg-ambient">
       <AnimatePresence>
@@ -110,29 +119,54 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.22 }}
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="clawclip-tour-title"
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.97, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.25, ease: [0.25, 0.4, 0.25, 1] }}
-            className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-[#0f172a] p-6 shadow-xl"
+            exit={{ opacity: 0, scale: 0.97, y: 8 }}
+            transition={{ duration: 0.32, ease: [0.25, 0.4, 0.25, 1] }}
+            className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-[#0f172a] p-6 shadow-2xl shadow-black/40"
           >
-            <h2 id="clawclip-tour-title" className="text-lg font-semibold text-white mb-3">
+            <h2 id="clawclip-tour-title" className="text-lg font-semibold text-white mb-4">
               {t('app.tour.title')}
             </h2>
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="flex flex-1 items-center gap-1.5 min-w-0"
+                role="progressbar"
+                aria-valuemin={1}
+                aria-valuemax={TOUR_KEYS.length}
+                aria-valuenow={tourStep + 1}
+                aria-label="Tour progress"
+              >
+                {TOUR_KEYS.map((_, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      'h-1 flex-1 rounded-full transition-colors duration-200',
+                      i < tourStep && 'bg-cyan-500/50',
+                      i === tourStep && 'bg-gradient-to-r from-blue-500 to-cyan-500',
+                      i > tourStep && 'bg-white/[0.08]',
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-[10px] text-slate-500 tabular-nums shrink-0" aria-live="polite">
+                {tourStep + 1}/{TOUR_KEYS.length}
+              </span>
+            </div>
             <AnimatePresence mode="wait">
               <motion.p
                 key={tourStep}
-                initial={{ opacity: 0, x: 8 }}
+                initial={{ opacity: 0, x: 6 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, x: -6 }}
+                transition={{ duration: 0.22, ease: [0.25, 0.4, 0.25, 1] }}
                 className="text-sm text-slate-400 leading-relaxed mb-6 min-h-[4.5rem]"
               >
                 {t(TOUR_KEYS[tourStep])}
@@ -142,14 +176,14 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
               <button
                 type="button"
                 onClick={finishTour}
-                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors rounded-lg px-1 py-0.5 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
               >
                 {t('app.tour.skip')}
               </button>
               <button
                 type="button"
                 onClick={onTourNext}
-                className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-500/20 hover:opacity-95 transition-opacity"
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-[box-shadow,opacity] duration-200 hover:opacity-95 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
               >
                 {tourStep >= TOUR_KEYS.length - 1 ? t('app.tour.done') : t('app.tour.next')}
               </button>

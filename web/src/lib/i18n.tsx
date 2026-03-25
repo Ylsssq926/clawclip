@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { cn } from './cn'
 
 export type Locale = 'zh' | 'en' | 'ja' | 'ko' | 'es' | 'fr' | 'de'
 
@@ -1369,16 +1370,26 @@ export function useI18n() {
   return useContext(I18nContext)
 }
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ variant = 'shell' }: { variant?: 'shell' | 'landing' }) {
   const { locale, setLocale } = useI18n()
   return (
     <select
       value={locale}
       onChange={(e) => setLocale(e.target.value as Locale)}
-      className="text-[11px] text-slate-400 bg-transparent border border-white/[0.08] rounded-lg px-2 py-1 outline-none cursor-pointer hover:border-white/[0.15] transition-colors"
+      aria-label="Language"
+      className={cn(
+        'text-[11px] rounded-lg px-2 py-1.5 outline-none cursor-pointer transition-[color,background-color,border-color,box-shadow]',
+        variant === 'landing'
+          ? 'text-slate-700 bg-white/90 border border-slate-200/90 shadow-sm hover:bg-white hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(248,250,252)]'
+          : 'text-slate-400 bg-transparent border border-white/[0.08] hover:border-white/[0.15] focus-visible:ring-2 focus-visible:ring-blue-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1120]',
+      )}
     >
       {(Object.entries(LOCALE_LABELS) as [Locale, string][]).map(([code, label]) => (
-        <option key={code} value={code} className="bg-[#0b1120] text-slate-300">
+        <option
+          key={code}
+          value={code}
+          className={variant === 'landing' ? 'bg-white text-slate-800' : 'bg-[#0b1120] text-slate-300'}
+        >
           {label}
         </option>
       ))}

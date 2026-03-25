@@ -84,33 +84,36 @@ export default function Landing({ onEnterDemo }: Props) {
         <div className="absolute top-[35%] right-[5%] w-[300px] h-[300px] bg-emerald-100/10 rounded-full blur-[80px]" />
       </div>
 
-      {/* Nav */}
-      <nav className="relative z-10 flex flex-wrap items-center justify-between gap-3 px-6 lg:px-16 py-5 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🍤</span>
-            <span className="text-lg font-bold text-slate-900">{t('app.name')}</span>
-            <span className="text-xs text-slate-500">ClawClip</span>
+      {/* Nav — sticky glass bar for scroll stability */}
+      <header className="sticky top-0 z-50 border-b border-slate-200/50 bg-white/75 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/65">
+        <nav className="relative flex flex-wrap items-center justify-between gap-3 px-6 lg:px-16 py-4 max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🍤</span>
+              <span className="text-lg font-bold text-slate-900">{t('app.name')}</span>
+              <span className="text-xs text-slate-500">ClawClip</span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <a
-            href="https://github.com/Ylsssq926/clawclip"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-lg hover:bg-blue-50"
-          >
-            <Github className="w-4 h-4" /> GitHub
-          </a>
-          <LanguageSwitcher />
-          <button
-            onClick={onEnterDemo}
-            className="text-sm font-medium px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-300/40 hover:shadow-blue-300/50 transition-all hover:scale-[1.03] active:scale-[0.98]"
-          >
-            {t('landing.cta.demo')}
-          </button>
-        </div>
-      </nav>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/Ylsssq926/clawclip"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-lg hover:bg-blue-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white/80"
+            >
+              <Github className="w-4 h-4" /> GitHub
+            </a>
+            <LanguageSwitcher variant="landing" />
+            <button
+              type="button"
+              onClick={onEnterDemo}
+              className="text-sm font-medium px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-400/35 hover:shadow-lg hover:shadow-blue-400/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
+            >
+              {t('landing.cta.demo')}
+            </button>
+          </div>
+        </nav>
+      </header>
 
       {/* Hero */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pt-20 pb-24 lg:pt-28 lg:pb-32">
@@ -137,8 +140,9 @@ export default function Landing({ onEnterDemo }: Props) {
 
           <div className="flex flex-wrap gap-4">
             <button
+              type="button"
               onClick={onEnterDemo}
-              className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-base shadow-xl shadow-blue-300/40 hover:shadow-blue-300/50 transition-all hover:scale-[1.03] active:scale-[0.98]"
+              className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-base shadow-lg shadow-blue-400/35 hover:shadow-xl hover:shadow-blue-400/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               <Play className="w-5 h-5" />
               {t('landing.cta.demo')}
@@ -148,7 +152,7 @@ export default function Landing({ onEnterDemo }: Props) {
               href="https://github.com/Ylsssq926/clawclip"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-8 py-4 rounded-2xl border border-blue-100 text-slate-700 font-medium text-base hover:bg-blue-50 hover:border-blue-200 transition-all"
+              className="flex items-center gap-3 px-8 py-4 rounded-2xl border border-blue-100 text-slate-700 font-medium text-base bg-white/50 hover:bg-blue-50/90 hover:border-blue-200 transition-[transform,background-color,border-color] duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               <Github className="w-5 h-5" />
               {t('landing.cta.source')}
@@ -302,8 +306,9 @@ export default function Landing({ onEnterDemo }: Props) {
               ))}
             </div>
             <button
+              type="button"
               onClick={onEnterDemo}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm shadow-lg shadow-amber-300/30 hover:shadow-amber-300/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm shadow-md shadow-amber-400/30 hover:shadow-lg hover:shadow-amber-400/40 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.01] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50/90"
             >
               {t('landing.leaderboard.cta')}
             </button>
@@ -364,8 +369,9 @@ export default function Landing({ onEnterDemo }: Props) {
               {t('landing.preview.desc')}
             </p>
             <button
+              type="button"
               onClick={onEnterDemo}
-              className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-xl shadow-blue-300/40 hover:shadow-blue-300/50 transition-all hover:scale-[1.03] active:scale-[0.98]"
+              className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-lg shadow-blue-400/35 hover:shadow-xl hover:shadow-blue-400/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               <Play className="w-5 h-5" />
               {t('landing.preview.cta')}

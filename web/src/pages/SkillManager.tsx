@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Search, Trash2, Download } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
-import { apiGet, apiPost } from '../lib/api'
+import { ApiError, apiGet, apiPost } from '../lib/api'
+
+/** 展示服务端返回的 error + hint，避免只显示泛化文案 */
+function formatUserApiError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    try {
+      const b = JSON.parse(err.body || '{}') as { error?: string; hint?: string }
+      const line = [b.error, b.hint].filter(x => typeof x === 'string' && x.trim()).join(' ')
+      if (line) return line
+    } catch {
+      /* ignore */
+    }
+  }
+  return fallback
+}
 
 interface Skill {
   name: string
@@ -21,7 +35,7 @@ export default function SkillManager() {
   useEffect(() => {
     apiGet<Skill[]>('/api/skills')
       .then(d => setSkills(Array.isArray(d) ? d : []))
-      .catch(() => { setError(t('skills.error.network')) })
+      .catch(err => { setError(formatUserApiError(err, t('skills.error.network'))) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -38,8 +52,8 @@ export default function SkillManager() {
       } else {
         setError(result.message || t('skills.error.install'))
       }
-    } catch {
-      setError(t('skills.error.install'))
+    } catch (err) {
+      setError(formatUserApiError(err, t('skills.error.install')))
     } finally {
       setInstalling(null)
     }
@@ -54,8 +68,8 @@ export default function SkillManager() {
       } else {
         setError(result.message ?? t('skills.error.network'))
       }
-    } catch {
-      setError(t('skills.error.network'))
+    } catch (err) {
+      setError(formatUserApiError(err, t('skills.error.network')))
     }
   }
 

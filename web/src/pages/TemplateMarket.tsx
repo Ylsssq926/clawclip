@@ -1,7 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Check, ArrowRight } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
-import { apiGet, apiPost } from '../lib/api'
+import { ApiError, apiGet, apiPost } from '../lib/api'
+
+function formatUserApiError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    try {
+      const b = JSON.parse(err.body || '{}') as { error?: string; hint?: string }
+      const line = [b.error, b.hint].filter(x => typeof x === 'string' && x.trim()).join(' ')
+      if (line) return line
+    } catch {
+      /* ignore */
+    }
+  }
+  return fallback
+}
 
 interface Template {
   id: string
@@ -36,7 +49,7 @@ export default function TemplateMarket() {
   useEffect(() => {
     apiGet<Template[]>('/api/templates')
       .then(d => setTemplates(Array.isArray(d) ? d : []))
-      .catch(() => { setError(t('templates.error.network')) })
+      .catch(err => { setError(formatUserApiError(err, t('templates.error.network'))) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -55,8 +68,8 @@ export default function TemplateMarket() {
       } else {
         setError(result.message || t('templates.error.apply'))
       }
-    } catch {
-      setError(t('templates.error.apply'))
+    } catch (err) {
+      setError(formatUserApiError(err, t('templates.error.apply')))
     } finally {
       setApplying(null)
     }

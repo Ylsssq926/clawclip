@@ -3,6 +3,15 @@ import { benchmarkRunner } from '../services/benchmark-runner.js';
 
 const router = Router();
 
+/** GET /api/benchmark/meta — 评测数据是否基于内置 Demo 会话 */
+router.get('/meta', (_req, res) => {
+  try {
+    res.json({ dataSource: benchmarkRunner.getSessionDataSource() });
+  } catch (e) {
+    res.status(500).json({ error: '获取评测元信息失败', detail: String(e) });
+  }
+});
+
 /** POST /api/benchmark/run — 执行评测（离线分析，不调 LLM） */
 router.post('/run', (_req, res) => {
   try {

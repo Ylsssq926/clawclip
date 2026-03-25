@@ -6,30 +6,9 @@ import GlowCard from '../components/ui/GlowCard'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
+import type { SessionMeta } from '../types/session'
 
 const TAG_ALL = '__all__'
-
-interface SessionMeta {
-  id: string
-  agentName: string
-  dataSource?: string
-  sessionLabel?: string
-  sessionKey?: string
-  storeUpdatedAt?: number
-  storeContextTokens?: number
-  storeTotalTokens?: number
-  storeModel?: string
-  storeChannel?: string
-  storeProvider?: string
-  startTime: string
-  endTime: string
-  durationMs: number
-  totalCost: number
-  totalTokens: number
-  modelUsed: string[]
-  stepCount: number
-  summary: string
-}
 
 function replaySessionTitle(m: SessionMeta, untitled: string): string {
   return (m.sessionLabel?.trim() || m.summary?.trim() || '').slice(0, 120) || untitled
@@ -251,6 +230,7 @@ export default function Replay() {
   const [speed, setSpeed] = useState<'slow' | 'normal' | 'fast'>('normal')
   const [showAllSteps, setShowAllSteps] = useState(false)
   const lastStepRef = useRef<HTMLDivElement | null>(null)
+  const [demoReplayHint, setDemoReplayHint] = useState(false)
 
   const tagColorByTag = useMemo(() => {
     const m = new Map<string, string>()
@@ -280,6 +260,10 @@ export default function Replay() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         return r.json() as Promise<SessionMeta[]>
       }),
+      fetch('/api/status')
+        .then(r => (r.ok ? r.json() : null))
+        .then((s: { hasRealSessionData?: boolean } | null) => !(s?.hasRealSessionData ?? false))
+        .catch(() => true),
       fetch('/api/analytics/session-tags')
         .then(r => (r.ok ? r.json() : null))
         .then(data => parseSessionTags(data))
@@ -289,8 +273,9 @@ export default function Replay() {
         .then(data => (Array.isArray(data) ? (data as TagInfo[]) : []))
         .catch(() => [] as TagInfo[]),
     ])
-      .then(([sess, st, tags]) => {
+      .then(([sess, isDemoData, st, tags]) => {
         setSessions(Array.isArray(sess) ? sess : [])
+        setDemoReplayHint(Boolean(isDemoData) && Array.isArray(sess) && sess.length > 0)
         setSessionTags(st)
         setTagInfos(tags)
       })
@@ -588,6 +573,12 @@ export default function Replay() {
     <div>
       <h2 className="text-2xl font-bold mb-1">{t('replay.title')}</h2>
       <p className="text-slate-400 text-sm mb-6">{t('replay.subtitle')}</p>
+
+      {demoReplayHint && (
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90">
+          {t('demo.hint.replay')}
+        </div>
+      )}
 
       {!loading && !error && (
         <div className="flex flex-wrap gap-2 mb-6">

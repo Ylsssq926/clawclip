@@ -6,6 +6,7 @@ import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import GradientText from '../components/ui/GradientText'
 import ShimmerButton from '../components/ui/ShimmerButton'
+import { useI18n } from '../lib/i18n'
 import {
   RadarChart,
   PolarGrid,
@@ -118,6 +119,7 @@ function mergeTimelineHistory(history: BenchmarkResult[], latest: BenchmarkResul
 }
 
 export default function Benchmark() {
+  const { t, locale } = useI18n()
   const [result, setResult] = useState<BenchmarkResult | null>(null)
   const [history, setHistory] = useState<BenchmarkResult[]>([])
   const [compareId, setCompareId] = useState<string | null>(null)
@@ -125,28 +127,41 @@ export default function Benchmark() {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDimTrend, setShowDimTrend] = useState(false)
+  const [dataSource, setDataSource] = useState<'demo' | 'real' | null>(null)
+  const [showRadarHelp, setShowRadarHelp] = useState(false)
+  const [showCurveHelp, setShowCurveHelp] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [latestRes, histRes] = await Promise.all([fetch('/api/benchmark/latest'), fetch('/api/benchmark/history')])
+      const [latestRes, histRes, metaRes] = await Promise.all([
+        fetch('/api/benchmark/latest'),
+        fetch('/api/benchmark/history'),
+        fetch('/api/benchmark/meta'),
+      ])
+      if (metaRes.ok) {
+        const meta = (await metaRes.json()) as { dataSource?: string }
+        setDataSource(meta.dataSource === 'real' ? 'real' : 'demo')
+      } else {
+        setDataSource(null)
+      }
       if (latestRes.status === 404) {
         setResult(null)
       } else {
-        if (!latestRes.ok) throw new Error(`最新评测 HTTP ${latestRes.status}`)
+        if (!latestRes.ok) throw new Error(`latest ${latestRes.status}`)
         const latest: BenchmarkResult = await latestRes.json()
         setResult(latest)
       }
-      if (!histRes.ok) throw new Error(`历史记录 HTTP ${histRes.status}`)
+      if (!histRes.ok) throw new Error(`history ${histRes.status}`)
       const histBody: { results?: BenchmarkResult[] } = await histRes.json()
       setHistory(Array.isArray(histBody.results) ? histBody.results : [])
     } catch {
-      setError('获取评测数据失败')
+      setError(t('benchmark.error.load'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void loadData()
@@ -207,13 +222,17 @@ export default function Benchmark() {
       const data: BenchmarkResult = await res.json()
       setResult(data)
       setCompareId(null)
-      const histRes = await fetch('/api/benchmark/history')
+      const [histRes, metaRes] = await Promise.all([fetch('/api/benchmark/history'), fetch('/api/benchmark/meta')])
+      if (metaRes.ok) {
+        const meta = (await metaRes.json()) as { dataSource?: string }
+        setDataSource(meta.dataSource === 'real' ? 'real' : 'demo')
+      }
       if (histRes.ok) {
         const histBody: { results?: BenchmarkResult[] } = await histRes.json()
         setHistory(Array.isArray(histBody.results) ? histBody.results : [])
       }
     } catch {
-      setError('评测执行失败，请检查后端是否运行')
+      setError(t('benchmark.error.run'))
     } finally {
       setRunning(false)
     }
@@ -223,11 +242,20 @@ export default function Benchmark() {
     if (result && compareId === result.id) setCompareId(null)
   }, [result, compareId])
 
+  const dateLocale =
+    locale === 'zh' ? 'zh-CN'
+    : locale === 'en' ? 'en-US'
+    : locale === 'ja' ? 'ja-JP'
+    : locale === 'ko' ? 'ko-KR'
+    : locale === 'de' ? 'de-DE'
+    : locale === 'fr' ? 'fr-FR'
+    : 'es-ES'
+
   if (loading) {
     return (
       <div>
-        <h2 className="text-2xl font-bold mb-1">能力评测</h2>
-        <div className="text-center py-12 text-slate-500">加载中...</div>
+        <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
+        <div className="text-center py-12 text-slate-500">{t('benchmark.loading')}</div>
       </div>
     )
   }
@@ -235,25 +263,25 @@ export default function Benchmark() {
   if (!result && !error) {
     return (
       <div>
-        <h2 className="text-2xl font-bold mb-1">能力评测</h2>
-        <p className="text-slate-400 text-sm mb-8">给你的龙虾做个体检，看看它到底行不行</p>
+        <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
+        <p className="text-slate-400 text-sm mb-8">{t('benchmark.subtitle')}</p>
 
         <FadeIn className="flex flex-col items-center justify-center py-16">
           <div className="text-6xl mb-6">🩺</div>
           <h3 className="text-xl font-semibold mb-2">
-            <GradientText animate={false}>还没做过评测</GradientText>
+            <GradientText animate={false}>{t('benchmark.empty.title')}</GradientText>
           </h3>
           <p className="text-slate-400 text-sm mb-6 text-center max-w-md">
-            评测会分析你的 Agent 历史会话数据，从中文写作、代码、工具调用、检索、安全、性价比六个维度打分。不会调用任何 API，不花钱。
+            {t('benchmark.empty.desc')}
           </p>
           <ShimmerButton variant="primary" onClick={runBenchmark} disabled={running} className="px-8 py-3 rounded-xl text-base">
             {running ? (
               <>
-                <RefreshCw className="w-5 h-5 animate-spin" /> 评测中...
+                <RefreshCw className="w-5 h-5 animate-spin" /> {t('benchmark.running')}
               </>
             ) : (
               <>
-                <Play className="w-5 h-5" /> 开始评测
+                <Play className="w-5 h-5" /> {t('benchmark.runStart')}
               </>
             )}
           </ShimmerButton>
@@ -264,13 +292,14 @@ export default function Benchmark() {
 
   const rankStyle = RANK_STYLES[result?.rank || 'C'] || RANK_STYLES.C
   const compareOptions = result ? history.filter(h => h.id !== result.id) : []
+  const curveNote = dataSource === 'demo' ? t('benchmark.curve.demo') : dataSource === 'real' ? t('benchmark.curve.real') : ''
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold mb-1">能力评测</h2>
-          <p className="text-slate-400 text-sm">给你的龙虾做个体检，看看它到底行不行</p>
+          <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
+          <p className="text-slate-400 text-sm">{t('benchmark.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           {result && (
@@ -280,7 +309,7 @@ export default function Benchmark() {
               rel="noopener noreferrer"
               className="px-4 py-2 bg-accent hover:opacity-90 rounded-lg text-sm font-medium transition-opacity text-white flex items-center gap-2"
             >
-              <Share2 className="w-4 h-4" /> 分享成绩单
+              <Share2 className="w-4 h-4" /> {t('benchmark.share')}
             </a>
           )}
           <ShimmerButton
@@ -291,11 +320,11 @@ export default function Benchmark() {
           >
             {running ? (
               <>
-                <RefreshCw className="w-4 h-4 animate-spin" /> 评测中...
+                <RefreshCw className="w-4 h-4 animate-spin" /> {t('benchmark.running')}
               </>
             ) : (
               <>
-                <RefreshCw className="w-4 h-4" /> 重新评测
+                <RefreshCw className="w-4 h-4" /> {t('benchmark.rerun')}
               </>
             )}
           </ShimmerButton>
@@ -304,9 +333,14 @@ export default function Benchmark() {
 
       {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-300 text-sm">{error}</div>}
 
+      {dataSource === 'demo' && (
+        <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.06] px-4 py-3 text-xs text-cyan-200/90">
+          {t('demo.hint.benchmark')}
+        </div>
+      )}
+
       {result && (
         <>
-          {/* 区域1: 成绩单大卡 */}
           <GlowCard className={`rounded-2xl mb-6 ${rankStyle.bg} ${rankStyle.glow} border-surface-border`}>
             <div className="p-6">
             <div className="flex items-center gap-6">
@@ -319,7 +353,7 @@ export default function Benchmark() {
                 >
                   {result.rank}
                 </motion.div>
-                <div className="text-xs text-slate-500 mt-1">评级</div>
+                <div className="text-xs text-slate-500 mt-1">{t('benchmark.rankLabel')}</div>
               </div>
               <div className="flex-1">
                 <div className="flex items-baseline gap-2 mb-2">
@@ -335,31 +369,46 @@ export default function Benchmark() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t border-white/10">
               <div>
-                <span className="text-xs text-slate-500">分析会话</span>
+                <span className="text-xs text-slate-500">{t('benchmark.metric.sessions')}</span>
                 <div className="text-lg font-semibold text-white">{result.totalSessions}</div>
               </div>
               <div>
-                <span className="text-xs text-slate-500">总 Token</span>
+                <span className="text-xs text-slate-500">{t('benchmark.metric.tokens')}</span>
                 <div className="text-lg font-semibold text-blue-400">{result.totalTokens.toLocaleString()}</div>
               </div>
               <div>
-                <span className="text-xs text-slate-500">总花费</span>
+                <span className="text-xs text-slate-500">{t('benchmark.metric.cost')}</span>
                 <div className="text-lg font-semibold text-accent">¥{result.totalCost.toFixed(2)}</div>
               </div>
               <div>
-                <span className="text-xs text-slate-500">常用模型</span>
+                <span className="text-xs text-slate-500">{t('benchmark.metric.model')}</span>
                 <div className="text-lg font-semibold text-green-400">{result.topModel}</div>
               </div>
             </div>
             </div>
           </GlowCard>
 
-          {/* 区域2: 六维雷达 */}
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-accent" />
-              <GradientText animate={false}>六维能力雷达</GradientText>
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-accent" />
+                <GradientText animate={false}>{t('benchmark.radar.title')}</GradientText>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowRadarHelp(v => !v)}
+                className="text-xs text-accent hover:opacity-80 shrink-0 flex items-center gap-1"
+              >
+                {showRadarHelp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                {t('benchmark.radar.toggle')}
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">{t('benchmark.radar.short')}</p>
+            {showRadarHelp && (
+              <p className="text-xs text-slate-400 mb-4 leading-relaxed border border-white/[0.06] rounded-lg p-3 bg-white/[0.02]">
+                {t('benchmark.radar.long')}
+              </p>
+            )}
             <div className="h-[320px] w-full mb-6">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
@@ -367,7 +416,7 @@ export default function Benchmark() {
                   <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12 }} />
                   <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 10 }} />
                   <Radar
-                    name="当前"
+                    name={t('benchmark.legend.current')}
                     dataKey="score"
                     stroke="#f97316"
                     strokeWidth={2}
@@ -376,11 +425,11 @@ export default function Benchmark() {
                   />
                   {compareResult && (
                     <Radar
-                      name="对比"
+                      name={t('benchmark.legend.compare')}
                       dataKey="compareScore"
-                      stroke="#3b82f6"
+                      stroke="#3b82c4"
                       strokeWidth={2}
-                      fill="#3b82f6"
+                      fill="#3b82c4"
                       fillOpacity={0.2}
                     />
                   )}
@@ -438,21 +487,40 @@ export default function Benchmark() {
             </div>
           </div>
 
-          {/* 区域3+4: 对比下拉 + 进化曲线 */}
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h3 className="text-lg font-semibold">能力进化曲线</h3>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+              <div>
+                <h3 className="text-lg font-semibold">{t('benchmark.curve.title')}</h3>
+                <p className="text-xs text-slate-500 mt-1">{t('benchmark.curve.oneLiner')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCurveHelp(v => !v)}
+                className="text-xs text-accent hover:opacity-80 shrink-0 flex items-center gap-1 self-start"
+              >
+                {showCurveHelp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                {t('benchmark.curve.toggle')}
+              </button>
+            </div>
+            {curveNote && <p className="text-xs text-amber-200/80 mb-3">{curveNote}</p>}
+            {showCurveHelp && (
+              <p className="text-xs text-slate-400 mb-4 leading-relaxed border border-white/[0.06] rounded-lg p-3 bg-white/[0.02]">
+                {t('benchmark.curve.long')}
+              </p>
+            )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-4">
               <label className="flex items-center gap-2 text-sm text-slate-400 shrink-0">
-                <span>对比历史评测</span>
+                <span>{t('benchmark.compare.label')}</span>
                 <select
                   value={compareId ?? ''}
                   onChange={e => setCompareId(e.target.value || null)}
                   className="glass-raised border border-surface-border rounded-lg px-3 py-2 text-slate-200 text-sm min-w-[200px] max-w-full bg-surface-raised"
                 >
-                  <option value="">不对比</option>
+                  <option value="">{t('benchmark.compare.none')}</option>
                   {compareOptions.map(h => (
                     <option key={h.id} value={h.id}>
-                      {formatRunDate(h.runAt)} · {h.rank}档 · {h.overallScore}分
+                      {formatRunDate(h.runAt)} · {h.rank}{t('benchmark.rankSuffix')} · {h.overallScore}{t('benchmark.scoreUnit')}
                     </option>
                   ))}
                 </select>
@@ -460,7 +528,7 @@ export default function Benchmark() {
             </div>
 
             {overallTrendData.length === 0 ? (
-              <p className="text-sm text-slate-500 py-8 text-center">暂无历史数据，多跑几次评测后可见趋势</p>
+              <p className="text-sm text-slate-500 py-8 text-center">{t('benchmark.noHistory')}</p>
             ) : (
               <div className="h-[280px] w-full mb-2">
                 <ResponsiveContainer width="100%" height="100%">
@@ -469,7 +537,7 @@ export default function Benchmark() {
                     <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
                     <YAxis domain={[0, 100]} stroke="#64748b" tick={{ fontSize: 12 }} />
                     <Tooltip {...chartTooltipProps} />
-                    <Line type="monotone" dataKey="overallScore" stroke="#f97316" strokeWidth={2} dot={{ r: 4, fill: '#f97316' }} name="综合分">
+                    <Line type="monotone" dataKey="overallScore" stroke="#f97316" strokeWidth={2} dot={{ r: 4, fill: '#f97316' }} name={t('benchmark.line.overall')}>
                       <LabelList
                         dataKey="rank"
                         position="top"
@@ -482,13 +550,14 @@ export default function Benchmark() {
               </div>
             )}
 
+            <p className="text-xs text-slate-500 mb-2">{t('benchmark.dimTrend.hint')}</p>
             <button
               type="button"
               onClick={() => setShowDimTrend(v => !v)}
-              className="flex items-center gap-2 text-sm text-accent hover:opacity-80 mt-4 mb-2 transition-opacity"
+              className="flex items-center gap-2 text-sm text-accent hover:opacity-80 mt-2 mb-2 transition-opacity"
             >
               {showDimTrend ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              查看各维度趋势
+              {t('benchmark.dimTrend')}
             </button>
 
             {showDimTrend && dimKeys.length > 0 && dimTrendData.length > 0 && (
@@ -528,13 +597,19 @@ export default function Benchmark() {
             )}
           </div>
 
-          <div className="glass-raised rounded-xl p-5 border border-surface-border text-center">
+          <div className="glass-raised rounded-xl p-5 border border-surface-border text-center mb-4">
             <Zap className="w-5 h-5 text-accent mx-auto mb-2" />
             <p className="text-xs text-slate-500">
-              评测基于本地 Agent 日志离线分析，不调用任何 API，不产生费用。使用龙虾越多，评测越准确。
+              {t('benchmark.footer')}
             </p>
+            <div className="mt-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-left">
+              <p className="text-[11px] font-medium text-slate-400 mb-1">{t('savings.hint.title')}</p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">{t('savings.hint.body')}</p>
+            </div>
             {result.runAt && (
-              <p className="text-xs text-slate-600 mt-1">上次评测: {new Date(result.runAt).toLocaleString('zh-CN')}</p>
+              <p className="text-xs text-slate-600 mt-3">
+                {t('benchmark.lastRun')}: {new Date(result.runAt).toLocaleString(dateLocale)}
+              </p>
             )}
           </div>
         </>

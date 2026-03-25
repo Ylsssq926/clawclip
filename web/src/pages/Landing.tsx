@@ -144,6 +144,41 @@ export default function Landing({ onEnterDemo }: Props) {
         </motion.div>
       </section>
 
+      {/* Data journey */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pb-24">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.55 }}
+        >
+          <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">{t('landing.journey.title')}</h2>
+          <p className="text-slate-500 mb-10 max-w-2xl leading-relaxed">{t('landing.journey.sub')}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {(
+              [
+                { step: 1, icon: Terminal, titleKey: 'landing.journey.s1t' as const, descKey: 'landing.journey.s1d' as const },
+                { step: 2, icon: Play, titleKey: 'landing.journey.s2t' as const, descKey: 'landing.journey.s2d' as const },
+                { step: 3, icon: Trophy, titleKey: 'landing.journey.s3t' as const, descKey: 'landing.journey.s3d' as const },
+                { step: 4, icon: BarChart3, titleKey: 'landing.journey.s4t' as const, descKey: 'landing.journey.s4d' as const },
+              ] as const
+            ).map(({ step, icon: Ico, titleKey, descKey }) => (
+              <div
+                key={titleKey}
+                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 hover:border-white/[0.12] transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xs font-mono text-[#3b82c4]/90 tabular-nums">0{step}</span>
+                  <Ico className="w-4 h-4 text-cyan-400/90 shrink-0" />
+                </div>
+                <h3 className="text-sm font-semibold text-white mb-2">{t(titleKey)}</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">{t(descKey)}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
       {/* Features */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pb-24">
         <motion.div

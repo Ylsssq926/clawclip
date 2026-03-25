@@ -5,6 +5,7 @@ import WordCloud, { type KeywordItem } from '../components/WordCloud'
 import { useI18n, type Locale } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
 import { cn } from '../lib/cn'
+import type { SessionMeta } from '../types/session'
 
 interface LobsterDataRootStatus {
   id: string
@@ -39,27 +40,6 @@ interface CostSummary {
   totalCost: number
   totalTokens: number
   trend: 'up' | 'down' | 'stable'
-}
-
-interface SessionMeta {
-  id: string
-  agentName: string
-  dataSource?: string
-  sessionLabel?: string
-  sessionKey?: string
-  storeUpdatedAt?: number
-  storeContextTokens?: number
-  storeTotalTokens?: number
-  storeModel?: string
-  storeChannel?: string
-  storeProvider?: string
-  startTime: string
-  durationMs: number
-  totalCost: number
-  totalTokens: number
-  modelUsed: string[]
-  stepCount: number
-  summary: string
 }
 
 function sessionListTitle(s: SessionMeta, locale: Locale): string {
@@ -145,7 +125,7 @@ export default function Dashboard({ onNavigate }: Props) {
       iconColor: status?.running ? 'text-emerald-400' : 'text-slate-500',
     },
     {
-      label: '本月费用',
+      label: t('dashboard.stat.monthCost'),
       value: `¥${(cost?.totalCost ?? 0).toFixed(2)}`,
       sub: cost ? `${cost.totalTokens.toLocaleString()} ${t('replay.list.tokensUnit')}` : null,
       icon: DollarSign,
@@ -154,18 +134,18 @@ export default function Dashboard({ onNavigate }: Props) {
       iconColor: 'text-cyan-400',
     },
     {
-      label: '已装 Skills',
+      label: t('dashboard.stat.skillsLabel'),
       value: String(status?.skillCount ?? 0),
-      sub: '个技能',
+      sub: t('dashboard.stat.skillsSub'),
       icon: Puzzle,
       variant: 'card-blue',
       color: 'text-blue-400',
       iconColor: 'text-blue-400',
     },
     {
-      label: '已连接平台',
+      label: t('dashboard.stat.channelsLabel'),
       value: String(status?.channels?.length ?? 0),
-      sub: status?.channels?.length ? status.channels.join(', ') : '无',
+      sub: status?.channels?.length ? status.channels.join(', ') : t('dashboard.stat.none'),
       icon: Activity,
       variant: 'card-purple',
       color: 'text-violet-400',
@@ -183,14 +163,16 @@ export default function Dashboard({ onNavigate }: Props) {
         </h2>
         <p className="text-slate-500 mt-2 text-sm">
           {status?.running
-            ? locale === 'en'
-              ? `Your lobster is working, ${status.skillCount} skills equipped`
-              : `你的龙虾正在工作中，已装备 ${status.skillCount} 个技能`
-            : locale === 'en'
-              ? 'Your lobster is offline — start OpenClaw / ZeroClaw (or compatible CLI) and refresh'
-              : '你的龙虾还没上线，启动 OpenClaw / ZeroClaw（或兼容 CLI）后刷新即可'}
+            ? t('dashboard.hero.running').replace('{skills}', String(status.skillCount))
+            : t('dashboard.hero.offline')}
         </p>
       </div>
+
+      {!loading && status && !status.hasRealSessionData && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90 animate-fade-in">
+          {t('demo.hint.dashboard')}
+        </div>
+      )}
 
       {!loading && status && (
         <div
@@ -273,24 +255,24 @@ export default function Dashboard({ onNavigate }: Props) {
             {
               tab: 'replay' as const,
               icon: '🎬',
-              title: locale === 'en' ? 'Session replay' : '会话回放',
-              desc: locale === 'en' ? 'See every step your lobster takes' : '看看龙虾每一步在干什么',
+              title: t('replay.title'),
+              desc: t('replay.subtitle'),
               color: 'card-blue',
               textColor: 'text-blue-400',
             },
             {
               tab: 'cost' as const,
               icon: '📊',
-              title: locale === 'en' ? 'Cost monitor' : '费用监控',
-              desc: locale === 'en' ? 'See where your spend goes' : '看看钱都花哪了',
+              title: t('cost.title'),
+              desc: t('cost.empty.desc'),
               color: 'card-blue',
               textColor: 'text-blue-400',
             },
             {
               tab: 'benchmark' as const,
               icon: '🏆',
-              title: locale === 'en' ? 'Benchmark' : '能力评测',
-              desc: locale === 'en' ? 'Six-dimension health check' : '给龙虾做六维体检',
+              title: t('nav.benchmark'),
+              desc: t('benchmark.subtitle'),
               color: 'card-purple',
               textColor: 'text-violet-400',
             },
@@ -305,7 +287,7 @@ export default function Dashboard({ onNavigate }: Props) {
               <h4 className="font-semibold text-white mb-1">{item.title}</h4>
               <p className="text-xs text-slate-500 mb-3">{item.desc}</p>
               <span className={`${item.textColor} text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all`}>
-                {locale === 'en' ? 'Open' : '查看'} <ArrowRight className="w-3 h-3" />
+                {t('dashboard.quick.open')} <ArrowRight className="w-3 h-3" />
               </span>
             </button>
           ))}
@@ -330,7 +312,7 @@ export default function Dashboard({ onNavigate }: Props) {
           ) : keywords.length > 0 ? (
             <WordCloud keywords={keywords} onWordClick={() => onNavigate('replay')} height={200} />
           ) : (
-            <p className="text-xs text-slate-600 py-8 text-center">{locale === 'en' ? 'No data yet' : '暂无数据'}</p>
+            <p className="text-xs text-slate-600 py-8 text-center">{t('dashboard.keywords.empty')}</p>
           )}
         </div>
 
@@ -350,7 +332,7 @@ export default function Dashboard({ onNavigate }: Props) {
               {[1,2,3].map(i => <div key={i} className="skeleton h-16 w-full" />)}
             </div>
           ) : sessions.length === 0 ? (
-            <p className="text-xs text-slate-600 py-8 text-center">{locale === 'en' ? 'No sessions yet' : '暂无会话记录'}</p>
+            <p className="text-xs text-slate-600 py-8 text-center">{t('dashboard.recent.empty')}</p>
           ) : (
             <div className="space-y-2">
               {sessions.slice(0, 5).map(s => {

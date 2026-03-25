@@ -774,6 +774,12 @@ export class BenchmarkRunner {
     }
     return results.reduce((a, b) => (a.runAt.getTime() >= b.runAt.getTime() ? a : b));
   }
+
+  /** 当前会话列表是否仅为内置 Demo（用于前端说明「示例曲线」vs 真实数据） */
+  getSessionDataSource(): 'demo' | 'real' {
+    const metas = sessionParser.getSessions();
+    return isBuiltinDemoOnly(metas) ? 'demo' : 'real';
+  }
 }
 
 export const benchmarkRunner = new BenchmarkRunner();

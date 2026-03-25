@@ -58,6 +58,7 @@ export default function CostMonitor() {
   const [days, setDays] = useState(7)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [demoCostHint, setDemoCostHint] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -72,25 +73,33 @@ export default function CostMonitor() {
     Promise.all([
       safeFetch(`/api/cost/daily?days=${days}`),
       safeFetch(`/api/cost/summary?days=${days}`),
-    ]).then(([d, s]) => {
-      setDaily(d)
-      setSummary(s)
-    }).catch(() => {
-      setError('获取费用数据失败，请检查后端是否运行')
-    }).finally(() => {
-      setLoading(false)
-    })
-  }, [days])
+      fetch('/api/status')
+        .then(r => (r.ok ? r.json() : null))
+        .then((s: { hasRealSessionData?: boolean } | null) => !(s?.hasRealSessionData ?? false))
+        .catch(() => true),
+    ])
+      .then(([d, s, isDemo]) => {
+        setDaily(d)
+        setSummary(s)
+        setDemoCostHint(Boolean(isDemo))
+      })
+      .catch(() => {
+        setError(t('cost.error'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [days, t])
 
   const TrendIcon = summary?.trend === 'up' ? TrendingUp : summary?.trend === 'down' ? TrendingDown : Minus
   const trendColor = summary?.trend === 'up' ? 'text-red-400' : summary?.trend === 'down' ? 'text-green-400' : 'text-slate-400'
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">费用监控</h2>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h2 className="text-2xl font-bold">{t('cost.title')}</h2>
         <div className="flex gap-2">
-          {[7, 14, 30].map(d => (
+          {([7, 14, 30] as const).map(d => (
             <button
               key={d}
               type="button"
@@ -100,11 +109,17 @@ export default function CostMonitor() {
                 days === d ? 'bg-accent text-white' : 'glass-raised text-slate-400 hover:text-white hover:bg-surface-overlay',
               )}
             >
-              {d}天
+              {t('cost.days').replace('{n}', String(d))}
             </button>
           ))}
         </div>
       </div>
+
+      {demoCostHint && (
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90">
+          {t('demo.hint.cost')}
+        </div>
+      )}
 
       {loading && <CostSkeleton />}
 
@@ -114,7 +129,6 @@ export default function CostMonitor() {
         </div>
       )}
 
-      {/* 预算告警 */}
       {!loading && summary?.budget?.isAlert && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
@@ -124,34 +138,37 @@ export default function CostMonitor() {
 
       {!loading && (
         <FadeIn>
-          {/* 统计卡片 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <GlowCard>
               <div className="p-5">
-                <span className="text-sm text-slate-400">总费用</span>
+                <span className="text-sm text-slate-400">{t('cost.card.total')}</span>
                 <div className="text-2xl font-bold text-accent mt-1 tabular-nums">
                   <AnimatedCounter value={summary?.totalCost ?? 0} prefix="¥" decimals={2} duration={1000} />
                 </div>
                 <div className={`flex items-center gap-1 mt-1 text-xs ${trendColor}`}>
                   <TrendIcon className="w-3 h-3" />
-                  <span>{summary?.comparedToLastMonth?.toFixed(1) ?? 0}% 环比</span>
+                  <span>
+                    {t('cost.card.mom').replace('{n}', String(summary?.comparedToLastMonth?.toFixed(1) ?? '0'))}
+                  </span>
                 </div>
               </div>
             </GlowCard>
             <GlowCard>
               <div className="p-5">
-                <span className="text-sm text-slate-400">Token 消耗</span>
+                <span className="text-sm text-slate-400">{t('cost.card.tokens')}</span>
                 <div className="text-2xl font-bold text-blue-400 mt-1 tabular-nums">
                   <AnimatedCounter value={summary?.totalTokens ?? 0} decimals={0} duration={1000} />
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
-                  输入 {summary?.inputTokens?.toLocaleString() ?? 0} / 输出 {summary?.outputTokens?.toLocaleString() ?? 0}
+                  {t('cost.card.inOut')
+                    .replace('{in}', String(summary?.inputTokens?.toLocaleString() ?? 0))
+                    .replace('{out}', String(summary?.outputTokens?.toLocaleString() ?? 0))}
                 </div>
               </div>
             </GlowCard>
             <GlowCard>
               <div className="p-5">
-                <span className="text-sm text-slate-400">预算使用</span>
+                <span className="text-sm text-slate-400">{t('cost.card.budget')}</span>
                 <div className="text-2xl font-bold text-purple-400 mt-1 tabular-nums">
                   <AnimatedCounter value={summary?.budget?.percentage ?? 0} decimals={1} suffix="%" duration={1000} />
                 </div>
@@ -167,14 +184,13 @@ export default function CostMonitor() {
             </GlowCard>
           </div>
 
-          {/* 趋势图 */}
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <h3 className="text-lg font-semibold mb-4">费用趋势</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('cost.trend.title')}</h3>
             {summary && summary.totalCost === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-slate-500">
                 <span className="text-4xl mb-3">📉</span>
-                <p className="text-lg mb-1">暂无费用数据</p>
-                <p className="text-sm">启动 OpenClaw 并使用一段时间后，这里会显示费用趋势图</p>
+                <p className="text-lg mb-1">{t('cost.empty.title')}</p>
+                <p className="text-sm text-center max-w-md">{t('cost.empty.desc')}</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
@@ -187,16 +203,15 @@ export default function CostMonitor() {
                     labelStyle={{ color: '#94a3b8' }}
                     itemStyle={{ color: '#e2e8f0' }}
                   />
-                  <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name="费用 (¥)" />
+                  <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={t('cost.chart.series')} />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </div>
 
-          {/* TOP 消耗任务 */}
           {summary?.topTasks && summary.topTasks.length > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border">
-              <h3 className="text-lg font-semibold mb-4">高消耗任务 TOP 5</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('cost.topTasks')}</h3>
               <div className="space-y-3">
                 {summary.topTasks.slice(0, 5).map((task, i) => (
                   <div key={task.taskId} className="flex items-center justify-between py-2 border-b border-surface-border last:border-0">

@@ -20,7 +20,7 @@ export default function SkillManager() {
     fetch('/api/skills')
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then(setSkills)
-      .catch(() => {})
+      .catch(() => { setError(t('skills.error.network')) })
   }, [])
 
   const handleInstall = async () => {
@@ -64,7 +64,9 @@ export default function SkillManager() {
       if (result.success) {
         setSkills(prev => prev.filter(s => s.name !== name))
       }
-    } catch {}
+    } catch {
+      setError(t('skills.error.network'))
+    }
   }
 
   return (

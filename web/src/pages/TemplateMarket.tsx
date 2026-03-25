@@ -36,7 +36,7 @@ export default function TemplateMarket() {
     fetch('/api/templates')
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then(setTemplates)
-      .catch(() => {})
+      .catch(() => { setError(t('templates.error.network')) })
       .finally(() => setLoading(false))
   }, [])
 

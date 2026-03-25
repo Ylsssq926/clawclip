@@ -592,17 +592,17 @@ export default function Replay() {
           >
             {t('replay.tag.all')}
           </button>
-          {tagInfos.map(t => (
+          {tagInfos.map(ti => (
             <button
-              key={t.tag}
+              key={ti.tag}
               type="button"
-              onClick={() => setSelectedTag(t.tag)}
+              onClick={() => setSelectedTag(ti.tag)}
               className={cn(
                 'px-4 py-2 rounded-lg text-sm transition-colors',
-                selectedTag === t.tag ? 'bg-accent text-white' : 'glass-raised text-slate-400 hover:text-white hover:bg-surface-overlay',
+                selectedTag === ti.tag ? 'bg-accent text-white' : 'glass-raised text-slate-400 hover:text-white hover:bg-surface-overlay',
               )}
             >
-              {t.tag}
+              {ti.tag}
             </button>
           ))}
         </div>

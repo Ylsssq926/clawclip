@@ -103,6 +103,8 @@ curl -s http://localhost:8080/api/health
 # → { "ok": true, "service": "clawclip", "ts": "..." }
 ```
 
+Production deployment (PM2, Nginx): [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Type Check (before PR / release)
 
 ```bash

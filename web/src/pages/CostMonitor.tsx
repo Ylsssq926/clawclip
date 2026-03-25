@@ -6,6 +6,7 @@ import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
+import { apiGet, apiGetSafe } from '../lib/api'
 
 interface DailyData {
   date: string
@@ -87,21 +88,13 @@ export default function CostMonitor() {
     setLoading(true)
     setError(null)
 
-    const safeFetch = async (url: string) => {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return res.json()
-    }
-
     Promise.all([
-      safeFetch(`/api/cost/daily?days=${days}`),
-      safeFetch(`/api/cost/summary?days=${days}`),
-      fetch('/api/status')
-        .then(r => (r.ok ? r.json() : null))
-        .then((s: { hasRealSessionData?: boolean } | null) => !(s?.hasRealSessionData ?? false))
-        .catch(() => true),
-      safeFetch(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
-      safeFetch(`/api/cost/savings?days=${days}`).catch(() => null as SavingsReport | null),
+      apiGet<DailyData[]>(`/api/cost/daily?days=${days}`),
+      apiGet<CostSummary>(`/api/cost/summary?days=${days}`),
+      apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
+        .then(s => !(s?.hasRealSessionData ?? false)),
+      apiGet<CostInsight[]>(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
+      apiGetSafe<SavingsReport>(`/api/cost/savings?days=${days}`),
     ])
       .then(([d, s, isDemo, ins, sav]) => {
         setDaily(Array.isArray(d) ? d : [])

@@ -2,6 +2,7 @@ import { useState, useCallback, type DragEvent, type ChangeEvent } from 'react'
 import { Search, Download, Upload, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useI18n } from '../lib/i18n'
+import { apiGet } from '../lib/api'
 
 interface SearchMatch {
   stepIndex: number
@@ -63,11 +64,7 @@ export default function Knowledge() {
     setSearchLoading(true)
     setSearchError(null)
     setSearchResults(null)
-    fetch(`/api/knowledge/search?q=${encodeURIComponent(q)}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`${t('knowledge.search.failStatus')} (${res.status})`)
-        return res.json() as Promise<{ results?: SearchResultItem[] }>
-      })
+    apiGet<{ results?: SearchResultItem[] }>(`/api/knowledge/search?q=${encodeURIComponent(q)}`)
       .then(data => {
         setSearchResults(Array.isArray(data.results) ? data.results : [])
       })

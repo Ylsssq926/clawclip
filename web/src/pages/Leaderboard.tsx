@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Medal, Loader2, AlertCircle, X } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
+import { apiGet, apiPost, ApiError } from '../lib/api'
 
 interface LeaderboardEntry {
   id: string
@@ -77,17 +78,16 @@ export default function Leaderboard() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/leaderboard?limit=50')
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError(typeof data.error === 'string' ? data.error : t('leaderboard.error'))
-        setEntries([])
-        return
-      }
+      const data = await apiGet<{ entries?: LeaderboardEntry[]; isDemo?: boolean }>('/api/leaderboard?limit=50')
       setEntries(Array.isArray(data.entries) ? data.entries : [])
       setIsDemo(Boolean(data.isDemo))
-    } catch {
-      setError(t('leaderboard.error.network'))
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const body = JSON.parse(err.body || '{}')
+        setError(typeof body.error === 'string' ? body.error : t('leaderboard.error'))
+      } else {
+        setError(t('leaderboard.error.network'))
+      }
       setEntries([])
     } finally {
       setLoading(false)
@@ -105,13 +105,8 @@ export default function Leaderboard() {
     setPreviewErr(null)
     setPreviewLoading(true)
     setPreview(null)
-    fetch('/api/benchmark/latest')
-      .then(async r => {
-        const d = await r.json().catch(() => ({}))
-        if (!r.ok) {
-          setPreviewErr(typeof d.error === 'string' ? d.error : t('leaderboard.modal.noData'))
-          return
-        }
+    apiGet<{ overallScore: number; rank?: string; topModel?: string; totalSessions: number }>('/api/benchmark/latest')
+      .then(d => {
         setPreview({
           overallScore: Number(d.overallScore),
           rank: String(d.rank ?? ''),
@@ -119,7 +114,14 @@ export default function Leaderboard() {
           totalSessions: Number(d.totalSessions),
         })
       })
-      .catch(() => setPreviewErr(t('leaderboard.modal.previewError')))
+      .catch((err) => {
+        if (err instanceof ApiError) {
+          const body = JSON.parse(err.body || '{}')
+          setPreviewErr(typeof body.error === 'string' ? body.error : t('leaderboard.modal.noData'))
+        } else {
+          setPreviewErr(t('leaderboard.modal.previewError'))
+        }
+      })
       .finally(() => setPreviewLoading(false))
   }
 
@@ -134,17 +136,7 @@ export default function Leaderboard() {
     setSubmitMsg(null)
     setSubmitOk(false)
     try {
-      const res = await fetch('/api/leaderboard/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: n }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setSubmitOk(false)
-        setSubmitMsg(typeof data.error === 'string' ? data.error : t('leaderboard.modal.fail'))
-        return
-      }
+      const data = await apiPost<{ rank_position?: number }>('/api/leaderboard/submit', { nickname: n })
       const pos = typeof data.rank_position === 'number' ? data.rank_position : '?'
       setSubmitOk(true)
       setSubmitMsg(t('leaderboard.modal.success').replace('{pos}', String(pos)))
@@ -153,9 +145,14 @@ export default function Leaderboard() {
         setModalOpen(false)
         setSubmitMsg(null)
       }, 1200)
-    } catch {
+    } catch (err) {
       setSubmitOk(false)
-      setSubmitMsg(t('leaderboard.error.network'))
+      if (err instanceof ApiError) {
+        const body = JSON.parse(err.body || '{}')
+        setSubmitMsg(typeof body.error === 'string' ? body.error : t('leaderboard.modal.fail'))
+      } else {
+        setSubmitMsg(t('leaderboard.error.network'))
+      }
     } finally {
       setSubmitting(false)
     }

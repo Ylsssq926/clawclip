@@ -6,6 +6,7 @@ import { useI18n, type Locale } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
 import { cn } from '../lib/cn'
 import type { SessionMeta } from '../types/session'
+import { apiGetSafe } from '../lib/api'
 
 interface LobsterDataRootStatus {
   id: string
@@ -66,34 +67,23 @@ export default function Dashboard({ onNavigate }: Props) {
   const [sessionsLoading, setSessionsLoading] = useState(true)
 
   useEffect(() => {
-    const safeFetch = async (url: string) => {
-      try {
-        const res = await fetch(url)
-        if (!res.ok) return null
-        return await res.json()
-      } catch { return null }
-    }
-    Promise.all([safeFetch('/api/status'), safeFetch('/api/cost/summary?days=30')])
+    Promise.all([apiGetSafe('/api/status'), apiGetSafe('/api/cost/summary?days=30')])
       .then(([s, c]) => {
-        setStatus(s); setCost(c)
+        setStatus(s as StatusData | null); setCost(c as CostSummary | null)
         if (!s && !c) setFetchError(true)
       })
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
-    fetch('/api/analytics/keywords?days=30&limit=40')
-      .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(d => setKeywords(Array.isArray(d.keywords) ? d.keywords : []))
-      .catch(() => setKeywords([]))
+    apiGetSafe<{ keywords: KeywordItem[] }>('/api/analytics/keywords?days=30&limit=40')
+      .then(d => setKeywords(Array.isArray(d?.keywords) ? d.keywords : []))
       .finally(() => setKwLoading(false))
   }, [])
 
   useEffect(() => {
-    fetch('/api/replay/sessions?limit=5')
-      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+    apiGetSafe<SessionMeta[]>('/api/replay/sessions?limit=5')
       .then(d => setSessions(Array.isArray(d) ? d : []))
-      .catch(() => setSessions([]))
       .finally(() => setSessionsLoading(false))
   }, [])
 

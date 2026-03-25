@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Check, ArrowRight } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
+import { apiGet, apiPost } from '../lib/api'
 
 interface Template {
   id: string
@@ -33,8 +34,7 @@ export default function TemplateMarket() {
   )
 
   useEffect(() => {
-    fetch('/api/templates')
-      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+    apiGet<Template[]>('/api/templates')
       .then(d => setTemplates(Array.isArray(d) ? d : []))
       .catch(() => { setError(t('templates.error.network')) })
       .finally(() => setLoading(false))
@@ -49,23 +49,14 @@ export default function TemplateMarket() {
     setError(null)
     setApplying(id)
     try {
-      const res = await fetch('/api/templates/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      })
-      if (!res.ok) {
-        setError(t('templates.error.apply'))
-        return
-      }
-      const result = await res.json()
+      const result = await apiPost<{ success: boolean; message?: string }>('/api/templates/apply', { id })
       if (result.success) {
         setApplied(prev => new Set(prev).add(id))
       } else {
         setError(result.message || t('templates.error.apply'))
       }
     } catch {
-      setError(t('templates.error.network'))
+      setError(t('templates.error.apply'))
     } finally {
       setApplying(null)
     }

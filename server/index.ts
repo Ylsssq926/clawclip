@@ -13,6 +13,7 @@ import analyticsRouter from './routes/analytics.js';
 import knowledgeRouter from './routes/knowledge.js';
 import leaderboardRouter from './routes/leaderboard.js';
 import { initPricingFetcher } from './services/pricing-fetcher.js';
+import { log } from './services/logger.js';
 
 const app = express();
 initPricingFetcher();
@@ -22,7 +23,7 @@ app.use(express.json());
 app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   const se = err as SyntaxError & { status?: number; body?: unknown };
   if (err instanceof SyntaxError && se.status === 400 && 'body' in se) {
-    res.status(400).json({ error: 'invalid_json', message: '请求体不是合法 JSON' });
+    res.status(400).json({ error: '请求体不是合法 JSON', code: 'INVALID_JSON' });
     return;
   }
   next(err);
@@ -71,12 +72,12 @@ app.get('*', (_req, res) => {
 });
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('未捕获错误:', err.message);
+  log.error('未捕获错误:', err.message);
   if (!res.headersSent) {
     res.status(500).json({ error: '服务器内部错误' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`🍤 虾片已启动 → http://localhost:${PORT}`);
+  log.info(`🍤 虾片已启动 → http://localhost:${PORT}`);
 });

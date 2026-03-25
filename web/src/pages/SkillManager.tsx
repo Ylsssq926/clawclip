@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Trash2, Download } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
+import { apiGet, apiPost } from '../lib/api'
 
 interface Skill {
   name: string
@@ -17,8 +18,7 @@ export default function SkillManager() {
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/skills')
-      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+    apiGet<Skill[]>('/api/skills')
       .then(d => setSkills(Array.isArray(d) ? d : []))
       .catch(() => { setError(t('skills.error.network')) })
   }, [])
@@ -28,26 +28,16 @@ export default function SkillManager() {
     setError(null)
     setInstalling(search)
     try {
-      const res = await fetch('/api/skills/install', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: search }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        setError(err.error || t('skills.error.install'))
-        return
-      }
-      const result = await res.json()
+      const result = await apiPost<{ success: boolean; message?: string }>('/api/skills/install', { name: search })
       if (result.success) {
         setSearch('')
-        const listRes = await fetch('/api/skills')
-        if (listRes.ok) setSkills(await listRes.json())
+        const list = await apiGet<Skill[]>('/api/skills')
+        setSkills(Array.isArray(list) ? list : [])
       } else {
         setError(result.message || t('skills.error.install'))
       }
     } catch {
-      setError(t('skills.error.network'))
+      setError(t('skills.error.install'))
     } finally {
       setInstalling(null)
     }
@@ -55,12 +45,7 @@ export default function SkillManager() {
 
   const doUninstall = async (name: string) => {
     try {
-      const res = await fetch('/api/skills/uninstall', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      })
-      const result = await res.json()
+      const result = await apiPost<{ success: boolean }>('/api/skills/uninstall', { name })
       if (result.success) {
         setSkills(prev => prev.filter(s => s.name !== name))
       }

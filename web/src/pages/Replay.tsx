@@ -7,6 +7,7 @@ import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
 import type { SessionMeta } from '../types/session'
+import { apiGet, apiGetSafe } from '../lib/api'
 
 const TAG_ALL = '__all__'
 
@@ -256,21 +257,14 @@ export default function Replay() {
       return out
     }
     Promise.all([
-      fetch('/api/replay/sessions?limit=20').then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<SessionMeta[]>
-      }),
-      fetch('/api/status')
-        .then(r => (r.ok ? r.json() : null))
-        .then((s: { hasRealSessionData?: boolean } | null) => !(s?.hasRealSessionData ?? false))
-        .catch(() => true),
-      fetch('/api/analytics/session-tags')
-        .then(r => (r.ok ? r.json() : null))
+      apiGet<SessionMeta[]>('/api/replay/sessions?limit=20'),
+      apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
+        .then(s => !(s?.hasRealSessionData ?? false)),
+      apiGetSafe<Record<string, unknown>>('/api/analytics/session-tags')
         .then(data => parseSessionTags(data))
         .catch(() => ({} as Record<string, string[]>)),
-      fetch('/api/analytics/tags')
-        .then(r => (r.ok ? r.json() : null))
-        .then(data => (Array.isArray(data) ? (data as TagInfo[]) : []))
+      apiGetSafe<TagInfo[]>('/api/analytics/tags')
+        .then(data => (Array.isArray(data) ? data : []))
         .catch(() => [] as TagInfo[]),
     ])
       .then(([sess, isDemoData, st, tags]) => {
@@ -344,8 +338,7 @@ export default function Replay() {
     setLoading(true)
     setError(null)
     setReplay(null)
-    fetch(`/api/replay/sessions/${encodeURIComponent(id)}`)
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+    apiGet<SessionReplay>(`/api/replay/sessions/${encodeURIComponent(id)}`)
       .then(setReplay)
       .catch(() => setError(t('replay.error.detail')))
       .finally(() => setLoading(false))

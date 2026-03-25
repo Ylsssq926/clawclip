@@ -7,6 +7,7 @@ import AnimatedCounter from '../components/ui/AnimatedCounter'
 import GradientText from '../components/ui/GradientText'
 import ShimmerButton from '../components/ui/ShimmerButton'
 import { useI18n } from '../lib/i18n'
+import { apiGet, apiPost, apiGetSafe, ApiError } from '../lib/api'
 import {
   RadarChart,
   PolarGrid,
@@ -135,26 +136,15 @@ export default function Benchmark() {
     setLoading(true)
     setError(null)
     try {
-      const [latestRes, histRes, metaRes] = await Promise.all([
-        fetch('/api/benchmark/latest'),
-        fetch('/api/benchmark/history'),
-        fetch('/api/benchmark/meta'),
+      const [latest, histBody, meta] = await Promise.all([
+        apiGet<BenchmarkResult>('/api/benchmark/latest').catch((e) =>
+          e instanceof ApiError && e.status === 404 ? null : Promise.reject(e),
+        ),
+        apiGet<{ results?: BenchmarkResult[] }>('/api/benchmark/history'),
+        apiGetSafe<{ dataSource?: string }>('/api/benchmark/meta'),
       ])
-      if (metaRes.ok) {
-        const meta = (await metaRes.json()) as { dataSource?: string }
-        setDataSource(meta.dataSource === 'real' ? 'real' : 'demo')
-      } else {
-        setDataSource(null)
-      }
-      if (latestRes.status === 404) {
-        setResult(null)
-      } else {
-        if (!latestRes.ok) throw new Error(`latest ${latestRes.status}`)
-        const latest: BenchmarkResult = await latestRes.json()
-        setResult(latest)
-      }
-      if (!histRes.ok) throw new Error(`history ${histRes.status}`)
-      const histBody: { results?: BenchmarkResult[] } = await histRes.json()
+      setDataSource(meta?.dataSource === 'real' ? 'real' : 'demo')
+      setResult(latest)
       setHistory(Array.isArray(histBody.results) ? histBody.results : [])
     } catch {
       setError(t('benchmark.error.load'))
@@ -217,20 +207,15 @@ export default function Benchmark() {
     setRunning(true)
     setError(null)
     try {
-      const res = await fetch('/api/benchmark/run', { method: 'POST' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data: BenchmarkResult = await res.json()
+      const data = await apiPost<BenchmarkResult>('/api/benchmark/run')
       setResult(data)
       setCompareId(null)
-      const [histRes, metaRes] = await Promise.all([fetch('/api/benchmark/history'), fetch('/api/benchmark/meta')])
-      if (metaRes.ok) {
-        const meta = (await metaRes.json()) as { dataSource?: string }
-        setDataSource(meta.dataSource === 'real' ? 'real' : 'demo')
-      }
-      if (histRes.ok) {
-        const histBody: { results?: BenchmarkResult[] } = await histRes.json()
-        setHistory(Array.isArray(histBody.results) ? histBody.results : [])
-      }
+      const [histBody, meta] = await Promise.all([
+        apiGetSafe<{ results?: BenchmarkResult[] }>('/api/benchmark/history'),
+        apiGetSafe<{ dataSource?: string }>('/api/benchmark/meta'),
+      ])
+      if (meta) setDataSource(meta.dataSource === 'real' ? 'real' : 'demo')
+      if (histBody) setHistory(Array.isArray(histBody.results) ? histBody.results : [])
     } catch {
       setError(t('benchmark.error.run'))
     } finally {

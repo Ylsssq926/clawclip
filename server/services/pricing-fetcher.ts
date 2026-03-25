@@ -1,4 +1,5 @@
 import { DEFAULT_MODEL_PRICING, type ModelPricing } from '../types/index.js';
+import { log } from './logger.js';
 
 const PRICETOKEN_URL = 'https://pricetoken.ai/api/v1/text';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
@@ -59,10 +60,10 @@ async function doFetch(): Promise<ModelPricing> {
 
     const pricing = buildPricingMap(json.data);
     cached = { pricing, fetchedAt: Date.now() };
-    console.log(`[pricing-fetcher] loaded ${json.data.length} models from PriceToken`);
+    log.info(`[pricing-fetcher] loaded ${json.data.length} models from PriceToken`);
     return pricing;
   } catch (err) {
-    console.warn('[pricing-fetcher] failed, using static fallback:', (err as Error).message);
+    log.warn('[pricing-fetcher] failed, using static fallback:', (err as Error).message);
     return DEFAULT_MODEL_PRICING;
   } finally {
     clearTimeout(timer);

@@ -63,4 +63,14 @@ router.post('/budget', (req, res) => {
   }
 });
 
+router.get('/insights', (req, res) => {
+  const days = parseInt(String(req.query.days)) || 30;
+  try {
+    const insights = costParser.getInsights(days);
+    res.json(insights);
+  } catch (e) {
+    res.status(500).json({ error: '获取洞察数据失败', detail: String(e) });
+  }
+});
+
 export default router;

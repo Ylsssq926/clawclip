@@ -7,14 +7,23 @@ import {
   CostStats,
   BudgetConfig,
   TaskCost,
+  CostInsight,
   DEFAULT_MODEL_PRICING,
   DEFAULT_BUDGET_CONFIG,
 } from '../types/index.js';
-import { getClawclipStateDir, getLobsterDataRoots, listAgentSessionEntries } from './agent-data-root.js';
+import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
+import { sessionParser } from './session-parser.js';
 
 export class CostParser {
+  private static readonly CHEAP_MODELS = [
+    'deepseek-chat', 'deepseek-coder', 'qwen-turbo', 'gpt-4o-mini',
+    'claude-3.5-haiku', 'claude-3-haiku', 'gpt-4.1-mini', 'minimax-01', 'glm-4-flash',
+  ];
+
   private config: BudgetConfig;
   private modelPricing: Record<string, number>;
+  private usageCache: { at: number; data: TokenUsage[] } | null = null;
+  private static readonly CACHE_MS = 3500;
 
   constructor() {
     this.ensureDirectories();
@@ -61,36 +70,57 @@ export class CostParser {
     this.config = { ...this.config, ...config };
     const configPath = path.join(this.getCacheDir(), 'config.json');
     fs.writeFileSync(configPath, JSON.stringify(this.config, null, 2));
+    this.usageCache = null;
   }
 
   getConfig(): BudgetConfig {
     return { ...this.config };
   }
 
-  /** 解析各数据根下的日志与会话 JSONL，提取 token 用量 */
   parseLogFiles(): TokenUsage[] {
     const usages: TokenUsage[] = [];
-    const roots = getLobsterDataRoots();
+    const replays = sessionParser.getRealReplays();
+    for (const replay of replays) {
+      for (const step of replay.steps) {
+        if (step.inputTokens === 0 && step.outputTokens === 0) continue;
+        usages.push({
+          timestamp: step.timestamp,
+          taskId: replay.meta.id,
+          model: step.model || 'unknown',
+          inputTokens: step.inputTokens,
+          outputTokens: step.outputTokens,
+          cost: step.cost,
+          sessionId: replay.meta.id,
+        });
+      }
+    }
 
+    const roots = getLobsterDataRoots();
     if (roots.length === 0) {
       const fallbackLogs = path.join(os.homedir(), '.openclaw', 'logs');
       if (fs.existsSync(fallbackLogs)) {
         this.parseDirectory(fallbackLogs, '.log', usages);
       }
-      return usages;
-    }
-
-    for (const root of roots) {
-      const logsDir = path.join(root.homeDir, 'logs');
-      if (fs.existsSync(logsDir)) {
-        this.parseDirectory(logsDir, '.log', usages);
-      }
-      for (const e of listAgentSessionEntries(root)) {
-        this.parseDirectory(e.sessionsDir, '.jsonl', usages);
+    } else {
+      for (const root of roots) {
+        const logsDir = path.join(root.homeDir, 'logs');
+        if (fs.existsSync(logsDir)) {
+          this.parseDirectory(logsDir, '.log', usages);
+        }
       }
     }
 
     return usages;
+  }
+
+  private getCachedUsages(): TokenUsage[] {
+    const now = Date.now();
+    if (this.usageCache && now - this.usageCache.at < CostParser.CACHE_MS) {
+      return this.usageCache.data;
+    }
+    const data = this.parseLogFiles();
+    this.usageCache = { at: now, data };
+    return data;
   }
 
   private parseDirectory(dir: string, ext: string, usages: TokenUsage[]): void {
@@ -112,7 +142,6 @@ export class CostParser {
         content = content.slice(1);
       }
       for (const line of content.split(/\r?\n/)) {
-        if (ext === '.jsonl' && !line.includes('"usage"') && !line.includes("'usage'")) continue;
         try {
           const parsed = JSON.parse(line) as Record<string, unknown>;
           const usage = parsed.usage as Record<string, unknown> | undefined;
@@ -154,7 +183,7 @@ export class CostParser {
   }
 
   getUsageStats(days: number = 30): CostStats {
-    const usages = this.parseLogFiles();
+    const usages = this.getCachedUsages();
     const now = Date.now();
     const cutoff = now - days * 24 * 60 * 60 * 1000;
     const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
@@ -206,7 +235,7 @@ export class CostParser {
   }
 
   getDailyUsage(days: number = 7): DailyUsage[] {
-    const usages = this.parseLogFiles();
+    const usages = this.getCachedUsages();
     const dailyMap = new Map<string, DailyUsage>();
 
     for (let i = 0; i < days; i++) {
@@ -231,7 +260,7 @@ export class CostParser {
   }
 
   getModelBreakdown(days: number = 30): Record<string, { tokens: number; cost: number }> {
-    const usages = this.parseLogFiles();
+    const usages = this.getCachedUsages();
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
 
@@ -260,6 +289,130 @@ export class CostParser {
             ? `预算使用已达 ${percentage.toFixed(1)}%，剩余 ¥${(this.config.monthly - stats.totalCost).toFixed(2)}`
             : `预算状态良好，当前使用 ${percentage.toFixed(1)}%`,
     };
+  }
+
+  getInsights(days: number = 30): CostInsight[] {
+    const insights: CostInsight[] = [];
+    const stats = this.getUsageStats(days);
+    const {
+      totalCost,
+      totalTokens,
+      inputTokens,
+      outputTokens,
+      topTasks,
+      trend,
+      comparedToLastMonth,
+    } = stats;
+
+    if (totalCost === 0) {
+      insights.push({
+        type: 'info',
+        icon: 'ℹ️',
+        messageZh: `近 ${days} 天没有产生费用`,
+        messageEn: `No costs in the last ${days} days`,
+      });
+      return insights;
+    }
+
+    const modelBreakdown = this.getModelBreakdown(days);
+    const sortedModels = Object.entries(modelBreakdown).sort((a, b) => b[1].cost - a[1].cost);
+    if (sortedModels.length > 0) {
+      const [topModelName, topModelStats] = sortedModels[0];
+      const topSharePct = (topModelStats.cost / totalCost) * 100;
+      if (topSharePct >= 60) {
+        insights.push({
+          type: 'warning',
+          icon: '🔥',
+          messageZh: `${topSharePct.toFixed(0)}% 的费用集中在 ${topModelName}，考虑在简单任务上使用更经济的模型`,
+          messageEn: `${topSharePct.toFixed(0)}% of costs are concentrated on ${topModelName}; consider using more economical models for simple tasks`,
+        });
+      } else {
+        insights.push({
+          type: 'info',
+          icon: '📊',
+          messageZh: `费用最高的模型是 ${topModelName}，占总费用 ${topSharePct.toFixed(0)}%`,
+          messageEn: `The highest-cost model is ${topModelName}, accounting for ${topSharePct.toFixed(0)}% of total cost`,
+        });
+      }
+    }
+
+    const modelKeys = Object.keys(modelBreakdown);
+    if (modelKeys.length === 1) {
+      insights.push({
+        type: 'tip',
+        icon: '💡',
+        messageZh: '你只用了一种模型，混合搭配经济型和旗舰型可以更省钱',
+        messageEn: 'You only use one model; mixing economical and flagship models can save more',
+      });
+    }
+
+    if (totalTokens > 0) {
+      let cheapTokens = 0;
+      for (const name of modelKeys) {
+        const lower = name.toLowerCase();
+        if (CostParser.CHEAP_MODELS.some(sub => lower.includes(sub.toLowerCase()))) {
+          cheapTokens += modelBreakdown[name].tokens;
+        }
+      }
+      const cheapRatioPct = (cheapTokens / totalTokens) * 100;
+      if (cheapRatioPct > 50) {
+        insights.push({
+          type: 'info',
+          icon: '✅',
+          messageZh: `${cheapRatioPct.toFixed(0)}% 的请求使用了经济型模型，成本控制良好`,
+          messageEn: `${cheapRatioPct.toFixed(0)}% of token usage goes to economical models; cost control looks good`,
+        });
+      } else if (cheapRatioPct < 10) {
+        insights.push({
+          type: 'tip',
+          icon: '💰',
+          messageZh: '几乎没有使用经济型模型，简单任务可以考虑 deepseek-chat / qwen-turbo 等',
+          messageEn: 'Economical models are barely used; for simple tasks consider deepseek-chat, qwen-turbo, etc.',
+        });
+      }
+    }
+
+    const changePct = Math.abs(comparedToLastMonth);
+    if (trend === 'up' && comparedToLastMonth > 20) {
+      insights.push({
+        type: 'warning',
+        icon: '📈',
+        messageZh: `费用环比上涨 ${changePct.toFixed(0)}%，注意控制用量`,
+        messageEn: `Cost is up ${changePct.toFixed(0)}% vs the previous period; watch your usage`,
+      });
+    } else if (trend === 'down') {
+      insights.push({
+        type: 'info',
+        icon: '📉',
+        messageZh: `费用环比下降 ${changePct.toFixed(0)}%，节约有效`,
+        messageEn: `Cost is down ${changePct.toFixed(0)}% vs the previous period; savings are effective`,
+      });
+    }
+
+    const highThreshold = 0.1;
+    const highTasks = topTasks.filter(t => t.cost > highThreshold);
+    if (highTasks.length > 0) {
+      const highSum = highTasks.reduce((s, t) => s + t.cost, 0);
+      const highSharePct = (highSum / totalCost) * 100;
+      insights.push({
+        type: 'info',
+        icon: '🔍',
+        messageZh: `${highTasks.length} 个任务单次花费超过 ¥0.10，占总费用 ${highSharePct.toFixed(0)}%`,
+        messageEn: `${highTasks.length} task(s) exceeded ¥0.10 per run, accounting for ${highSharePct.toFixed(0)}% of total cost`,
+      });
+    }
+
+    if (inputTokens > 0 && outputTokens / inputTokens > 3) {
+      const ratio = outputTokens / inputTokens;
+      insights.push({
+        type: 'tip',
+        icon: '📝',
+        messageZh: `输出 Token 是输入的 ${ratio.toFixed(1)} 倍，如果输出过于冗长可以在 prompt 里加约束`,
+        messageEn: `Output tokens are ${ratio.toFixed(1)}× input tokens; if output is too verbose, add constraints in the prompt`,
+      });
+    }
+
+    return insights;
   }
 }
 

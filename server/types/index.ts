@@ -121,3 +121,10 @@ export interface TemplateInfo {
   icon: string;
   skills: string[];
 }
+
+export interface CostInsight {
+  type: 'info' | 'warning' | 'tip';
+  icon: string;
+  messageZh: string;
+  messageEn: string;
+}

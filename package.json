@@ -15,6 +15,23 @@
   },
   "author": "掠蓝 (Luolan)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ylsssq926/clawclip.git"
+  },
+  "homepage": "https://clawclip.luelan.online",
+  "keywords": [
+    "ai-agent",
+    "agent-visualization",
+    "session-replay",
+    "benchmark",
+    "cost-tracking",
+    "openclaw",
+    "zeroclaw",
+    "token-cost",
+    "llm-analytics",
+    "developer-tools"
+  ],
   "engines": {
     "node": ">=18.0.0"
   }

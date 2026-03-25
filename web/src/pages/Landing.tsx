@@ -170,6 +170,27 @@ export default function Landing({ onEnterDemo }: Props) {
             </div>
           ))}
         </motion.div>
+        {/* Stats bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.5, ease: [0.25, 0.4, 0.25, 1] }}
+          className="mt-12 flex flex-wrap justify-center gap-8 lg:gap-16"
+        >
+          {[
+            { num: '8', labelKey: 'landing.stats.features' as const },
+            { num: '6', labelKey: 'landing.stats.dimensions' as const },
+            { num: '7', labelKey: 'landing.stats.languages' as const },
+            { num: '0', labelKey: 'landing.stats.apicost' as const },
+          ].map((s, i) => (
+            <div key={i} className="text-center">
+              <div className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                {s.num === '0' ? '$0' : s.num}
+              </div>
+              <div className="text-xs text-slate-500 mt-1">{t(s.labelKey)}</div>
+            </div>
+          ))}
+        </motion.div>
       </section>
 
       {/* Data journey */}

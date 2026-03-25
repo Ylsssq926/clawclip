@@ -1,12 +1,43 @@
 # 🍤 ClawClip
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js ≥18](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
+[![7 Languages](https://img.shields.io/badge/i18n-7%20languages-blueviolet.svg)](#features)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org)
+[![Live Demo](https://img.shields.io/badge/demo-online-00c7b7.svg)](https://clawclip.luelan.online)
+
 > **English** | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 **What did your AI Agent actually do?**
 
-ClawClip is a local-first visualization tool for AI Agents. It turns JSONL session logs from OpenClaw / ZeroClaw (and compatible frameworks) into interactive timeline replays, runs offline 6-dimension benchmarks, and tracks token costs. All analysis runs **locally — no LLM API calls, no extra bills, data stays on your machine.**
+ClawClip is a **local-first** visualization & analytics platform for AI Agents. It turns raw JSONL session logs from OpenClaw / ZeroClaw (and compatible frameworks) into **interactive timeline replays**, runs **offline 6-dimension benchmarks** (no LLM API calls), and provides **real-time token cost tracking** with savings recommendations powered by [PriceToken](https://pricetoken.ai).
 
-**Live demo**: https://clawclip.luelan.online (8 built-in demo sessions, no install needed)
+> **Zero cloud dependency. Zero extra bills. Your data never leaves your machine.**
+
+**Live demo**: https://clawclip.luelan.online — 8 built-in demo sessions, no install needed
+
+<table>
+<tr>
+<td width="50%">
+
+**Without ClawClip**
+- Agent runs → logs pile up unread
+- No idea which model costs how much
+- "Is my Agent getting better?" → no answer
+- Debugging = reading raw JSONL
+
+</td>
+<td width="50%">
+
+**With ClawClip**
+- Every step visualized on an interactive timeline
+- Cost breakdown by model, task, and time
+- 6-dimension benchmark with evolution tracking
+- Word cloud, tags, knowledge base, leaderboard
+
+</td>
+</tr>
+</table>
 
 ## Quick Start
 

@@ -1,12 +1,43 @@
 # 🍤 虾片 (ClawClip)
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js ≥18](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
+[![7 Languages](https://img.shields.io/badge/i18n-7%20languages-blueviolet.svg)](#核心功能)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org)
+[![Live Demo](https://img.shields.io/badge/demo-在线体验-00c7b7.svg)](https://clawclip.luelan.online)
+
 > [English](README.md) | **中文** | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 **你的 AI Agent 到底干了什么？**
 
-虾片是一个本地部署的 AI Agent 可视化工具——把 OpenClaw / ZeroClaw 等兼容框架的会话日志变成可交互的时间轴回放，做离线六维能力评测，并追踪 Token 与费用。分析评测**不调用云端 LLM API**（不产生额外模型账单），数据默认留在本机。
+虾片是一个**本地优先**的 AI Agent 可视化与分析平台——把 OpenClaw / ZeroClaw 等兼容框架的会话日志变成**可交互的时间轴回放**，做**离线六维能力评测**（不调用 LLM API），并提供基于 [PriceToken](https://pricetoken.ai) 的**实时成本追踪与省钱建议**。
 
-**在线体验**: https://clawclip.luelan.online （内置 8 条 Demo 会话，无需安装）
+> **零云依赖。零额外账单。数据始终在你电脑上。**
+
+**在线体验**: https://clawclip.luelan.online — 8 条 Demo 会话，无需安装
+
+<table>
+<tr>
+<td width="50%">
+
+**没有虾片**
+- Agent 跑完 → 日志堆在那没人看
+- 哪个模型花了多少钱 → 不知道
+- "Agent 有没有变强？" → 没答案
+- 排查问题 = 肉眼读 JSONL
+
+</td>
+<td width="50%">
+
+**有了虾片**
+- 每一步可视化在交互式时间轴上
+- 按模型、任务、时间拆分费用
+- 六维评测 + 进化曲线追踪成长
+- 词云、标签、知识库、排行榜一应俱全
+
+</td>
+</tr>
+</table>
 
 **一句话复制**：虾片 = 本地 Agent 日志 → 回放 + 离线体检分 + 成本与标签，隐私在你电脑。
 

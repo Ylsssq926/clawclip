@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Play, Trophy, BarChart3, Cloud, Github, MessageCircle, ArrowRight, Terminal, Zap, Eye, Shield, Coins } from 'lucide-react'
+import { Play, Trophy, BarChart3, Cloud, Github, MessageCircle, ArrowRight, Terminal, Zap, Eye, Shield, Coins, BookOpen, LayoutGrid } from 'lucide-react'
 import { useI18n, LanguageSwitcher } from '../lib/i18n'
 
 interface Props {
@@ -34,6 +34,34 @@ const FEATURES = [
     descKey: 'feat.wordcloud.desc',
     iconBg: 'bg-violet-50',
     iconColor: 'text-violet-600',
+  },
+  {
+    icon: BookOpen,
+    titleKey: 'feat.knowledge',
+    descKey: 'feat.knowledge.desc',
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+  },
+  {
+    icon: Trophy,
+    titleKey: 'feat.leaderboard',
+    descKey: 'feat.leaderboard.desc',
+    iconBg: 'bg-rose-50',
+    iconColor: 'text-rose-600',
+  },
+  {
+    icon: LayoutGrid,
+    titleKey: 'feat.templates',
+    descKey: 'feat.templates.desc',
+    iconBg: 'bg-indigo-50',
+    iconColor: 'text-indigo-600',
+  },
+  {
+    icon: Coins,
+    titleKey: 'feat.savings',
+    descKey: 'feat.savings.desc',
+    iconBg: 'bg-teal-50',
+    iconColor: 'text-teal-600',
   },
 ] as const
 
@@ -191,7 +219,7 @@ export default function Landing({ onEnterDemo }: Props) {
           <p className="text-slate-500 mb-12">{t('landing.features.sub')}</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {FEATURES.map((f, i) => (
             <motion.div
               key={f.titleKey}
@@ -238,28 +266,43 @@ export default function Landing({ onEnterDemo }: Props) {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
-          {/* Fake preview */}
+          {/* Mock dashboard */}
           <div className="px-8 lg:px-12 pb-2">
-            <div className="rounded-t-xl border border-blue-100 border-b-0 bg-gradient-to-b from-blue-50/50 to-white p-6 space-y-4">
-              <div className="flex gap-2 mb-4">
-                <div className="w-3 h-3 rounded-full bg-red-400" />
-                <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                <div className="w-3 h-3 rounded-full bg-green-400" />
+            <div className="rounded-t-xl border border-blue-100 border-b-0 bg-gradient-to-b from-slate-900 to-slate-800 p-6 space-y-4">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                </div>
+                <div className="flex-1 h-6 rounded-md bg-slate-700/50 max-w-xs" />
               </div>
               <div className="grid grid-cols-4 gap-3">
-                {[t('dashboard.status.running'), '¥3.42', `15 ${t('dashboard.stat.skillsSub')}`, `3 ${t('dashboard.stat.channelsLabel')}`].map((cell, i) => (
-                  <div key={i} className="rounded-lg border border-blue-100 bg-blue-50/30 p-3">
-                    <div className="text-[10px] text-slate-400 mb-1">—</div>
-                    <div className="text-sm font-bold text-slate-900">{cell}</div>
+                {['🟢 Running', '¥3.42', '15 Skills', '8 Sessions'].map((cell, i) => (
+                  <div key={i} className="rounded-lg bg-slate-700/40 border border-slate-600/30 p-3">
+                    <div className="text-[10px] text-slate-500 mb-1">{['Status', 'Cost', 'Skills', 'Sessions'][i]}</div>
+                    <div className="text-sm font-bold text-slate-200">{cell}</div>
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[`🎬 ${t('feat.replay')}`, `🏆 ${t('feat.benchmark')}`, `📊 ${t('feat.cost')}`].map((label, i) => (
-                  <div key={i} className="rounded-lg border border-blue-100 bg-blue-50/30 p-3 text-center">
-                    <div className="text-xs text-slate-400">{label}</div>
+              <div className="grid grid-cols-12 gap-3">
+                <div className="col-span-8 rounded-lg bg-slate-700/30 border border-slate-600/30 p-3 h-28">
+                  <div className="text-[10px] text-slate-500 mb-2">Token Trend</div>
+                  <div className="flex items-end gap-1 h-16">
+                    {[40, 65, 50, 80, 55, 90, 70, 85, 60, 95, 75, 88].map((h, i) => (
+                      <div key={i} className="flex-1 rounded-t bg-gradient-to-t from-blue-500 to-cyan-400 opacity-70" style={{ height: `${h}%` }} />
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div className="col-span-4 rounded-lg bg-slate-700/30 border border-slate-600/30 p-3 h-28">
+                  <div className="text-[10px] text-slate-500 mb-2">Radar</div>
+                  <div className="flex items-center justify-center h-16">
+                    <svg viewBox="0 0 100 100" className="w-16 h-16">
+                      <polygon points="50,10 90,35 80,80 20,80 10,35" fill="none" stroke="rgba(100,116,139,0.3)" strokeWidth="1" />
+                      <polygon points="50,25 75,40 70,70 30,70 25,40" fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -323,7 +366,7 @@ export default function Landing({ onEnterDemo }: Props) {
           </div>
 
           <p className="text-xs text-slate-400">
-            虾片 ClawClip · 🍤
+            掠蓝蓝蓝 出品 · 虾片 ClawClip 🍤
           </p>
         </div>
       </footer>

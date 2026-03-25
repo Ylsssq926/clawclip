@@ -170,7 +170,7 @@ export default function CostMonitor() {
               <div className="p-5">
                 <span className="text-sm text-slate-400">{t('cost.card.total')}</span>
                 <div className="text-2xl font-bold text-accent mt-1 tabular-nums">
-                  <AnimatedCounter value={summary?.totalCost ?? 0} prefix="¥" decimals={2} duration={1000} />
+                  <AnimatedCounter value={summary?.totalCost ?? 0} prefix="$" decimals={2} duration={1000} />
                 </div>
                 <div className={`flex items-center gap-1 mt-1 text-xs ${trendColor}`}>
                   <TrendIcon className="w-3 h-3" />
@@ -239,7 +239,7 @@ export default function CostMonitor() {
                 <h3 className="text-lg font-semibold">{t('cost.savings.title')}</h3>
                 <div className="text-right">
                   <span className="text-xs text-slate-400">{t('cost.savings.total')}</span>
-                  <span className="text-lg font-bold text-green-400 ml-2">¥{savings.totalPotentialSaving.toFixed(2)}</span>
+                  <span className="text-lg font-bold text-green-400 ml-2">${savings.totalPotentialSaving.toFixed(2)}</span>
                 </div>
               </div>
               <div className="space-y-3">
@@ -251,7 +251,7 @@ export default function CostMonitor() {
                       <span className="text-green-400 truncate">{sug.alternativeModel}</span>
                     </div>
                     <div className="text-right shrink-0 ml-4">
-                      <span className="text-green-400 font-medium text-sm">-¥{sug.saving.toFixed(2)}</span>
+                      <span className="text-green-400 font-medium text-sm">-${sug.saving.toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
@@ -302,7 +302,7 @@ export default function CostMonitor() {
                       <span className="text-sm truncate max-w-[300px]">{task.taskName}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-accent font-medium">¥{task.cost.toFixed(4)}</span>
+                      <span className="text-accent font-medium">${task.cost.toFixed(4)}</span>
                       <span className="text-xs text-slate-500 ml-2">
                         {task.tokens.toLocaleString()} {t('replay.list.tokensUnit')}
                       </span>

@@ -183,7 +183,7 @@ export class CostParser {
             usage.output_tokens ?? usage.completion_tokens ?? usage.outputTokens ?? 0,
           );
           if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) continue;
-          const price = this.modelPricing[model] || 5.0;
+          const price = this.modelPricing[model] || 2.0;
           const cost = (inputTokens + outputTokens) * price / 1_000_000;
 
           const rawTs = parsed.timestamp ?? parsed.created_at ?? parsed.createdAt;
@@ -313,9 +313,9 @@ export class CostParser {
       percentage,
       message:
         percentage >= 100
-          ? `预算已超支！当前消费 ¥${stats.totalCost.toFixed(2)}，超出 ¥${(stats.totalCost - this.config.monthly).toFixed(2)}`
+          ? `预算已超支！当前消费 $${stats.totalCost.toFixed(2)}，超出 $${(stats.totalCost - this.config.monthly).toFixed(2)}`
           : percentage >= this.config.alertThreshold
-            ? `预算使用已达 ${percentage.toFixed(1)}%，剩余 ¥${(this.config.monthly - stats.totalCost).toFixed(2)}`
+            ? `预算使用已达 ${percentage.toFixed(1)}%，剩余 $${(this.config.monthly - stats.totalCost).toFixed(2)}`
             : `预算状态良好，当前使用 ${percentage.toFixed(1)}%`,
     };
   }
@@ -426,8 +426,8 @@ export class CostParser {
       insights.push({
         type: 'info',
         icon: '🔍',
-        messageZh: `${highTasks.length} 个任务单次花费超过 ¥0.10，占总费用 ${highSharePct.toFixed(0)}%`,
-        messageEn: `${highTasks.length} task(s) exceeded ¥0.10 per run, accounting for ${highSharePct.toFixed(0)}% of total cost`,
+        messageZh: `${highTasks.length} 个任务单次花费超过 $0.10，占总费用 ${highSharePct.toFixed(0)}%`,
+        messageEn: `${highTasks.length} task(s) exceeded $0.10 per run, accounting for ${highSharePct.toFixed(0)}% of total cost`,
       });
     }
 
@@ -441,6 +441,16 @@ export class CostParser {
       });
     }
 
+    const unknownModels = modelKeys.filter(m => this.modelPricing[m] == null);
+    if (unknownModels.length > 0) {
+      insights.push({
+        type: 'warning',
+        icon: '⚠️',
+        messageZh: `${unknownModels.length} 个模型未在定价表中（${unknownModels.slice(0, 3).join(', ')}${unknownModels.length > 3 ? '…' : ''}），费用按 $2/M token 估算`,
+        messageEn: `${unknownModels.length} model(s) not in pricing table (${unknownModels.slice(0, 3).join(', ')}${unknownModels.length > 3 ? '…' : ''}); cost estimated at $2/M tokens`,
+      });
+    }
+
     return insights;
   }
 
@@ -450,7 +460,7 @@ export class CostParser {
     let totalPotentialSaving = 0;
 
     for (const [model, data] of Object.entries(models)) {
-      const pricePerMillion = this.modelPricing[model] ?? 5.0;
+      const pricePerMillion = this.modelPricing[model] ?? 2.0;
       const alt = suggestAlternative(pricePerMillion, this.modelPricing);
       if (!alt) continue;
 

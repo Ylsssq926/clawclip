@@ -201,7 +201,7 @@ function replayToMarkdown(replay: SessionReplay): string {
     `- **Agent**: ${meta.agentName}`,
     `- **模型**: ${models}`,
     `- **时间**: ${start} - ${end}`,
-    `- **花费**: ¥${meta.totalCost.toFixed(4)}`,
+    `- **花费**: $${meta.totalCost.toFixed(4)}`,
     `- **Token**: ${formatTokens(meta.totalTokens)}`,
     '',
     '---',

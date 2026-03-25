@@ -10,9 +10,11 @@ import {
 } from './agent-data-root.js';
 import { enrichSessionMetaFromStore, loadOpenclawSessionStore } from './session-store.js';
 
+const UNKNOWN_MODEL_FALLBACK_PRICE = 2.0;
+
 function priceFor(model?: string): number {
   if (model && DEFAULT_MODEL_PRICING[model] != null) return DEFAULT_MODEL_PRICING[model];
-  return 5.0;
+  return UNKNOWN_MODEL_FALLBACK_PRICE;
 }
 
 function computeCost(model: string | undefined, input: number, output: number): number {

@@ -127,17 +127,27 @@ function scoreWriting(replays: SessionReplay[]): DimensionScore {
   const avgLen = responseCount ? responseChars / responseCount : 0;
   const avgHan = responseCount ? responseHanSum / responseChars : 0;
 
+  const isMainlyChinese = avgHan > 0.15;
+
   let score = 40;
-  score += clamp(avgHan * 30, 0, 30);
+  if (isMainlyChinese) {
+    score += clamp(avgHan * 30, 0, 30);
+  } else {
+    const avgWords = avgLen > 0 ? avgLen / 5.5 : 0;
+    score += clamp((avgWords / 80) * 30, 0, 30);
+  }
   score += clamp((avgLen / 2000) * 15, 0, 15);
   score += respRatio * 10;
   if (responseCount >= 10) score += 5;
 
   score = clamp(Math.round(score), 0, 100);
+  const langHint = isMainlyChinese
+    ? `约 ${Math.round(avgHan * 100)}% 字符为中文`
+    : `avg ~${Math.round(avgLen > 0 ? avgLen / 5.5 : 0)} words/response`;
   const details =
     responseCount === 0
       ? '本钳没捞到多少「assistant 正文回复」步骤，写作分先保守给；多聊几轮就有数啦。'
-      : `共 ${responseCount} 条回复，平均约 ${Math.round(avgLen)} 字；约 ${Math.round(avgHan * 100)}% 字符为中文；${sessionsWithResponse}/${n} 个会话有可见回复。`;
+      : `共 ${responseCount} 条回复，平均约 ${Math.round(avgLen)} 字；${langHint}；${sessionsWithResponse}/${n} 个会话有可见回复。`;
 
   return {
     dimension: 'writing',
@@ -760,17 +770,13 @@ export class BenchmarkRunner {
     return result;
   }
 
-  /** 获取评测历史（Demo 模式返回虚拟曲线，不落盘） */
+  /** 获取评测历史（Demo 模式返回虚拟曲线，不落盘；真实模式返回真实历史或空） */
   getHistory(): BenchmarkHistory {
     const metas = sessionParser.getSessions();
     if (isBuiltinDemoOnly(metas)) {
       return { results: buildDemoHistoryResults() };
     }
-    const h = this.readHistoryFile();
-    if (h.results.length === 0) {
-      return { results: buildDemoHistoryResults() };
-    }
-    return h;
+    return this.readHistoryFile();
   }
 
   /** 获取最近一次评测 */

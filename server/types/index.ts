@@ -166,9 +166,9 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
 };
 
 export const DEFAULT_BUDGET_CONFIG: BudgetConfig = {
-  monthly: 500,
+  monthly: 50,
   alertThreshold: 80,
-  currency: 'CNY',
+  currency: 'USD',
 };
 
 /** 单个「龙虾」数据根在本机的探测结果（用于兼容多框架/多路径） */

@@ -34,6 +34,37 @@ router.get('/sessions/:id', (req, res, next) => {
   }
 });
 
+/** POST /api/replay/compare — 多会话对比 */
+router.post('/compare', (req, res, next) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length < 2 || ids.length > 5) {
+      res.status(400).json({ error: '需要 2-5 个会话 ID / Need 2-5 session IDs' });
+      return;
+    }
+    const results = ids.map(id => {
+      const replay = sessionParser.getSessionReplay(id);
+      if (!replay) return null;
+      const m = replay.meta;
+      return {
+        id: m.id,
+        agentName: m.agentName,
+        label: (m.sessionLabel || m.summary || m.agentName).slice(0, 80),
+        totalCost: m.totalCost,
+        totalTokens: m.totalTokens,
+        durationMs: m.durationMs,
+        stepCount: m.stepCount,
+        modelUsed: m.modelUsed,
+        avgTokensPerStep: m.stepCount > 0 ? Math.round(m.totalTokens / m.stepCount) : 0,
+        costPerStep: m.stepCount > 0 ? +(m.totalCost / m.stepCount).toFixed(6) : 0,
+      };
+    }).filter(Boolean);
+    res.json({ sessions: results });
+  } catch (e) {
+    next(e);
+  }
+});
+
 /** GET /api/replay/sessions/:id/insights — 会话智能诊断 */
 router.get('/sessions/:id/insights', (req, res, next) => {
   try {

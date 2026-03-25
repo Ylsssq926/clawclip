@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Landing from './pages/Landing'
 import ErrorBoundary from './components/ErrorBoundary'
-import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb } from 'lucide-react'
+import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb, GitCompareArrows } from 'lucide-react'
 import { cn } from './lib/cn'
 import { useI18n, LanguageSwitcher } from './lib/i18n'
 
@@ -14,6 +14,7 @@ const Replay = lazy(() => import('./pages/Replay'))
 const Benchmark = lazy(() => import('./pages/Benchmark'))
 const CostMonitor = lazy(() => import('./pages/CostMonitor'))
 const PromptInsight = lazy(() => import('./pages/PromptInsight'))
+const Compare = lazy(() => import('./pages/Compare'))
 const SkillManager = lazy(() => import('./pages/SkillManager'))
 const TemplateMarket = lazy(() => import('./pages/TemplateMarket'))
 const Knowledge = lazy(() => import('./pages/Knowledge'))
@@ -26,6 +27,7 @@ export type Tab =
   | 'leaderboard'
   | 'cost'
   | 'prompt'
+  | 'compare'
   | 'skills'
   | 'templates'
   | 'knowledge'
@@ -37,6 +39,7 @@ const tabs = [
   { id: 'leaderboard' as const, nameKey: 'nav.leaderboard', icon: Medal },
   { id: 'cost' as const, nameKey: 'nav.cost', icon: DollarSign },
   { id: 'prompt' as const, nameKey: 'nav.prompt', icon: Lightbulb },
+  { id: 'compare' as const, nameKey: 'nav.compare', icon: GitCompareArrows },
   { id: 'skills' as const, nameKey: 'nav.skills', icon: Puzzle },
   { id: 'templates' as const, nameKey: 'nav.templates', icon: Store },
   { id: 'knowledge' as const, nameKey: 'nav.knowledge', icon: Database },
@@ -259,6 +262,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
                   {activeTab === 'leaderboard' && <Leaderboard />}
                   {activeTab === 'cost' && <CostMonitor />}
                   {activeTab === 'prompt' && <PromptInsight />}
+                  {activeTab === 'compare' && <Compare />}
                   {activeTab === 'skills' && <SkillManager />}
                   {activeTab === 'templates' && <TemplateMarket />}
                   {activeTab === 'knowledge' && <Knowledge />}

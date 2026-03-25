@@ -206,7 +206,11 @@ export class OpenClawBridge {
       });
       return { success: true, message: `${name} 安装成功` };
     } catch (e) {
-      return { success: false, message: `安装失败: ${e instanceof Error ? e.message : e}` };
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('ENOENT') || msg.includes('not found') || msg.includes('clawhub')) {
+        return { success: false, message: '安装失败：未检测到 clawhub CLI。请先安装 OpenClaw 框架（npm i -g @anthropic/clawhub 或参考 docs.openclaw.ai）。' };
+      }
+      return { success: false, message: `安装失败: ${msg}` };
     }
   }
 

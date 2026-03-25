@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useCallback } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
 import Landing from './pages/Landing'
 import ErrorBoundary from './components/ErrorBoundary'
 import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X } from 'lucide-react'
@@ -52,6 +52,17 @@ function TabFallback() {
 function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
   const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>('replay')
+  const [isDemo, setIsDemo] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/status')
+      .then(r => r.ok ? r.json() : null)
+      .then((s: { hasRealSessionData?: boolean } | null) => {
+        if (s?.hasRealSessionData) setIsDemo(false)
+      })
+      .catch(() => {})
+  }, [])
+
   const [showTour, setShowTour] = useState(() => {
     try {
       return localStorage.getItem('clawclip-tour-done') !== '1'
@@ -117,11 +128,17 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
         </div>
       )}
 
-      {/* Demo banner */}
       <div className="bg-gradient-to-r from-blue-500/10 via-cyan-500/5 to-transparent border-b border-blue-500/10 px-6 py-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">{t('app.demo')}</span>
-          <span className="text-xs text-slate-400">{t('app.demo.desc')}</span>
+          {isDemo && (
+            <>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">{t('app.demo')}</span>
+              <span className="text-xs text-slate-400">{t('app.demo.desc')}</span>
+            </>
+          )}
+          {!isDemo && (
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">{t('app.realData')}</span>
+          )}
         </div>
         <button
           type="button"
@@ -147,7 +164,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
             <span className="text-xl">🍤</span>
             <div>
               <h1 className="text-base font-semibold tracking-tight text-white">{t('app.name')}</h1>
-              <p className="text-[10px] text-slate-500 leading-none">{t('app.subtitle')} Demo</p>
+              <p className="text-[10px] text-slate-500 leading-none">{t('app.subtitle')}{isDemo ? ' Demo' : ''}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

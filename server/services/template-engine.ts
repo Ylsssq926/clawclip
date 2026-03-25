@@ -65,7 +65,11 @@ export class TemplateEngine {
       fs.copyFileSync(skillMd, path.join(targetDir, 'SKILL.md'));
       return { success: true, message: `模板「${template.name}」已导入` };
     } catch (e) {
-      return { success: false, message: `导入失败: ${e instanceof Error ? e.message : e}` };
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('EACCES') || msg.includes('EPERM')) {
+        return { success: false, message: `导入失败：没有写入权限。请检查 ${targetDir} 目录权限。` };
+      }
+      return { success: false, message: `导入失败: ${msg}` };
     }
   }
 }

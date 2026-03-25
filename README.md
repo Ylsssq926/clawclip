@@ -20,17 +20,14 @@
 **环境**：Node.js **≥ 18**；首次 `npm run build` 可能需要一两分钟并占用一定内存，属正常现象。
 
 ```bash
-# 1. 克隆
+# 1. 克隆 & 安装
 git clone https://github.com/Ylsssq926/clawclip.git
-cd clawclip
+cd clawclip && npm install
 
-# 2. 安装
-npm install
+# 2. 启动（首次会自动构建，约 1-2 分钟）
+npm start
 
-# 3. 构建并启动
-npm run build && npm start
-
-# 打开 http://localhost:8080（默认端口 8080，可通过环境变量 PORT 修改）
+# 打开 http://localhost:8080（端口可通过 PORT 环境变量修改）
 ```
 
 ### 开发模式
@@ -145,14 +142,14 @@ Express + TypeScript | React 18 + Vite + Tailwind CSS | Recharts | Framer Motion
 - [x] 知识库导入导出 + 全文搜索
 - [x] **排行榜（提交分数 + 全网排名）**
 - [x] **模板市场 + 技能管理**
-- [ ] **智能省钱 / 成本优化**
+- [x] **智能省钱 / 成本优化（P0 + P1 已完成）**
   - [x] P0：成本可观测——模型分布、趋势、预算告警、高消耗排行
   - [x] P1：洞察与建议——消费分析 + 替代模型推荐（基于 PriceToken 实时定价）
-  - [ ] P2：（可选）与运行时/网关的深度联动
+  - [ ] P2：（可选里程碑）与运行时/网关的深度联动
 
 ## 交流
 
-QQ 群: `892555092`
+QQ 群: `469906100`
 
 ## 关于这只虾
 

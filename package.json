@@ -2,13 +2,15 @@
   "name": "clawclip",
   "version": "0.1.0",
   "description": "🍤 虾片 (ClawClip) — AI Agent 回放可视化 + 能力评测 + 成本优化",
-  "private": true,
   "workspaces": ["server", "web"],
+  "bin": {
+    "clawclip": "bin/clawclip.mjs"
+  },
   "scripts": {
     "dev:server": "npm run dev --workspace=server",
     "dev:web": "npm run dev --workspace=web",
     "build": "npm run build --workspace=server && npm run build --workspace=web",
-    "start": "npm run start --workspace=server",
+    "start": "node bin/clawclip.mjs",
     "check": "npm run check --workspace=@clawclip/server && npm run check --workspace=@clawclip/web"
   },
   "author": "掠蓝 (Luolan)",

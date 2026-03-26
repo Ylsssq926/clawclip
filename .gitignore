@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -60,3 +60,7 @@ _qa*.py
 .cache/
 .temp/
 tmp/
+# IDE & automation
+.playwright/
+.codebuddy/
+

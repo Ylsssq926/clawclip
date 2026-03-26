@@ -70,3 +70,15 @@
 
 - 发版或合并前执行：`npm run check`（双端 `tsc --noEmit`）
 - OpenClaw 目录/转写以官方为准；大改前对照 https://docs.openclaw.ai/llms.txt 中 session、environment 相关页
+
+## 部署
+
+- 域名：https://clawclip.luelan.online
+- 端口：8080
+- PM2：clawclip
+- 服务器：121.4.98.150（ssh ruxi-server）
+- 路径：/opt/apps/services/clawclip/
+- 测试服务器：43.133.60.168（ZeroClaw）
+- Playwright 公共目录：C:\Users\黑受\.playwright\
+- 品牌色 #3b82c4，署名"掠蓝 (Luolan)"
+- 全局端口表：writing-pro:3001, 2048maomao:3002, ai-love:3003, ruxi:3004, ruxi-admin:3005, resume:3006, ruxi-api:3007, clawclip:8080

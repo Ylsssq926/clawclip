@@ -1,12 +1,5 @@
-import { DEFAULT_MODEL_PRICING } from '../types/index.js';
+import { computeCost, DEFAULT_DETAILED_PRICING } from './pricing-utils.js';
 import type { SessionReplay, SessionStep, SessionMeta } from '../types/replay.js';
-
-const UNKNOWN_MODEL_FALLBACK_PRICE = 2.0;
-
-function priceFor(model?: string): number {
-  if (model && DEFAULT_MODEL_PRICING[model] != null) return DEFAULT_MODEL_PRICING[model];
-  return UNKNOWN_MODEL_FALLBACK_PRICE;
-}
 
 function finalizeReplay(partial: { meta: Omit<SessionMeta, 'totalCost' | 'totalTokens' | 'durationMs' | 'startTime' | 'endTime' | 'modelUsed' | 'stepCount'> & Partial<SessionMeta>; steps: SessionStep[] }): SessionReplay {
   const stepsIn = partial.steps;
@@ -18,7 +11,7 @@ function finalizeReplay(partial: { meta: Omit<SessionMeta, 'totalCost' | 'totalT
   const steps: SessionStep[] = stepsIn.map((s, i) => {
     const model = s.model;
     if (model) models.add(model);
-    const cost = ((s.inputTokens || 0) + (s.outputTokens || 0)) * priceFor(model) / 1_000_000;
+    const cost = computeCost(DEFAULT_DETAILED_PRICING, model, s.inputTokens || 0, s.outputTokens || 0);
     totalCost += cost;
     totalTokens += (s.inputTokens || 0) + (s.outputTokens || 0);
     const durationMs =

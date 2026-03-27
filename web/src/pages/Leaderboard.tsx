@@ -149,9 +149,12 @@ export default function Leaderboard() {
         <div>
           <h2 className="text-2xl font-semibold text-white tracking-tight">{t('leaderboard.title')}</h2>
           <p className="text-sm text-slate-500 mt-1">{t('leaderboard.subtitle')}</p>
-          {isDemo && entries.length > 0 && (
-            <p className="text-[11px] text-cyan-500/80 mt-2">{t('leaderboard.demo')}</p>
-          )}
+      {isDemo && entries.length > 0 && (
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.07] px-4 py-3 flex items-start gap-2.5">
+          <span className="text-base leading-none mt-px" aria-hidden>💡</span>
+          <p className="text-sm text-cyan-300/90 leading-relaxed">{t('leaderboard.demoBanner')}</p>
+        </div>
+      )}
         </div>
         <button
           type="button"

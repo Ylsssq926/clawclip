@@ -46,6 +46,129 @@ export interface ModelPricing {
 }
 
 /**
+ * 分离 input/output 价格的详细定价表（USD / 百万 token）。
+ * 用于精确计算费用；legacy ModelPricing 仅存 output 价格，供向后兼容场景使用。
+ */
+export interface ModelPriceDetail {
+  input: number;
+  output: number;
+}
+
+export type DetailedModelPricing = { [model: string]: ModelPriceDetail };
+
+/**
+ * 默认详细模型定价表 — 同时包含 input 和 output 价格。
+ * 数据来源 & 校验日期 (2026-03-25):
+ *   OpenAI, Anthropic, Google, DeepSeek, Qwen, 智谱/Kimi, 百度, 腾讯, 零一万物 等
+ *   详见各厂商官方文档 / pricepertoken.com 交叉校验
+ */
+export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
+  // ── OpenAI ──
+  'gpt-5.4':        { input: 2.50, output: 15.0 },
+  'gpt-5.4-mini':    { input: 0.75, output: 4.50 },
+  'gpt-5.4-nano':    { input: 0.20, output: 1.25 },
+  'gpt-5.4-pro':   { input: 30.0, output: 180.0 },
+  'gpt-5.2':        { input: 1.75, output: 14.0 },
+  'gpt-5.2-pro':   { input: 21.0, output: 168.0 },
+  'gpt-5.1':        { input: 1.25, output: 10.0 },
+  'gpt-5':          { input: 1.25, output: 10.0 },
+  'gpt-5-mini':      { input: 0.25, output: 2.0 },
+  'gpt-5-nano':      { input: 0.05, output: 0.40 },
+  'gpt-5-pro':     { input: 15.0, output: 120.0 },
+  'gpt-4.1':         { input: 2.00, output: 8.0 },
+  'gpt-4.1-mini':    { input: 0.40, output: 1.60 },
+  'gpt-4.1-nano':    { input: 0.10, output: 0.40 },
+  'gpt-4o':         { input: 2.50, output: 10.0 },
+  'gpt-4o-mini':     { input: 0.15, output: 0.60 },
+  'gpt-4-turbo':    { input: 10.0, output: 30.0 },
+  'gpt-4':          { input: 30.0, output: 60.0 },
+  'gpt-3.5-turbo':   { input: 0.50, output: 1.50 },
+  'o3-pro':         { input: 20.0, output: 80.0 },
+  'o3':              { input: 2.00, output: 8.0 },
+  'o4-mini':         { input: 1.10, output: 4.40 },
+  'o3-mini':         { input: 1.10, output: 4.40 },
+  'o1':             { input: 15.0, output: 60.0 },
+  'o1-mini':         { input: 1.10, output: 4.40 },
+  'o1-pro':        { input: 150.0, output: 600.0 },
+
+  // ── Anthropic ──
+  'claude-opus-4.6':     { input: 5.0, output: 25.0 },
+  'claude-opus-4.5':     { input: 5.0, output: 25.0 },
+  'claude-opus-4.1':     { input: 15.0, output: 75.0 },
+  'claude-opus-4':       { input: 15.0, output: 75.0 },
+  'claude-sonnet-4.6':   { input: 3.0, output: 15.0 },
+  'claude-sonnet-4.5':   { input: 3.0, output: 15.0 },
+  'claude-sonnet-4':     { input: 3.0, output: 15.0 },
+  'claude-sonnet-3.7':   { input: 3.0, output: 15.0 },
+  'claude-3.5-sonnet':   { input: 3.0, output: 15.0 },
+  'claude-haiku-4.5':     { input: 1.0, output: 5.0 },
+  'claude-3.5-haiku':     { input: 0.80, output: 4.0 },
+  'claude-3-opus':       { input: 15.0, output: 75.0 },
+  'claude-3-haiku':       { input: 0.25, output: 1.25 },
+
+  // ── Google Gemini ──
+  'gemini-3.1-pro':     { input: 2.00, output: 12.0 },
+  'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
+  'gemini-3-flash':      { input: 0.50, output: 3.0 },
+  'gemini-2.5-pro':     { input: 1.25, output: 10.0 },
+  'gemini-2.5-flash':    { input: 0.30, output: 2.50 },
+  'gemini-2.5-flash-lite': { input: 0.10, output: 0.40 },
+  'gemini-2.0-flash':    { input: 0.10, output: 0.40 },
+
+  // ── DeepSeek ──
+  'deepseek-chat':       { input: 0.28, output: 0.42 },
+  'deepseek-reasoner':   { input: 0.28, output: 0.42 },
+
+  // ── Qwen / 阿里 ──
+  'qwen-max':       { input: 1.60, output: 6.40 },
+  'qwen-plus':      { input: 0.26, output: 1.56 },
+  'qwen3.5-flash':  { input: 0.065, output: 0.26 },
+  'qwen-turbo':     { input: 0.033, output: 0.13 },
+
+  // ── 字节跳动 豆包 ──
+  'doubao-pro':      { input: 0.25, output: 2.0 },
+  'doubao-lite':     { input: 0.07, output: 0.30 },
+
+  // ── 智谱 GLM ──
+  'glm-5':           { input: 1.00, output: 3.20 },
+  'glm-5-code':      { input: 1.20, output: 5.0 },
+  'glm-4.7':         { input: 0.60, output: 2.20 },
+  'glm-4.5':         { input: 0.60, output: 2.20 },
+  'glm-4':           { input: 0.70, output: 0.70 },
+  'glm-4.7-flash':   { input: 0.0, output: 0.0 },
+  'glm-4.5-flash':   { input: 0.0, output: 0.0 },
+  'glm-4-flash':     { input: 0.0, output: 0.0 },
+
+  // ── 月之暗面 Kimi ──
+  'kimi-k2.5':       { input: 0.45, output: 2.20 },
+  'kimi-k2':         { input: 0.40, output: 2.0 },
+  'moonshot-v1':     { input: 0.40, output: 2.0 },
+
+  // ── 百度 ERNIE ──
+  'ernie-4.0':       { input: 4.14, output: 8.28 },
+  'ernie-speed':     { input: 0.20, output: 0.40 },
+
+  // ── 腾讯混元 ──
+  'hunyuan-pro':     { input: 1.0, output: 1.5 },
+  'hunyuan-lite':    { input: 0.14, output: 0.28 },
+
+  // ── 零一万物 ──
+  'yi-lightning':    { input: 0.10, output: 0.14 },
+  'yi-large':        { input: 1.50, output: 3.0 },
+
+  // ── 开源模型（托管平台均价）──
+  'llama-3.3-70b':   { input: 0.50, output: 0.80 },
+
+  // ── Mistral ──
+  'mistral-large':   { input: 3.0, output: 6.0 },
+  'mistral-small':   { input: 0.15, output: 0.30 },
+
+  // ── MiniMax ──
+  'minimax-m2.7':    { input: 0.30, output: 1.20 },
+  'minimax-01':      { input: 0.50, output: 1.0 },
+};
+
+/**
  * 默认模型定价表 — 值为 **output 价格 (USD / 百万 token)**。
  * cost-parser 用同一个值乘以 (inputTokens + outputTokens)，
  * 因此实际成本仅作相对比较用途，精确账单请以各云厂商为准。

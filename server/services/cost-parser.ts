@@ -14,7 +14,9 @@ import {
 } from '../types/index.js';
 import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
 import { sessionParser } from './session-parser.js';
-import { getModelPricing } from './pricing-fetcher.js';
+import { getModelPricing, getDetailedModelPricing } from './pricing-fetcher.js';
+import { resolveModelDetail, computeDetailedCost } from './pricing-utils.js';
+import type { ModelPriceDetail } from '../types/index.js';
 
 const ALT_TIERS: { threshold: number; models: string[] }[] = [
   { threshold: 50, models: ['gpt-5.4-mini', 'claude-sonnet-4.6', 'gemini-2.5-pro'] },
@@ -65,6 +67,11 @@ export class CostParser {
       if (model.startsWith(key)) return table[key];
     }
     return 2.0;
+  }
+
+  /** 返回模型的 input/output 分离价格，用于精确计价 */
+  private priceDetailForModel(model: string): ModelPriceDetail {
+    return resolveModelDetail(getDetailedModelPricing(), model);
   }
 
   constructor() {
@@ -199,8 +206,8 @@ export class CostParser {
             usage.output_tokens ?? usage.completion_tokens ?? usage.outputTokens ?? usage.completionTokens ?? 0,
           );
           if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) continue;
-          const price = this.priceForModel(model);
-          const cost = (inputTokens + outputTokens) * price / 1_000_000;
+          const detail = this.priceDetailForModel(model);
+          const cost = computeDetailedCost(detail, inputTokens, outputTokens);
 
           const rawTs = parsed.timestamp ?? parsed.created_at ?? parsed.createdAt;
           let ts = new Date();

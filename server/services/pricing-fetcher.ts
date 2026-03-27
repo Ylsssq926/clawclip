@@ -1,4 +1,9 @@
-import { DEFAULT_MODEL_PRICING, type ModelPricing } from '../types/index.js';
+import {
+  DEFAULT_MODEL_PRICING,
+  DEFAULT_DETAILED_PRICING,
+  type ModelPricing,
+  type DetailedModelPricing,
+} from '../types/index.js';
 import { log } from './logger.js';
 
 const PRICETOKEN_URL = 'https://pricetoken.ai/api/v1/text';
@@ -17,7 +22,7 @@ interface PriceTokenResponse {
   data: PriceTokenModel[];
 }
 
-let cached: { pricing: ModelPricing; fetchedAt: number } | null = null;
+let cached: { pricing: ModelPricing; detailed: DetailedModelPricing; fetchedAt: number } | null = null;
 let fetching: Promise<ModelPricing> | null = null;
 
 function normalizeModelId(raw: string): string[] {
@@ -45,6 +50,20 @@ function buildPricingMap(models: PriceTokenModel[]): ModelPricing {
   return map;
 }
 
+function buildDetailedPricingMap(models: PriceTokenModel[]): DetailedModelPricing {
+  const map: DetailedModelPricing = { ...DEFAULT_DETAILED_PRICING };
+
+  for (const m of models) {
+    if (typeof m.outputPerMTok !== 'number' || m.outputPerMTok < 0) continue;
+    const input = typeof m.inputPerMTok === 'number' && m.inputPerMTok >= 0 ? m.inputPerMTok : m.outputPerMTok;
+    for (const id of normalizeModelId(m.modelId)) {
+      map[id] = { input, output: m.outputPerMTok };
+    }
+  }
+
+  return map;
+}
+
 async function doFetch(): Promise<ModelPricing> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -59,7 +78,8 @@ async function doFetch(): Promise<ModelPricing> {
     }
 
     const pricing = buildPricingMap(json.data);
-    cached = { pricing, fetchedAt: Date.now() };
+    const detailed = buildDetailedPricingMap(json.data);
+    cached = { pricing, detailed, fetchedAt: Date.now() };
     log.info(`[pricing-fetcher] loaded ${json.data.length} models from PriceToken`);
     return pricing;
   } catch (err) {
@@ -97,4 +117,21 @@ export async function getModelPricingAsync(): Promise<ModelPricing> {
 
 export function initPricingFetcher(): void {
   doFetch().catch(() => {});
+}
+
+export function getDetailedModelPricing(): DetailedModelPricing {
+  return cached?.detailed ?? DEFAULT_DETAILED_PRICING;
+}
+
+export async function getDetailedModelPricingAsync(): Promise<DetailedModelPricing> {
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.detailed;
+  }
+
+  if (!fetching) {
+    fetching = doFetch();
+  }
+
+  await fetching;
+  return cached?.detailed ?? DEFAULT_DETAILED_PRICING;
 }

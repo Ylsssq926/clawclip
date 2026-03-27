@@ -52,6 +52,47 @@ function envExtraRoots(): string[] {
     .filter(Boolean);
 }
 
+// ── 可配置会话文件扩展名 ──
+
+const DEFAULT_SESSION_EXTENSIONS = ['.jsonl'];
+let _cachedExtensions: string[] | null = null;
+
+/**
+ * 获取会话文件扩展名列表。
+ * 可通过环境变量 `CLAWCLIP_SESSION_EXTENSIONS` 配置（逗号分隔），默认 ['.jsonl']。
+ */
+export function getSessionFileExtensions(): string[] {
+  if (_cachedExtensions) return _cachedExtensions;
+  const raw = process.env.CLAWCLIP_SESSION_EXTENSIONS?.trim();
+  if (raw) {
+    const exts = raw
+      .split(/[,;]/)
+      .map(s => s.trim().startsWith('.') ? s.trim() : `.${s.trim()}`)
+      .filter(Boolean);
+    if (exts.length > 0) {
+      _cachedExtensions = exts;
+      return exts;
+    }
+  }
+  _cachedExtensions = DEFAULT_SESSION_EXTENSIONS;
+  return DEFAULT_SESSION_EXTENSIONS;
+}
+
+/** 判断文件名是否匹配会话文件扩展名 */
+export function isSessionFile(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return getSessionFileExtensions().some(ext => lower.endsWith(ext.toLowerCase()));
+}
+
+/** 去掉匹配的会话文件扩展名，返回不带后缀的文件名 */
+export function stripSessionExt(filename: string): string {
+  const lower = filename.toLowerCase();
+  for (const ext of getSessionFileExtensions()) {
+    if (lower.endsWith(ext.toLowerCase())) return filename.slice(0, -ext.length);
+  }
+  return filename;
+}
+
 /** 与运行中的 Gateway 使用同一状态目录时，可读会话；官方变量见 OPENCLAW_STATE_DIR */
 function envOpenclawStateDirRoot(): string | null {
   const raw = process.env.OPENCLAW_STATE_DIR?.trim();
@@ -220,7 +261,7 @@ export function listAgentSessionEntries(root: LobsterDataRoot): AgentSessionsEnt
 const MAX_JSONL_BYTES = 28 * 1024 * 1024;
 
 /**
- * 统计各根下「文件名以 .jsonl 结尾」的数量（用于状态 API）。
+ * 统计各根下会话文件的数量（用于状态 API）。
  * 与「可解析为至少一步」的会话数口径不同，后者由 SessionParser 基于解析结果统计。
  */
 export function countSessionJsonlFiles(): { total: number; byRoot: Record<string, number> } {
@@ -236,7 +277,7 @@ export function countSessionJsonlFiles(): { total: number; byRoot: Record<string
         continue;
       }
       for (const f of files) {
-        if (f.endsWith('.jsonl')) n += 1;
+        if (isSessionFile(f)) n += 1;
       }
     }
     byRoot[root.id] = n;

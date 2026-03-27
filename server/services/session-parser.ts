@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { DEFAULT_MODEL_PRICING } from '../types/index.js';
+import { computeCost, DEFAULT_DETAILED_PRICING } from './pricing-utils.js';
 import type { SessionMeta, SessionReplay, SessionStep } from '../types/replay.js';
 import { DEMO_SESSIONS } from './demo-sessions.js';
 import {
@@ -8,26 +8,11 @@ import {
   getLobsterDataRoots,
   listAgentSessionEntries,
   readJsonlFileSafe,
+  isSessionFile,
+  stripSessionExt,
 } from './agent-data-root.js';
 import { enrichSessionMetaFromStore, loadOpenclawSessionStore } from './session-store.js';
 import { log } from './logger.js';
-
-const UNKNOWN_MODEL_FALLBACK_PRICE = 2.0;
-
-function priceFor(model?: string): number {
-  if (!model) return UNKNOWN_MODEL_FALLBACK_PRICE;
-  if (DEFAULT_MODEL_PRICING[model] != null) return DEFAULT_MODEL_PRICING[model];
-  const stripped = model.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/:.*$/, '');
-  if (stripped !== model && DEFAULT_MODEL_PRICING[stripped] != null) return DEFAULT_MODEL_PRICING[stripped];
-  for (const key of Object.keys(DEFAULT_MODEL_PRICING)) {
-    if (model.startsWith(key)) return DEFAULT_MODEL_PRICING[key];
-  }
-  return UNKNOWN_MODEL_FALLBACK_PRICE;
-}
-
-function computeCost(model: string | undefined, input: number, output: number): number {
-  return (input + output) * priceFor(model) / 1_000_000;
-}
 
 /** session id：sourceId/agent/文件名（无后缀），再 URL 编码；多根并存时不撞车 */
 export function makeSessionId(sourceId: string, agentName: string, fileBase: string): string {
@@ -404,7 +389,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
 function finalizeStepDurationsAndCost(steps: SessionStep[]): SessionStep[] {
   const n = steps.length;
   return steps.map((s, i) => {
-    const cost = computeCost(s.model, s.inputTokens, s.outputTokens);
+    const cost = computeCost(DEFAULT_DETAILED_PRICING, s.model, s.inputTokens, s.outputTokens);
     const durationMs =
       i < n - 1 ? Math.max(0, steps[i + 1].timestamp.getTime() - s.timestamp.getTime()) : 0;
     return { ...s, index: i, cost, durationMs };
@@ -505,10 +490,10 @@ function loadRealReplaysIncremental(): SessionReplay[] {
         continue;
       }
       for (const f of files) {
-        if (!f.endsWith('.jsonl')) continue;
+        if (!isSessionFile(f)) continue;
         const filePath = path.join(e.sessionsDir, f);
         seenPaths.add(filePath);
-        const baseName = f.slice(0, -'.jsonl'.length);
+        const baseName = stripSessionExt(f);
 
         let mtimeMs: number;
         try {

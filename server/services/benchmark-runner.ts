@@ -15,7 +15,7 @@ function historyPath(): string {
   return path.join(getClawclipStateDir(), 'benchmark-history.json');
 }
 
-const WEIGHTS: Record<BenchmarkDimension, number> = {
+const DEFAULT_WEIGHTS: Record<BenchmarkDimension, number> = {
   writing: 0.2,
   coding: 0.15,
   toolUse: 0.2,
@@ -23,6 +23,50 @@ const WEIGHTS: Record<BenchmarkDimension, number> = {
   safety: 0.15,
   costEfficiency: 0.15,
 };
+
+/**
+ * 从 config.json 读取用户自定义评测权重，与默认值合并。
+ * 配置路径：{stateDir}/config.json → benchmarkWeights: { writing: 0.25, coding: 0.1, ... }
+ * 未提供的维度使用默认值；总和会自动归一化到 1.0。
+ */
+function loadBenchmarkWeights(): Record<BenchmarkDimension, number> {
+  try {
+    const configPath = path.join(getClawclipStateDir(), 'config.json');
+    if (!fs.existsSync(configPath)) return { ...DEFAULT_WEIGHTS };
+    const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const custom = raw?.benchmarkWeights;
+    if (!custom || typeof custom !== 'object') return { ...DEFAULT_WEIGHTS };
+
+    const merged: Record<string, number> = {};
+    let total = 0;
+    for (const dim of Object.keys(DEFAULT_WEIGHTS) as BenchmarkDimension[]) {
+      const v = typeof custom[dim] === 'number' && custom[dim] >= 0 ? custom[dim] : DEFAULT_WEIGHTS[dim];
+      merged[dim] = v;
+      total += v;
+    }
+    if (total > 0) {
+      for (const dim of Object.keys(merged)) {
+        merged[dim] = merged[dim] / total;
+      }
+    }
+    return merged as Record<BenchmarkDimension, number>;
+  } catch {
+    return { ...DEFAULT_WEIGHTS };
+  }
+}
+
+let _cachedWeights: Record<BenchmarkDimension, number> | null = null;
+
+/** 获取当前有效的评测权重（带缓存） */
+export function getEffectiveWeights(): Record<BenchmarkDimension, number> {
+  if (!_cachedWeights) _cachedWeights = loadBenchmarkWeights();
+  return _cachedWeights;
+}
+
+/** 重置权重缓存（配置变更后调用） */
+export function resetWeightsCache(): void {
+  _cachedWeights = null;
+}
 
 const CHEAP_MODEL_SUBSTR = [
   'deepseek-chat',
@@ -458,8 +502,9 @@ function computeFromReplays(replays: SessionReplay[]): BenchmarkResult {
   }
 
   let overall = 0;
+  const w = getEffectiveWeights();
   for (const d of dimensions) {
-    overall += d.score * WEIGHTS[d.dimension];
+    overall += d.score * w[d.dimension];
   }
   overall = clamp(Math.round(overall), 0, 100);
 

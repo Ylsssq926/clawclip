@@ -477,6 +477,9 @@ export default function Landing({ onEnterDemo }: Props) {
             <a href="https://github.com/Ylsssq926/clawclip" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors flex items-center gap-1.5">
               <Github className="w-4 h-4" /> GitHub
             </a>
+            <a href="https://luelan.online" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">
+              More Tools
+            </a>
             <span className="flex items-center gap-1.5">
               <MessageCircle className="w-4 h-4" /> {t('landing.footer.qq')}
             </span>

@@ -12,9 +12,9 @@ interface GradientTextProps {
 export default function GradientText({
   children,
   className,
-  from = '#f97316',
-  via = '#ec4899',
-  to = '#a855f7',
+  from = '#3b82c4',
+  via = '#06b6d4',
+  to = '#10b981',
   animate = true,
 }: GradientTextProps) {
   return (

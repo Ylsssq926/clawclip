@@ -36,13 +36,22 @@
     border-color: rgba(148, 163, 184, 0.2);
   }
 
+  .glass-raised {
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.78), rgba(15, 23, 42, 0.64));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.75rem;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.65);
+    transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  }
+
   .card-blue {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(15, 23, 42, 0.8) 60%);
-    border-color: rgba(59, 130, 246, 0.1);
+    background: linear-gradient(135deg, rgba(59, 130, 196, 0.06) 0%, rgba(15, 23, 42, 0.8) 60%);
+    border-color: rgba(59, 130, 196, 0.1);
   }
   .card-blue:hover {
-    border-color: rgba(59, 130, 246, 0.25);
-    box-shadow: 0 0 30px -10px rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 196, 0.25);
+    box-shadow: 0 0 30px -10px rgba(59, 130, 196, 0.12);
   }
 
   .card-cyan {
@@ -73,7 +82,7 @@
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #3b82f6, #06b6d4, #10b981);
+    background: linear-gradient(135deg, #3b82c4, #06b6d4, #10b981);
     background-size: 200% 200%;
     animation: gradient-shift 6s ease infinite;
     -webkit-background-clip: text;
@@ -103,7 +112,7 @@
     left: -10%;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.04) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(59, 130, 196, 0.04) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
   }

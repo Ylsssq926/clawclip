@@ -123,7 +123,7 @@ export default function TemplateMarket() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {!loading && filtered.map(template => (
-          <div key={template.id} className="card-blue p-6 hover:border-blue-400/25 transition-all">
+          <div key={template.id} className="card card-blue p-6 hover:border-blue-400/25 transition-all">
             <div className="flex items-start justify-between mb-3">
               <span className="text-3xl">{template.icon}</span>
               <span className="text-xs px-2 py-1 bg-white/[0.05] rounded-full text-slate-400 border border-white/[0.06]">{template.category}</span>

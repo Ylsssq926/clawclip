@@ -1,4 +1,4 @@
-import { Activity, DollarSign, Puzzle, Wifi, WifiOff, ArrowRight, Sparkles, Cloud, Clock, Bot } from 'lucide-react'
+import { Activity, AlertTriangle, Bot, ChevronDown, ChevronUp, Clock, Cloud, DollarSign, Puzzle, Sparkles, Wifi, WifiOff, X, ArrowRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { Tab } from '../App'
 import WordCloud, { type KeywordItem } from '../components/WordCloud'
@@ -48,6 +48,21 @@ interface CostSummary {
   trend: 'up' | 'down' | 'stable'
 }
 
+interface ReplayDiagnosticsSession {
+  id: string
+  agentName: string
+  totalLines: number
+  parsedLines: number
+  skippedLines: number
+  errorSamples?: string[]
+}
+
+interface ReplayDiagnosticsData {
+  totalJsonlFiles: number
+  parsableCount: number
+  sessions: ReplayDiagnosticsSession[]
+}
+
 function sessionListTitle(s: SessionMeta, locale: Locale): string {
   const fromStore = s.sessionLabel?.trim()
   const fromTranscript = s.summary?.trim()
@@ -70,6 +85,9 @@ export default function Dashboard({ onNavigate }: Props) {
   const [kwLoading, setKwLoading] = useState(true)
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [diagnostics, setDiagnostics] = useState<ReplayDiagnosticsData | null>(null)
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
+  const [diagnosticsDismissed, setDiagnosticsDismissed] = useState(false)
 
   useEffect(() => {
     Promise.all([apiGetSafe('/api/status'), apiGetSafe('/api/cost/summary?days=30')])
@@ -92,11 +110,24 @@ export default function Dashboard({ onNavigate }: Props) {
       .finally(() => setSessionsLoading(false))
   }, [])
 
+  useEffect(() => {
+    apiGetSafe<ReplayDiagnosticsData>('/api/replay/diagnostics')
+      .then(d => {
+        if (!d || !Array.isArray(d.sessions)) {
+          setDiagnostics(null)
+          return
+        }
+        setDiagnostics(d)
+      })
+  }, [])
+
   const jsonlTotal = status?.totalSessionFiles ?? 0
   const parsableCount = status?.parsableSessionCount ?? 0
   /** 磁盘有 .jsonl 但解析不出步骤（与「无日志仅用 Demo」区分） */
   const hasJsonlButUnparsed =
     Boolean(status) && jsonlTotal > 0 && parsableCount === 0 && !status?.hasRealSessionData
+  const diagnosticSessions = diagnostics?.sessions ?? []
+  const showDiagnosticsBanner = !diagnosticsDismissed && diagnosticSessions.length > 0
 
   const hour = new Date().getHours()
   const greetingKey =
@@ -271,6 +302,79 @@ export default function Dashboard({ onNavigate }: Props) {
       {fetchError && (
         <div className="text-xs text-amber-400/80 bg-amber-400/5 border border-amber-400/10 rounded-lg px-4 py-2 animate-fade-in">
           {t('dashboard.error.backend')}
+        </div>
+      )}
+
+      {showDiagnosticsBanner && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-sm animate-fade-in">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+              <div>
+                <p className="font-medium text-amber-100">
+                  {locale === 'en'
+                    ? `${diagnosticSessions.length} sessions have parsing issues`
+                    : `${diagnosticSessions.length} 个会话存在解析问题`}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
+                  {locale === 'en'
+                    ? `Parsable sessions: ${diagnostics?.parsableCount ?? 0} / JSONL files: ${diagnostics?.totalJsonlFiles ?? 0}`
+                    : `可解析会话：${diagnostics?.parsableCount ?? 0} / JSONL 文件：${diagnostics?.totalJsonlFiles ?? 0}`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDiagnosticsOpen(open => !open)}
+                className="inline-flex items-center gap-1 rounded-lg border border-amber-400/20 px-2.5 py-1 text-xs text-amber-100 transition-colors hover:bg-amber-400/10"
+              >
+                {diagnosticsOpen
+                  ? locale === 'en'
+                    ? 'Hide details'
+                    : '收起详情'
+                  : locale === 'en'
+                    ? 'View details'
+                    : '查看详情'}
+                {diagnosticsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiagnosticsDismissed(true)}
+                className="rounded-lg p-1 text-amber-100/80 transition-colors hover:bg-amber-400/10 hover:text-amber-50"
+                aria-label={locale === 'en' ? 'Dismiss diagnostics' : '关闭诊断提示'}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {diagnosticsOpen && (
+            <div className="mt-3 space-y-2 border-t border-amber-400/15 pt-3">
+              {diagnosticSessions.map(session => (
+                <div key={session.id} className="rounded-lg border border-amber-400/10 bg-black/10 px-3 py-2.5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm font-medium text-amber-50">{session.agentName}</span>
+                    <span className="text-[11px] text-amber-100/70">
+                      {locale === 'en'
+                        ? `total ${session.totalLines} · parsed ${session.parsedLines} · skipped ${session.skippedLines}`
+                        : `总计 ${session.totalLines} · 解析 ${session.parsedLines} · 跳过 ${session.skippedLines}`}
+                    </span>
+                  </div>
+                  <p className="mt-1 break-all font-mono text-[11px] text-amber-100/55">{session.id}</p>
+                  {session.errorSamples?.length ? (
+                    <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-amber-100/80">
+                      {session.errorSamples.map(sample => (
+                        <li key={`${session.id}-${sample}`} className="break-words">
+                          • {sample}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

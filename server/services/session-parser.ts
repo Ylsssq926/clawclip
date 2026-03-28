@@ -6,8 +6,10 @@ import { DEMO_SESSIONS } from './demo-sessions.js';
 import {
   countSessionJsonlFiles,
   getLobsterDataRoots,
+  getSkippedLargeFiles,
   listAgentSessionEntries,
   readJsonlFileSafe,
+  resetSkippedLargeFiles,
   isSessionFile,
   stripSessionExt,
 } from './agent-data-root.js';
@@ -60,14 +62,146 @@ function stringifyContent(c: unknown): string {
 
 type JsonlLine = Record<string, unknown>;
 
-function extractLineText(obj: JsonlLine): string {
-  if (obj.content != null) return stringifyContent(obj.content);
+const MAX_MULTILINE_JSON_LINES = 20;
+
+interface ParsedJsonChunk {
+  obj: JsonlLine;
+  consumedLines: number;
+  consumedNonEmptyLines: number;
+  multilineRecovered: number;
+}
+
+function tryRecoverMultilineJson(lines: string[], startIndex: number, firstTrimmedLine: string): ParsedJsonChunk | null {
+  if (!firstTrimmedLine.startsWith('{')) return null;
+
+  let merged = lines[startIndex] ?? '';
+  let consumedLines = 1;
+  let consumedNonEmptyLines = 1;
+
+  for (
+    let nextIndex = startIndex + 1;
+    nextIndex < lines.length && consumedLines < MAX_MULTILINE_JSON_LINES;
+    nextIndex += 1
+  ) {
+    const nextLine = lines[nextIndex] ?? '';
+    const trimmed = nextLine.trim();
+    merged += `\n${nextLine}`;
+    consumedLines += 1;
+    if (trimmed) consumedNonEmptyLines += 1;
+    if (!trimmed.endsWith('}')) continue;
+
+    try {
+      return {
+        obj: JSON.parse(merged) as JsonlLine,
+        consumedLines,
+        consumedNonEmptyLines,
+        multilineRecovered: consumedNonEmptyLines,
+      };
+    } catch {
+      // 继续向后合并，直到命中可解析的闭合对象或达到上限。
+    }
+  }
+
+  return null;
+}
+
+function parseJsonChunk(lines: string[], lineIndex: number): ParsedJsonChunk {
+  const rawLine = lines[lineIndex] ?? '';
+  const trimmed = rawLine.trim();
+
+  try {
+    return {
+      obj: JSON.parse(trimmed) as JsonlLine,
+      consumedLines: 1,
+      consumedNonEmptyLines: 1,
+      multilineRecovered: 0,
+    };
+  } catch (error) {
+    const recovered = tryRecoverMultilineJson(lines, lineIndex, trimmed);
+    if (recovered) return recovered;
+    throw error;
+  }
+}
+
+function partText(part: Record<string, unknown>): string {
+  return stringifyContent(
+    part.text ??
+      part.content ??
+      part.summary ??
+      part.reasoning_content ??
+      part.reasoning ??
+      part.thinking ??
+      part.message ??
+      part.output_text ??
+      part.output ??
+      part.result ??
+      part.value,
+  );
+}
+
+function isReasoningPart(part: Record<string, unknown>): boolean {
+  const type =
+    typeof part.type === 'string'
+      ? part.type.toLowerCase()
+      : typeof part.kind === 'string'
+        ? part.kind.toLowerCase()
+        : '';
+  return (
+    type.includes('reason') ||
+    type.includes('think') ||
+    part.reasoning != null ||
+    part.reasoning_content != null ||
+    part.thinking != null
+  );
+}
+
+function extractTextAndReasoning(content: unknown): { text: string; reasoning: string } {
+  if (Array.isArray(content)) {
+    const textParts: string[] = [];
+    const reasoningParts: string[] = [];
+    for (const item of content) {
+      if (typeof item === 'string') {
+        textParts.push(item);
+        continue;
+      }
+      if (!item || typeof item !== 'object') continue;
+      const part = item as Record<string, unknown>;
+      const value = partText(part);
+      if (!value) continue;
+      if (isReasoningPart(part)) reasoningParts.push(value);
+      else textParts.push(value);
+    }
+    return { text: textParts.join(''), reasoning: reasoningParts.join('') };
+  }
+  if (content && typeof content === 'object') {
+    const part = content as Record<string, unknown>;
+    const value = partText(part);
+    if (!value) return { text: '', reasoning: '' };
+    return isReasoningPart(part) ? { text: '', reasoning: value } : { text: value, reasoning: '' };
+  }
+  return { text: stringifyContent(content), reasoning: '' };
+}
+
+function mergeDistinctStrings(values: Array<string | undefined>, separator = '\n'): string {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const value = raw ?? '';
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+  }
+  return out.join(separator);
+}
+
+function extractLineTextAndReasoning(obj: JsonlLine): { text: string; reasoning: string } {
+  if (obj.content != null) return extractTextAndReasoning(obj.content);
   const msg = obj.message;
-  if (typeof msg === 'string') return msg;
+  if (typeof msg === 'string') return { text: msg, reasoning: '' };
   if (msg && typeof msg === 'object') {
     const m = msg as Record<string, unknown>;
-    if (m.content != null) return stringifyContent(m.content);
-    if (typeof m.text === 'string') return m.text;
+    if (m.content != null) return extractTextAndReasoning(m.content);
+    if (typeof m.text === 'string') return { text: m.text, reasoning: '' };
   }
   const choices = obj.choices;
   if (Array.isArray(choices) && choices[0] && typeof choices[0] === 'object') {
@@ -75,10 +209,81 @@ function extractLineText(obj: JsonlLine): string {
     const message = ch0.message;
     if (message && typeof message === 'object') {
       const mm = message as Record<string, unknown>;
-      if (mm.content != null) return stringifyContent(mm.content);
+      if (mm.content != null) return extractTextAndReasoning(mm.content);
+      if (typeof mm.text === 'string') return { text: mm.text, reasoning: '' };
     }
   }
-  return '';
+  return { text: '', reasoning: '' };
+}
+
+function extractReasoningText(body: JsonlLine, outer: JsonlLine, contentReasoning = ''): string {
+  return mergeDistinctStrings([
+    contentReasoning,
+    body.reasoning_content != null ? stringifyContent(body.reasoning_content) : '',
+    body.reasoning != null ? stringifyContent(body.reasoning) : '',
+    outer.reasoning_content != null ? stringifyContent(outer.reasoning_content) : '',
+    outer.reasoning != null ? stringifyContent(outer.reasoning) : '',
+  ]);
+}
+
+function stringifyErrorValue(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return mergeDistinctStrings(value.map(item => stringifyErrorValue(item)));
+  }
+  if (value && typeof value === 'object') {
+    const err = value as Record<string, unknown>;
+    const summary = mergeDistinctStrings(
+      [
+        stringifyContent(err.message),
+        stringifyContent(err.error),
+        stringifyContent(err.details),
+        stringifyContent(err.detail),
+        stringifyContent(err.reason),
+      ],
+      ' · ',
+    );
+    if (summary) return summary;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  if (value == null || typeof value === 'boolean') return '';
+  return String(value);
+}
+
+function extractErrorText(body: JsonlLine, outer: JsonlLine): string {
+  return stringifyErrorValue(body.error ?? outer.error);
+}
+
+function buildStepContent(text: string, reasoning: string): Pick<SessionStep, 'content' | 'reasoning'> {
+  if (reasoning) {
+    return {
+      content: text || reasoning,
+      reasoning,
+    };
+  }
+  return { content: text };
+}
+
+function extractToolCallId(...records: Array<Record<string, unknown> | undefined>): string | undefined {
+  for (const record of records) {
+    if (!record) continue;
+    const id = record.id ?? record.tool_call_id;
+    if (typeof id === 'string' && id) return id;
+  }
+  return undefined;
+}
+
+function extractToolResultCallId(...records: Array<Record<string, unknown> | undefined>): string | undefined {
+  for (const record of records) {
+    if (!record) continue;
+    const id = record.tool_call_id ?? record.call_id;
+    if (typeof id === 'string' && id) return id;
+  }
+  return undefined;
 }
 
 function readUsage(obj: JsonlLine): { input: number; output: number } {
@@ -233,19 +438,27 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
     outputTokens: output,
   });
 
-  const text = extractLineText(body);
-  const reasoningExtra =
-    body.reasoning_content != null
-      ? stringifyContent(body.reasoning_content)
-      : body.reasoning != null
-        ? stringifyContent(body.reasoning)
-        : obj.reasoning_content != null
-          ? stringifyContent(obj.reasoning_content)
-          : obj.reasoning != null
-            ? stringifyContent(obj.reasoning)
-            : '';
-
+  const { text, reasoning: contentReasoning } = extractLineTextAndReasoning(body);
+  const reasoningExtra = extractReasoningText(body, obj, contentReasoning);
   const role = resolveMessageRole(body, outerType);
+  const stepContent = buildStepContent(text, reasoningExtra);
+  const errorText = extractErrorText(body, obj);
+
+  if (outerType === 'error' || errorText) {
+    const errorContent = buildStepContent(text || errorText, reasoningExtra);
+    return {
+      index,
+      timestamp,
+      type: 'system',
+      ...errorContent,
+      model,
+      error: errorText || errorContent.content || '（错误）',
+      isError: true,
+      ...base(),
+      cost: 0,
+      durationMs: 0,
+    };
+  }
 
   if (role === 'user' || outerType === 'user_message') {
     return {
@@ -268,10 +481,11 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
         index,
         timestamp,
         type: 'tool_call',
-        content: text || '',
+        ...stepContent,
         model,
         toolName: fc.name,
         toolInput,
+        toolCallId: extractToolCallId(fc),
         ...base(),
         cost: 0,
         durationMs: 0,
@@ -280,30 +494,48 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
 
     const toolCalls = pickToolCalls(body, obj);
     if (toolCalls && toolCalls.length > 0) {
-      return toolCalls.map((tc, i) => {
-        const tcr = tc as Record<string, unknown>;
-        const n = toolCallName(tcr);
-        const tin = toolCallInput(tcr);
-        return {
-          index: index + i,
+      const steps: SessionStep[] = [];
+      if (text.length > 0) {
+        steps.push({
+          index,
           timestamp,
-          type: 'tool_call' as const,
-          content: i === 0 ? (text || '') : '',
+          type: 'response',
+          ...stepContent,
           model,
-          toolName: n,
-          toolInput: tin,
           ...base(),
           cost: 0,
           durationMs: 0,
-        };
+        });
+      }
+      const toolCallOffset = steps.length;
+      toolCalls.forEach((tc, i) => {
+        const tcr = tc as Record<string, unknown>;
+        const n = toolCallName(tcr);
+        const tin = toolCallInput(tcr);
+        const toolStepContent =
+          i === 0 && text.length === 0 ? buildStepContent('', reasoningExtra) : { content: '' };
+        steps.push({
+          index: index + toolCallOffset + i,
+          timestamp,
+          type: 'tool_call',
+          ...toolStepContent,
+          model,
+          toolName: n,
+          toolInput: tin,
+          toolCallId: extractToolCallId(tcr),
+          ...base(),
+          cost: 0,
+          durationMs: 0,
+        });
       });
+      return steps;
     }
     if (text.length > 0 || reasoningExtra.length > 0) {
       return {
         index,
         timestamp,
         type: 'response',
-        content: text || reasoningExtra,
+        ...stepContent,
         model,
         ...base(),
         cost: 0,
@@ -311,16 +543,13 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
       };
     }
     if (input > 0 || output > 0) {
+      const thinkingText =
+        text || stringifyContent(body.thought) || stringifyContent(obj.thought) || reasoningExtra || '（模型内部推算）';
       return {
         index,
         timestamp,
         type: 'thinking',
-        content:
-          text ||
-          reasoningExtra ||
-          stringifyContent(body.thought) ||
-          stringifyContent(obj.thought) ||
-          '（模型内部推算）',
+        ...buildStepContent(thinkingText, reasoningExtra),
         model,
         ...base(),
         cost: 0,
@@ -331,9 +560,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
   }
 
   if (role === 'tool' || outerType === 'tool_result' || outerType === 'function_call_output') {
-    const out =
-      text ||
-      stringifyContent(body.output ?? body.result ?? obj.output ?? obj.result);
+    const out = text || stringifyContent(body.output ?? body.result ?? obj.output ?? obj.result);
     return {
       index,
       timestamp,
@@ -341,6 +568,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
       content: out,
       toolOutput: out,
       model,
+      toolCallId: extractToolResultCallId(body, obj),
       toolName:
         typeof body.name === 'string'
           ? body.name
@@ -362,7 +590,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
       index,
       timestamp,
       type: 'system',
-      content: text,
+      ...stepContent,
       model,
       ...base(),
       cost: 0,
@@ -375,7 +603,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
       index,
       timestamp,
       type: 'thinking',
-      content: text || reasoningExtra || '（用量记录）',
+      ...buildStepContent(text || reasoningExtra || '（用量记录）', reasoningExtra),
       model,
       ...base(),
       cost: 0,
@@ -437,23 +665,49 @@ function parseJsonlFile(
   filePath: string,
   baseName: string,
 ): SessionReplay | null {
-  const content = readJsonlFileSafe(filePath);
-  if (content == null) return null;
+  const readResult = readJsonlFileSafe(filePath);
+  if (readResult.content == null) return null;
 
+  let totalLines = 0;
+  let parsedLines = 0;
+  let skippedLines = 0;
+  let multilineRecovered = 0;
+  const errorSamples: string[] = [];
   const draft: SessionStep[] = [];
-  for (const line of content.split(/\r?\n/)) {
-    const t = line.trim();
+  const lines = readResult.content.split(/\r?\n/);
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const t = lines[lineIndex]?.trim();
     if (!t) continue;
-    let obj: JsonlLine;
+
+    let parsedChunk: ParsedJsonChunk;
     try {
-      obj = JSON.parse(t) as JsonlLine;
+      parsedChunk = parseJsonChunk(lines, lineIndex);
     } catch (e) {
-      log.debug(`[session-parser] skipped malformed JSONL line in ${baseName}:`, (e as Error).message);
+      totalLines += 1;
+      const message = (e as Error).message;
+      skippedLines += 1;
+      if (errorSamples.length < 3) {
+        errorSamples.push(`第 ${lineIndex + 1} 行 JSON.parse 失败：${message}`);
+      }
+      log.debug(`[session-parser] skipped malformed JSONL line in ${baseName}:`, message);
       continue;
     }
-    const stepOrSteps = lineToStep(obj, draft.length);
-    if (stepOrSteps == null) continue;
+
+    totalLines += parsedChunk.consumedNonEmptyLines;
+    multilineRecovered += parsedChunk.multilineRecovered;
+    if (parsedChunk.consumedLines > 1) {
+      lineIndex += parsedChunk.consumedLines - 1;
+    }
+
+    const stepOrSteps = lineToStep(parsedChunk.obj, draft.length);
+    if (stepOrSteps == null) {
+      skippedLines += 1;
+      continue;
+    }
+
     const batch = Array.isArray(stepOrSteps) ? stepOrSteps : [stepOrSteps];
+    parsedLines += batch.length;
     for (const s of batch) {
       draft.push(s);
     }
@@ -464,6 +718,13 @@ function parseJsonlFile(
   const steps = finalizeStepDurationsAndCost(draft);
   const id = makeSessionId(sourceId, agentName, baseName);
   const meta = buildMeta(sourceId, agentName, id, steps);
+  meta.parseDiagnostics = {
+    totalLines,
+    parsedLines,
+    skippedLines,
+    multilineRecovered,
+    ...(errorSamples.length > 0 ? { errorSamples } : {}),
+  };
   return { meta, steps };
 }
 
@@ -475,6 +736,7 @@ interface FileCacheEntry {
 const fileCache = new Map<string, FileCacheEntry>();
 
 function loadRealReplaysIncremental(): SessionReplay[] {
+  resetSkippedLargeFiles();
   const out: SessionReplay[] = [];
   const roots = getLobsterDataRoots();
   const seenPaths = new Set<string>();
@@ -594,6 +856,47 @@ export class SessionParser {
   } {
     const totalJsonlFiles = precomputedTotalJsonl ?? countSessionJsonlFiles().total;
     return { totalJsonlFiles, parsableSessionCount: this.getRealReplays().length };
+  }
+
+  getDiagnostics(): {
+    totalJsonlFiles: number;
+    parsableCount: number;
+    skippedLargeFiles: string[];
+    sessions: Array<{
+      id: string;
+      agentName: string;
+      totalLines: number;
+      parsedLines: number;
+      skippedLines: number;
+      multilineRecovered: number;
+      errorSamples?: string[];
+    }>;
+  } {
+    const replays = this.getRealReplays();
+    return {
+      totalJsonlFiles: countSessionJsonlFiles().total,
+      parsableCount: replays.length,
+      skippedLargeFiles: getSkippedLargeFiles(),
+      sessions: replays
+        .filter(replay => {
+          const diagnostics = replay.meta.parseDiagnostics;
+          return (
+            (diagnostics?.skippedLines ?? 0) > 0 ||
+            (diagnostics?.multilineRecovered ?? 0) > 0
+          );
+        })
+        .map(replay => ({
+          id: replay.meta.id,
+          agentName: replay.meta.agentName,
+          totalLines: replay.meta.parseDiagnostics?.totalLines ?? 0,
+          parsedLines: replay.meta.parseDiagnostics?.parsedLines ?? 0,
+          skippedLines: replay.meta.parseDiagnostics?.skippedLines ?? 0,
+          multilineRecovered: replay.meta.parseDiagnostics?.multilineRecovered ?? 0,
+          ...(replay.meta.parseDiagnostics?.errorSamples?.length
+            ? { errorSamples: replay.meta.parseDiagnostics.errorSamples }
+            : {}),
+        })),
+    };
   }
 
   getRealReplays(): SessionReplay[] {

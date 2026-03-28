@@ -20,6 +20,15 @@ router.get('/sessions', (req, res, next) => {
   }
 });
 
+/** GET /api/replay/diagnostics — JSONL 解析诊断 */
+router.get('/diagnostics', (_req, res, next) => {
+  try {
+    res.json(sessionParser.getDiagnostics());
+  } catch (e) {
+    next(e);
+  }
+});
+
 /** GET /api/replay/sessions/:id — 单会话回放（:id 可为 URL 编码） */
 router.get('/sessions/:id', (req, res, next) => {
   try {

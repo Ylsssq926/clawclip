@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { log } from './logger.js';
 
 /**
  * 数据根探测（对齐 OpenClaw 当前文档，约 2026）：
@@ -259,6 +260,20 @@ export function listAgentSessionEntries(root: LobsterDataRoot): AgentSessionsEnt
 }
 
 const MAX_JSONL_BYTES = 28 * 1024 * 1024;
+const skippedLargeFiles = new Set<string>();
+
+export interface ReadJsonlFileSafeResult {
+  content: string | null;
+  skippedReason?: 'too_large' | 'read_error';
+}
+
+export function resetSkippedLargeFiles(): void {
+  skippedLargeFiles.clear();
+}
+
+export function getSkippedLargeFiles(): string[] {
+  return [...skippedLargeFiles];
+}
 
 /**
  * 统计各根下会话文件的数量（用于状态 API）。
@@ -286,23 +301,30 @@ export function countSessionJsonlFiles(): { total: number; byRoot: Record<string
   return { total, byRoot };
 }
 
-export function readJsonlFileSafe(filePath: string): string | null {
+export function readJsonlFileSafe(filePath: string): ReadJsonlFileSafeResult {
   let st: fs.Stats;
   try {
     st = fs.statSync(filePath);
   } catch {
-    return null;
+    return { content: null, skippedReason: 'read_error' };
   }
-  if (!st.isFile() || st.size === 0) return null;
-  if (st.size > MAX_JSONL_BYTES) return null;
+  if (!st.isFile() || st.size === 0) {
+    return { content: null, skippedReason: 'read_error' };
+  }
+  if (st.size > MAX_JSONL_BYTES) {
+    const fileSizeMB = (st.size / 1024 / 1024).toFixed(2);
+    skippedLargeFiles.add(filePath);
+    log.warn(`[session-parser] 跳过大文件 ${filePath}（${fileSizeMB}MB > 28MB 限制）`);
+    return { content: null, skippedReason: 'too_large' };
+  }
   try {
     let buf = fs.readFileSync(filePath);
     if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
       buf = buf.subarray(3);
     }
-    return buf.toString('utf-8');
+    return { content: buf.toString('utf-8') };
   } catch {
-    return null;
+    return { content: null, skippedReason: 'read_error' };
   }
 }
 

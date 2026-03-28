@@ -78,12 +78,15 @@ const DIMENSION_LINE_STROKES: Record<string, string> = {
 }
 
 const RANK_STYLES: Record<string, { bg: string; text: string; glow: string }> = {
-  S: { bg: 'bg-gradient-to-br from-yellow-500/30 to-orange-500/20', text: 'text-yellow-400', glow: 'shadow-yellow-500/20 shadow-lg' },
+  S: { bg: 'bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10', text: 'text-blue-300', glow: 'shadow-cyan-500/10 shadow-lg' },
   A: { bg: 'bg-gradient-to-br from-green-500/20 to-emerald-500/10', text: 'text-green-400', glow: 'shadow-green-500/10 shadow-md' },
   B: { bg: 'bg-gradient-to-br from-blue-500/20 to-cyan-500/10', text: 'text-blue-400', glow: '' },
   C: { bg: 'bg-gradient-to-br from-slate-500/20 to-slate-500/10', text: 'text-slate-400', glow: '' },
   D: { bg: 'bg-gradient-to-br from-red-500/20 to-red-500/10', text: 'text-red-400', glow: '' },
 }
+
+const PRIMARY_SERIES_COLOR = '#3b82c4'
+const COMPARE_SERIES_COLOR = '#06b6d4'
 
 const chartTooltipProps = {
   contentStyle: {
@@ -415,18 +418,18 @@ export default function Benchmark() {
                   <Radar
                     name={t('benchmark.legend.current')}
                     dataKey="score"
-                    stroke="#f97316"
+                    stroke={PRIMARY_SERIES_COLOR}
                     strokeWidth={2}
-                    fill="#f97316"
+                    fill={PRIMARY_SERIES_COLOR}
                     fillOpacity={0.3}
                   />
                   {compareResult && (
                     <Radar
                       name={t('benchmark.legend.compare')}
                       dataKey="compareScore"
-                      stroke="#3b82c4"
+                      stroke={COMPARE_SERIES_COLOR}
                       strokeWidth={2}
-                      fill="#3b82c4"
+                      fill={COMPARE_SERIES_COLOR}
                       fillOpacity={0.2}
                     />
                   )}
@@ -499,7 +502,7 @@ export default function Benchmark() {
                 {t('benchmark.curve.toggle')}
               </button>
             </div>
-            {curveNote && <p className="text-xs text-amber-200/80 mb-3">{curveNote}</p>}
+            {curveNote && <p className="text-xs text-blue-200/80 mb-3">{curveNote}</p>}
             {showCurveHelp && (
               <p className="text-xs text-slate-400 mb-4 leading-relaxed border border-white/[0.06] rounded-lg p-3 bg-white/[0.02]">
                 {t('benchmark.curve.long')}
@@ -534,7 +537,7 @@ export default function Benchmark() {
                     <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
                     <YAxis domain={[0, 100]} stroke="#64748b" tick={{ fontSize: 12 }} />
                     <Tooltip {...chartTooltipProps} />
-                    <Line type="monotone" dataKey="overallScore" stroke="#f97316" strokeWidth={2} dot={{ r: 4, fill: '#f97316' }} name={t('benchmark.line.overall')}>
+                    <Line type="monotone" dataKey="overallScore" stroke={PRIMARY_SERIES_COLOR} strokeWidth={2} dot={{ r: 4, fill: PRIMARY_SERIES_COLOR }} name={t('benchmark.line.overall')}>
                       <LabelList
                         dataKey="rank"
                         position="top"

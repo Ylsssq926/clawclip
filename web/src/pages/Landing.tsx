@@ -76,7 +76,7 @@ export default function Landing({ onEnterDemo }: Props) {
   const { t } = useI18n()
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-white text-slate-800 overflow-hidden">
+    <div className="relative min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-slate-50 text-slate-800 overflow-hidden">
       {/* Ambient orbs — absolute so they don't overlap on scroll */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[5%] left-[15%] w-[700px] h-[700px] bg-blue-200/20 rounded-full blur-[120px]" />
@@ -99,7 +99,7 @@ export default function Landing({ onEnterDemo }: Props) {
               href="https://github.com/Ylsssq926/clawclip"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 transition-colors px-3 py-2 rounded-lg hover:bg-blue-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white/80"
+              className="flex items-center gap-2 text-sm text-slate-600 hover:text-accent transition-colors px-3 py-2 rounded-lg hover:bg-blue-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white/80"
             >
               <Github className="w-4 h-4" /> GitHub
             </a>
@@ -107,7 +107,7 @@ export default function Landing({ onEnterDemo }: Props) {
             <button
               type="button"
               onClick={onEnterDemo}
-              className="text-sm font-medium px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-400/35 hover:shadow-lg hover:shadow-blue-400/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
+              className="text-sm font-medium px-5 py-2.5 rounded-xl bg-gradient-to-r from-accent to-cyan-500 text-white shadow-md shadow-[#3b82c4]/35 hover:shadow-lg hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               {t('landing.cta.demo')}
             </button>
@@ -123,15 +123,15 @@ export default function Landing({ onEnterDemo }: Props) {
           transition={{ duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
           className="max-w-3xl"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-xs text-blue-600 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/20 bg-blue-50 text-xs text-accent mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             {t('landing.tagline')}
           </div>
 
           <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
             <span className="text-slate-900">{t('landing.hero.line1')}</span>
             <br />
-            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{t('landing.hero.line2')}</span>
+            <span className="bg-gradient-to-r from-accent to-cyan-500 bg-clip-text text-transparent">{t('landing.hero.line2')}</span>
           </h1>
 
           <p className="text-lg lg:text-xl text-slate-600 leading-relaxed max-w-2xl mb-10">
@@ -142,7 +142,7 @@ export default function Landing({ onEnterDemo }: Props) {
             <button
               type="button"
               onClick={onEnterDemo}
-              className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-base shadow-lg shadow-blue-400/35 hover:shadow-xl hover:shadow-blue-400/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
+              className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-accent to-cyan-500 text-white font-semibold text-base shadow-lg shadow-[#3b82c4]/35 hover:shadow-xl hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               <Play className="w-5 h-5" />
               {t('landing.cta.demo')}
@@ -152,7 +152,7 @@ export default function Landing({ onEnterDemo }: Props) {
               href="https://github.com/Ylsssq926/clawclip"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-8 py-4 rounded-2xl border border-blue-100 text-slate-700 font-medium text-base bg-white/50 hover:bg-blue-50/90 hover:border-blue-200 transition-[transform,background-color,border-color] duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
+              className="flex items-center gap-3 px-8 py-4 rounded-2xl border border-accent/15 text-slate-700 font-medium text-base bg-white/60 hover:bg-accent/5 hover:border-accent/25 transition-[transform,background-color,border-color] duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               <Github className="w-5 h-5" />
               {t('landing.cta.source')}
@@ -188,7 +188,7 @@ export default function Landing({ onEnterDemo }: Props) {
             { num: '0', labelKey: 'landing.stats.apicost' as const },
           ].map((s, i) => (
             <div key={i} className="text-center">
-              <div className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+              <div className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-accent to-cyan-500 bg-clip-text text-transparent">
                 {s.num === '0' ? '$0' : s.num}
               </div>
               <div className="text-xs text-slate-500 mt-1">{t(s.labelKey)}</div>
@@ -226,7 +226,7 @@ export default function Landing({ onEnterDemo }: Props) {
                 className="rounded-2xl border border-blue-100 bg-blue-50 p-5 hover:border-blue-200 cursor-default"
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-xs font-mono text-blue-600 tabular-nums">0{step}</span>
+                  <span className="text-xs font-mono text-accent tabular-nums">0{step}</span>
                   <Ico className="w-4 h-4 text-cyan-600 shrink-0" />
                 </div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-2">{t(titleKey)}</h3>
@@ -255,7 +255,7 @@ export default function Landing({ onEnterDemo }: Props) {
               key={f.titleKey}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              whileHover={{ y: -4, boxShadow: '0 12px 32px -8px rgba(59,130,246,0.15)' }}
+              whileHover={{ y: -4, boxShadow: '0 12px 32px -8px rgba(59,130,196,0.15)' }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.45, delay: i * 0.08, ease: [0.25, 0.4, 0.25, 1] }}
               className="bg-white border border-blue-100 rounded-2xl shadow-sm p-6 hover:border-blue-300 cursor-default"
@@ -333,18 +333,18 @@ export default function Landing({ onEnterDemo }: Props) {
               <svg viewBox="0 0 320 120" className="w-full h-32">
                 <defs>
                   <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(59,130,246,0.3)" />
-                    <stop offset="100%" stopColor="rgba(59,130,246,0)" />
+                    <stop offset="0%" stopColor="rgba(59,130,196,0.3)" />
+                    <stop offset="100%" stopColor="rgba(59,130,196,0)" />
                   </linearGradient>
                 </defs>
-                <path d="M0,110 Q40,100 80,85 T160,60 T240,35 T320,15" fill="none" stroke="rgba(59,130,246,0.5)" strokeWidth="2" strokeDasharray="4 3" />
-                <path d="M0,105 Q40,95 80,78 T160,52 T240,28 T320,10" fill="none" stroke="rgba(59,130,246,0.9)" strokeWidth="2.5" />
+                <path d="M0,110 Q40,100 80,85 T160,60 T240,35 T320,15" fill="none" stroke="rgba(59,130,196,0.5)" strokeWidth="2" strokeDasharray="4 3" />
+                <path d="M0,105 Q40,95 80,78 T160,52 T240,28 T320,10" fill="none" stroke="rgba(59,130,196,0.9)" strokeWidth="2.5" />
                 <path d="M0,105 Q40,95 80,78 T160,52 T240,28 T320,10 L320,120 L0,120 Z" fill="url(#curveGrad)" />
                 {[
                   [20, 100], [60, 90], [100, 75], [140, 62], [180, 48],
                   [220, 38], [260, 26], [300, 14],
                 ].map(([cx, cy], i) => (
-                  <circle key={i} cx={cx} cy={cy} r="3.5" fill="white" stroke="rgba(59,130,246,0.8)" strokeWidth="2" />
+                  <circle key={i} cx={cx} cy={cy} r="3.5" fill="white" stroke="rgba(59,130,196,0.8)" strokeWidth="2" />
                 ))}
                 <text x="8" y="12" fontSize="9" fill="rgba(100,116,139,0.6)">Score</text>
                 <text x="280" y="118" fontSize="9" fill="rgba(100,116,139,0.6)">{t('landing.curve.axis')}</text>
@@ -354,142 +354,146 @@ export default function Landing({ onEnterDemo }: Props) {
         </div>
       </section>
 
-      {/* Demo Preview */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pb-24">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.6 }}
-          className="bg-white border border-blue-100 rounded-2xl shadow-sm overflow-hidden"
-        >
-          <div className="p-8 lg:p-12 text-center">
-            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3">{t('landing.preview.title')}</h2>
-            <p className="text-slate-600 mb-8 max-w-md mx-auto">
-              {t('landing.preview.desc')}
-            </p>
-            <button
-              type="button"
-              onClick={onEnterDemo}
-              className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold shadow-lg shadow-blue-400/35 hover:shadow-xl hover:shadow-blue-400/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
-            >
-              <Play className="w-5 h-5" />
-              {t('landing.preview.cta')}
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-          {/* Mock dashboard */}
-          <div className="px-8 lg:px-12 pb-2">
-            <div className="rounded-t-xl border border-blue-100 border-b-0 bg-gradient-to-b from-slate-900 to-slate-800 p-6 space-y-4">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-400" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                  <div className="w-3 h-3 rounded-full bg-green-400" />
-                </div>
-                <div className="flex-1 h-6 rounded-md bg-slate-700/50 max-w-xs" />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: t('dashboard.stat.cli'), value: '🟢 Online' },
-                  { label: t('dashboard.stat.monthCost'), value: '$3.42' },
-                  { label: t('nav.skills'), value: '15' },
-                  { label: t('dashboard.stat.sessionsLabel'), value: '8' },
-                ].map((cell, i) => (
-                  <div key={i} className="rounded-lg bg-slate-700/40 border border-slate-600/30 p-3">
-                    <div className="text-[10px] text-slate-500 mb-1 truncate">{cell.label}</div>
-                    <div className="text-sm font-bold text-slate-200">{cell.value}</div>
+      <div className="relative z-10 bg-gradient-to-b from-white via-slate-100 to-[#0b1120]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-transparent via-[#3b82c4]/5 to-transparent" />
+
+        {/* Demo Preview */}
+        <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pb-24 pt-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6 }}
+            className="overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-slate-900 via-[#0f172a] to-[#0b1120] shadow-[0_30px_100px_-40px_rgba(11,17,32,0.85)]"
+          >
+            <div className="border-b border-white/10 bg-gradient-to-b from-white/[0.06] via-transparent to-transparent p-8 text-center lg:p-12">
+              <h2 className="text-2xl font-bold text-slate-50 lg:text-3xl mb-3">{t('landing.preview.title')}</h2>
+              <p className="mx-auto mb-8 max-w-md text-slate-300">
+                {t('landing.preview.desc')}
+              </p>
+              <button
+                type="button"
+                onClick={onEnterDemo}
+                className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-accent to-cyan-500 text-white font-semibold shadow-lg shadow-[#3b82c4]/35 hover:shadow-xl hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
+              >
+                <Play className="w-5 h-5" />
+                {t('landing.preview.cta')}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+            {/* Mock dashboard */}
+            <div className="px-8 lg:px-12 pb-8 pt-6">
+              <div className="rounded-t-xl border border-white/10 border-b-0 bg-gradient-to-b from-slate-900 to-slate-800 p-6 space-y-4">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-400" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <div className="w-3 h-3 rounded-full bg-green-400" />
                   </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                <div className="sm:col-span-8 rounded-lg bg-slate-700/30 border border-slate-600/30 p-3 h-28">
-                  <div className="text-[10px] text-slate-500 mb-2">{t('cost.chart.title')}</div>
-                  <div className="flex items-end gap-1 h-16">
-                    {[40, 65, 50, 80, 55, 90, 70, 85, 60, 95, 75, 88].map((h, i) => (
-                      <div key={i} className="flex-1 rounded-t bg-gradient-to-t from-blue-500 to-cyan-400 opacity-70" style={{ height: `${h}%` }} />
-                    ))}
-                  </div>
+                  <div className="flex-1 h-6 rounded-md bg-slate-700/50 max-w-xs" />
                 </div>
-                <div className="sm:col-span-4 rounded-lg bg-slate-700/30 border border-slate-600/30 p-3 h-28">
-                  <div className="text-[10px] text-slate-500 mb-2">{t('benchmark.curve.title')}</div>
-                  <div className="flex items-center justify-center h-16">
-                    <svg viewBox="0 0 100 100" className="w-16 h-16">
-                      <polygon points="50,10 90,35 80,80 20,80 10,35" fill="none" stroke="rgba(100,116,139,0.3)" strokeWidth="1" />
-                      <polygon points="50,25 75,40 70,70 30,70 25,40" fill="rgba(59,130,246,0.2)" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" />
-                    </svg>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: t('dashboard.stat.cli'), value: '🟢 Online' },
+                    { label: t('dashboard.stat.monthCost'), value: '$3.42' },
+                    { label: t('nav.skills'), value: '15' },
+                    { label: t('dashboard.stat.sessionsLabel'), value: '8' },
+                  ].map((cell, i) => (
+                    <div key={i} className="rounded-lg bg-slate-700/40 border border-slate-600/30 p-3">
+                      <div className="text-[10px] text-slate-500 mb-1 truncate">{cell.label}</div>
+                      <div className="text-sm font-bold text-slate-200">{cell.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-8 rounded-lg bg-slate-700/30 border border-slate-600/30 p-3 h-28">
+                    <div className="text-[10px] text-slate-500 mb-2">{t('cost.chart.title')}</div>
+                    <div className="flex items-end gap-1 h-16">
+                      {[40, 65, 50, 80, 55, 90, 70, 85, 60, 95, 75, 88].map((h, i) => (
+                        <div key={i} className="flex-1 rounded-t bg-gradient-to-t from-accent to-cyan-400 opacity-70" style={{ height: `${h}%` }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-4 rounded-lg bg-slate-700/30 border border-slate-600/30 p-3 h-28">
+                    <div className="text-[10px] text-slate-500 mb-2">{t('benchmark.curve.title')}</div>
+                    <div className="flex items-center justify-center h-16">
+                      <svg viewBox="0 0 100 100" className="w-16 h-16">
+                        <polygon points="50,10 90,35 80,80 20,80 10,35" fill="none" stroke="rgba(100,116,139,0.3)" strokeWidth="1" />
+                        <polygon points="50,25 75,40 70,70 30,70 25,40" fill="rgba(59,130,196,0.2)" stroke="rgba(59,130,196,0.6)" strokeWidth="1.5" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+          </motion.div>
+        </section>
+
+        {/* Install */}
+        <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pb-24">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <Terminal className="w-5 h-5 text-accent" />
+              <h2 className="text-2xl lg:text-3xl font-bold text-slate-50">{t('landing.install')}</h2>
+            </div>
+            <p className="text-slate-300 mb-8">{t('landing.install.sub')}</p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { step: '01', cmd: 'git clone https://github.com/Ylsssq926/clawclip.git\ncd clawclip', labelKey: 'landing.install.s1' as const },
+              { step: '02', cmd: 'npm install', labelKey: 'landing.install.s2' as const },
+              { step: '03', cmd: 'npm start\n# → http://localhost:8080', labelKey: 'landing.install.s3' as const },
+            ].map((s, i) => (
+              <motion.div
+                key={s.step}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_20px_60px_-36px_rgba(11,17,32,0.9)] backdrop-blur-sm"
+              >
+                <div className="mb-4 text-3xl font-black bg-gradient-to-r from-accent to-cyan-400 bg-clip-text text-transparent">{s.step}</div>
+                <p className="mb-3 text-sm font-medium text-slate-100">{t(s.labelKey)}</p>
+                <pre className="overflow-x-auto rounded-lg border border-white/10 bg-slate-950/70 p-3 font-mono text-xs leading-relaxed text-slate-200">
+                  {s.cmd}
+                </pre>
+              </motion.div>
+            ))}
           </div>
-        </motion.div>
-      </section>
+        </section>
 
-      {/* Install */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pb-24">
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <Terminal className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900">{t('landing.install')}</h2>
+        {/* Footer */}
+        <footer className="relative z-10 border-t border-white/10 bg-[#0b1120]/80 py-12 px-6 lg:px-16 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-300">{t('app.name')}</span>
+              <span className="text-xs text-slate-500">ClawClip</span>
+            </div>
+
+            <div className="flex items-center gap-6 text-sm text-slate-400">
+              <a href="https://github.com/Ylsssq926/clawclip" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors flex items-center gap-1.5">
+                <Github className="w-4 h-4" /> GitHub
+              </a>
+              <a href="https://luelan.online" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">
+                More Tools
+              </a>
+              <span className="flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4" /> {t('landing.footer.qq')}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              {t('landing.footer.brand')}
+            </p>
           </div>
-          <p className="text-slate-500 mb-8">{t('landing.install.sub')}</p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[
-            { step: '01', cmd: 'git clone https://github.com/Ylsssq926/clawclip.git\ncd clawclip', labelKey: 'landing.install.s1' as const },
-            { step: '02', cmd: 'npm install', labelKey: 'landing.install.s2' as const },
-            { step: '03', cmd: 'npm start\n# → http://localhost:8080', labelKey: 'landing.install.s3' as const },
-          ].map((s, i) => (
-            <motion.div
-              key={s.step}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              className="bg-white border border-blue-100 rounded-2xl shadow-sm p-6"
-            >
-              <div className="text-3xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-4">{s.step}</div>
-              <p className="text-sm font-medium text-slate-900 mb-3">{t(s.labelKey)}</p>
-              <pre className="text-xs text-slate-700 bg-slate-100 rounded-lg p-3 overflow-x-auto font-mono leading-relaxed">
-                {s.cmd}
-              </pre>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-200 bg-slate-50 py-12 px-6 lg:px-16">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-500">{t('app.name')}</span>
-            <span className="text-xs text-slate-400">ClawClip</span>
-          </div>
-
-          <div className="flex items-center gap-6 text-sm text-slate-500">
-            <a href="https://github.com/Ylsssq926/clawclip" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors flex items-center gap-1.5">
-              <Github className="w-4 h-4" /> GitHub
-            </a>
-            <a href="https://luelan.online" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">
-              More Tools
-            </a>
-            <span className="flex items-center gap-1.5">
-              <MessageCircle className="w-4 h-4" /> {t('landing.footer.qq')}
-            </span>
-          </div>
-
-          <p className="text-xs text-slate-400">
-            {t('landing.footer.brand')}
-          </p>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   )
 }

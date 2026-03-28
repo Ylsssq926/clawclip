@@ -27,6 +27,13 @@ export interface SessionMeta {
   storeChannel?: string;
   /** 提供方：origin.provider 等 */
   storeProvider?: string;
+  parseDiagnostics?: {
+    totalLines: number;
+    parsedLines: number;
+    skippedLines: number;
+    errorSamples?: string[];
+    multilineRecovered?: number;
+  };
 }
 
 export interface SessionStep {
@@ -38,6 +45,14 @@ export interface SessionStep {
   toolName?: string;
   toolInput?: string;
   toolOutput?: string;
+  /** tool call 的唯一标识，用于关联 tool_call 和 tool_result */
+  toolCallId?: string;
+  /** 错误信息（如果这一步失败了） */
+  error?: string;
+  /** 步骤是否出错 */
+  isError?: boolean;
+  /** 推理/思考内容（和 content 分开存储） */
+  reasoning?: string;
   inputTokens: number;
   outputTokens: number;
   cost: number;

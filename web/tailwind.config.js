@@ -15,13 +15,13 @@ export default {
           'border-hover': '#374151',
         },
         accent: {
-          DEFAULT: '#3b82f6',
+          DEFAULT: '#3b82c4',
           light: '#60a5fa',
-          dim: 'rgba(59,130,246,0.12)',
-          glow: 'rgba(59,130,246,0.3)',
+          dim: 'rgba(59,130,196,0.12)',
+          glow: 'rgba(59,130,196,0.3)',
         },
         brand: {
-          blue: '#3b82f6',
+          blue: '#3b82c4',
           cyan: '#06b6d4',
           green: '#10b981',
           purple: '#8b5cf6',

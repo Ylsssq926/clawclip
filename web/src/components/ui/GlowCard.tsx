@@ -7,7 +7,7 @@ interface GlowCardProps {
   glowColor?: string
 }
 
-export default function GlowCard({ children, className, glowColor = 'rgba(249,115,22,0.15)' }: GlowCardProps) {
+export default function GlowCard({ children, className, glowColor = 'rgba(59,130,196,0.15)' }: GlowCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [hovering, setHovering] = useState(false)

@@ -1339,14 +1339,30 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('clawclip-lang') : null
     if (saved && saved in locales) return saved as Locale
-    const nav = typeof navigator !== 'undefined' ? navigator.language?.toLowerCase() ?? '' : ''
-    if (nav.startsWith('zh')) return 'zh'
-    if (nav.startsWith('ja')) return 'ja'
-    if (nav.startsWith('ko')) return 'ko'
-    if (nav.startsWith('es')) return 'es'
-    if (nav.startsWith('fr')) return 'fr'
-    if (nav.startsWith('de')) return 'de'
-    if (nav.startsWith('en')) return 'en'
+
+    // 检查 navigator.languages（更全面）
+    const langs = typeof navigator !== 'undefined'
+      ? (navigator.languages || [navigator.language]).map(l => l?.toLowerCase() ?? '')
+      : []
+
+    for (const nav of langs) {
+      if (nav.startsWith('zh')) return 'zh'
+      if (nav.startsWith('ja')) return 'ja'
+      if (nav.startsWith('ko')) return 'ko'
+      if (nav.startsWith('es')) return 'es'
+      if (nav.startsWith('fr')) return 'fr'
+      if (nav.startsWith('de')) return 'de'
+      if (nav.startsWith('en')) return 'en'
+    }
+
+    // 时区辅助检测
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (/Shanghai|Chongqing|Hong_Kong|Taipei|Macau/.test(tz)) return 'zh'
+      if (/Tokyo/.test(tz)) return 'ja'
+      if (/Seoul/.test(tz)) return 'ko'
+    } catch { /* noop */ }
+
     return 'en'
   })
 
@@ -1375,26 +1391,23 @@ export function useI18n() {
 export function LanguageSwitcher({ variant = 'shell' }: { variant?: 'shell' | 'landing' }) {
   const { locale, setLocale } = useI18n()
   return (
-    <select
-      value={locale}
-      onChange={(e) => setLocale(e.target.value as Locale)}
-      aria-label="Language"
-      className={cn(
-        'text-[11px] rounded-lg px-2 py-1.5 outline-none cursor-pointer transition-[color,background-color,border-color,box-shadow]',
-        variant === 'landing'
-          ? 'text-slate-700 bg-white/90 border border-slate-200/90 shadow-sm hover:bg-white hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(248,250,252)]'
-          : 'text-slate-600 bg-white border border-slate-200 hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
-      )}
-    >
-      {(Object.entries(LOCALE_LABELS) as [Locale, string][]).map(([code, label]) => (
-        <option
-          key={code}
-          value={code}
-          className="bg-white text-slate-800"
-        >
-          {label}
-        </option>
-      ))}
-    </select>
+    <div className="relative inline-flex items-center">
+      <span className="absolute left-2 text-[11px] pointer-events-none">🌐</span>
+      <select
+        value={locale}
+        onChange={(e) => setLocale(e.target.value as Locale)}
+        aria-label="Language"
+        className={cn(
+          'text-[11px] rounded-lg pl-6 pr-2 py-1.5 outline-none cursor-pointer appearance-none transition-[color,background-color,border-color,box-shadow]',
+          variant === 'landing'
+            ? 'text-slate-700 bg-white/90 border border-slate-200/90 shadow-sm hover:bg-white hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(248,250,252)]'
+            : 'text-slate-600 bg-white border border-slate-200 hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+        )}
+      >
+        {(Object.entries(LOCALE_LABELS) as [Locale, string][]).map(([code, label]) => (
+          <option key={code} value={code} className="bg-white text-slate-800">{label}</option>
+        ))}
+      </select>
+    </div>
   )
 }

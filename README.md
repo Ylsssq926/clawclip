@@ -1,36 +1,39 @@
+<div align="center">
+
 # 🍤 ClawClip
 
+**Your AI Agent just ran 47 steps, burned $2.30, and you have no idea what happened.**
+
+*ClawClip turns boring JSONL logs into interactive timelines, runs offline benchmarks, and tells you where every cent went.*
+
+[![Live Demo](https://img.shields.io/badge/🔴_Live_Demo-clawclip.luelan.online-blue?style=for-the-badge)](https://clawclip.luelan.online)
+[![MIT License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
+[![Node.js ≥18](https://img.shields.io/badge/node-%E2%89%A518-brightgreen?style=for-the-badge)](https://nodejs.org)
+
 [![Latest Release](https://img.shields.io/github/v/release/Ylsssq926/clawclip?label=release)](https://github.com/Ylsssq926/clawclip/releases)
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js ≥18](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
-[![7 Languages](https://img.shields.io/badge/i18n-7%20languages-blueviolet.svg)](#features)
+[![7 Languages](https://img.shields.io/badge/i18n-7%20languages-blueviolet.svg)](#whats-inside)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org)
-[![Live Demo](https://img.shields.io/badge/demo-online-00c7b7.svg)](https://clawclip.luelan.online)
 
 > **English** | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
-**What did your AI Agent actually do?**
+</div>
 
-ClawClip is a **local-first** visualization & analytics platform for AI Agents. It turns raw JSONL session logs from OpenClaw / ZeroClaw (and compatible frameworks) into **interactive timeline replays**, runs **offline 6-dimension benchmarks** (no LLM API calls), and provides **real-time token cost tracking** with savings recommendations powered by [PriceToken](https://pricetoken.ai).
-
-> **Zero cloud dependency. Zero extra bills. Your data never leaves your machine.**
-
-**Live demo**: https://clawclip.luelan.online — 8 built-in demo sessions, no install needed
+---
 
 <table>
 <tr>
 <td width="50%">
 
-**Without ClawClip**
+### 😵 Without ClawClip
 - Agent runs → logs pile up unread
-- No idea which model costs how much
+- "Which model costs how much?" → 🤷
 - "Is my Agent getting better?" → no answer
-- Debugging = reading raw JSONL
+- Debugging = squinting at raw JSONL
 
 </td>
 <td width="50%">
 
-**With ClawClip**
+### 🍤 With ClawClip
 - Every step visualized on an interactive timeline
 - Cost breakdown by model, task, and time
 - 6-dimension benchmark with evolution tracking
@@ -40,15 +43,17 @@ ClawClip is a **local-first** visualization & analytics platform for AI Agents. 
 </tr>
 </table>
 
-## Quick Start
+---
 
-**Requirements**: Node.js **≥ 18**. First run auto-builds (~1-2 min).
+## ⚡ 30-Second Setup
 
 ```bash
-git clone https://github.com/Ylsssq926/clawclip.git
-cd clawclip && npm install && npm start
-# → http://localhost:8080
+git clone https://github.com/Ylsssq926/clawclip.git && cd clawclip
+npm install && npm start
+# → http://localhost:8080 (8 built-in demo sessions, no config needed)
 ```
+
+> **Requirements**: Node.js ≥ 18. First run auto-builds (~1-2 min).
 
 ### Development Mode
 
@@ -60,24 +65,47 @@ npm run dev:server
 npm run dev:web
 ```
 
-### Where does the data come from?
+---
 
-- On startup, ClawClip scans **`~/.openclaw/`** and env vars **`OPENCLAW_STATE_DIR`**, **`CLAWCLIP_LOBSTER_DIRS`** for session **JSONL** files.
-- **No real JSONL?** 8 built-in Demo sessions let you explore replay, benchmark, and cost features.
-- **Only SQLite, no JSONL?** The dashboard shows ecosystem hints — ClawClip currently targets the JSONL session path.
+## Why ClawClip?
 
-## Features
+- **100% Local** — Your data never leaves your machine. No cloud, no accounts, no tracking.
+- **Zero Cost** — Benchmarks run offline. No LLM API calls. No hidden fees.
+- **Framework Agnostic** — Works with OpenClaw, ZeroClaw, and any agent that writes JSONL logs.
 
-| Feature | Description |
-|---------|-------------|
-| 🎬 Session Replay | JSONL logs → interactive timeline with thinking, tool calls, results, and token costs step by step |
-| 📊 6-Dimension Benchmark | Writing, Coding, Tool Use, Retrieval, Safety, Cost Efficiency — S/A/B/C/D rank + radar chart + evolution curve |
-| 💰 Cost Monitor | Token spend trends, model cost breakdown, budget alerts, insights & savings suggestions |
-| ☁️ Word Cloud & Tags | Auto-extracted keywords visualized as a word cloud, session auto-tagging |
-| 📚 Knowledge Base | Import session JSON to build a searchable knowledge base with drag-and-drop upload |
-| 🏆 Leaderboard | Submit benchmark scores and compare your Agent with others |
-| 🛒 Template Market | Pre-built Agent scenario templates, one-click apply + skill management |
-| 🧠 Smart Savings | Cost analysis + alternative model recommendations (powered by PriceToken real-time pricing) |
+---
+
+## What's Inside
+
+🎬 **Session Replay** — Every thought, tool call, and token cost on an interactive timeline
+
+📊 **6-Dimension Benchmark** — Writing, coding, tools, retrieval, safety, cost-efficiency — S/A/B/C/D rank + radar chart + evolution curve (offline, zero API calls)
+
+💰 **Cost Monitor** — Token trends, model breakdown, budget alerts, savings suggestions
+
+☁️ **Word Cloud** — Auto-extracted keywords, color-coded by category, session auto-tagging
+
+📚 **Knowledge Base** — Import session JSON, full-text search, drag-and-drop upload
+
+🏆 **Leaderboard** — Submit scores, compare with the community
+
+🛒 **Template Market** — Pre-built Agent scenario templates, one-click apply + skill management
+
+🧠 **Smart Savings** — Alternative model recommendations via [PriceToken](https://pricetoken.ai) real-time pricing
+
+---
+
+## Where Does the Data Come From?
+
+| Source | Details |
+|--------|---------|
+| `~/.openclaw/` | Auto-scanned on startup |
+| `OPENCLAW_STATE_DIR` | Environment variable override |
+| `CLAWCLIP_LOBSTER_DIRS` | Additional custom directories |
+| **No real JSONL?** | 8 built-in Demo sessions — explore replay, benchmark, and cost features right away |
+| **Only SQLite?** | Dashboard shows ecosystem hints — ClawClip currently targets the JSONL session path |
+
+---
 
 ## Tech Stack
 
@@ -117,9 +145,7 @@ Runs `tsc --noEmit` for both `server` and `web` workspaces.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Security self-check: [docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md).
 
-## Community
-
-QQ Group: `892555092`
+---
 
 ## About the Shrimp
 
@@ -132,10 +158,20 @@ QQ Group: `892555092`
 >
 > — 🍤 ClawClip Mascot
 
+---
+
+## Community
+
+QQ Group: `892555092`
+
 ## License
 
 [MIT](LICENSE)
 
 ---
 
-Made by Luelan (掠蓝)
+<div align="center">
+
+Built with 🍤 by **[Luelan (掠蓝)](https://github.com/Ylsssq926)**
+
+</div>

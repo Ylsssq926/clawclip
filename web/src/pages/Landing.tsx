@@ -128,7 +128,7 @@ export default function Landing({ onEnterDemo }: Props) {
             {t('landing.tagline')}
           </div>
 
-          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
+          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
             <span className="text-slate-900">{t('landing.hero.line1')}</span>
             <br />
             <span className="bg-gradient-to-r from-accent to-cyan-500 bg-clip-text text-transparent">{t('landing.hero.line2')}</span>

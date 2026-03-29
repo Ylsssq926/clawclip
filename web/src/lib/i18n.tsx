@@ -1383,14 +1383,14 @@ export function LanguageSwitcher({ variant = 'shell' }: { variant?: 'shell' | 'l
         'text-[11px] rounded-lg px-2 py-1.5 outline-none cursor-pointer transition-[color,background-color,border-color,box-shadow]',
         variant === 'landing'
           ? 'text-slate-700 bg-white/90 border border-slate-200/90 shadow-sm hover:bg-white hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(248,250,252)]'
-          : 'text-slate-400 bg-transparent border border-white/[0.08] hover:border-white/[0.15] focus-visible:ring-2 focus-visible:ring-blue-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1120]',
+          : 'text-slate-600 bg-white border border-slate-200 hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
       )}
     >
       {(Object.entries(LOCALE_LABELS) as [Locale, string][]).map(([code, label]) => (
         <option
           key={code}
           value={code}
-          className={variant === 'landing' ? 'bg-white text-slate-800' : 'bg-[#0b1120] text-slate-300'}
+          className="bg-white text-slate-800"
         >
           {label}
         </option>

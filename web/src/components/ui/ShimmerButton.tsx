@@ -16,8 +16,8 @@ export default function ShimmerButton({ children, className, variant = 'primary'
           'active:scale-[0.98]',
         ],
         variant === 'secondary' && [
-          'bg-surface-overlay text-slate-300 border border-surface-border',
-          'hover:bg-surface-border hover:text-white',
+          'bg-surface-overlay text-slate-600 border border-surface-border',
+          'hover:bg-surface-border hover:text-slate-800',
           'active:scale-[0.98]',
         ],
         'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',

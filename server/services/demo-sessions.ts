@@ -193,7 +193,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       return [
         {
           index: 0,
-          timestamp: new Date('2026-03-19T06:40:00.000Z'),
+          timestamp: new Date('2026-03-17T06:40:00.000Z'),
           type: 'user' as const,
           content: `${userMsg}\n\n\`\`\`python\n${codeSnippet}\n\`\`\``,
           inputTokens: 0,
@@ -203,7 +203,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 1,
-          timestamp: new Date('2026-03-19T06:40:04.500Z'),
+          timestamp: new Date('2026-03-17T06:40:04.500Z'),
           type: 'thinking' as const,
           model: 'gpt-4o-mini',
           content:
@@ -215,7 +215,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 2,
-          timestamp: new Date('2026-03-19T06:40:11.200Z'),
+          timestamp: new Date('2026-03-17T06:40:11.200Z'),
           type: 'tool_call' as const,
           model: 'gpt-4o-mini',
           content: '',
@@ -228,7 +228,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 3,
-          timestamp: new Date('2026-03-19T06:40:15.800Z'),
+          timestamp: new Date('2026-03-17T06:40:15.800Z'),
           type: 'tool_result' as const,
           content: '',
           toolOutput: `"""duplicate finder — user paste mirror"""\n${codeSnippet}`,
@@ -239,7 +239,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 4,
-          timestamp: new Date('2026-03-19T06:40:28.000Z'),
+          timestamp: new Date('2026-03-17T06:40:28.000Z'),
           type: 'thinking' as const,
           model: 'gpt-4o-mini',
           content:
@@ -251,7 +251,44 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 5,
-          timestamp: new Date('2026-03-19T06:41:45.000Z'),
+          timestamp: new Date('2026-03-17T06:40:55.000Z'),
+          type: 'tool_call' as const,
+          model: 'gpt-4o-mini',
+          content: '',
+          toolName: 'file_write',
+          toolInput: JSON.stringify({ path: 'src/utils/validate.ts', content: `// 输入校验工具函数
+export function isNonEmptyString(val: unknown): val is string {
+  return typeof val === 'string' && val.trim().length > 0;
+}
+
+export function isPositiveNumber(val: unknown): val is number {
+  return typeof val === 'number' && isFinite(val) && val > 0;
+}
+
+export function assertDefined<T>(val: T | undefined | null, name: string): T {
+  if (val == null) throw new Error(\`\${name} is required\`);
+  return val;
+}
+` }),
+          inputTokens: 1050,
+          outputTokens: 120,
+          cost: 0,
+          durationMs: 0,
+        },
+        {
+          index: 6,
+          timestamp: new Date('2026-03-17T06:41:02.000Z'),
+          type: 'tool_result' as const,
+          content: '',
+          toolOutput: JSON.stringify({ ok: true, path: 'src/utils/validate.ts', message: '文件写入成功，共 312 字节。' }),
+          inputTokens: 0,
+          outputTokens: 0,
+          cost: 0,
+          durationMs: 0,
+        },
+        {
+          index: 7,
+          timestamp: new Date('2026-03-17T06:41:45.000Z'),
           type: 'response' as const,
           model: 'gpt-4o-mini',
           content: `这段代码在大列表上慢，主要来自 **三类性能瓶颈**：
@@ -296,7 +333,9 @@ def find_duplicates_set(items):
     return list(dup)
 \`\`\`
 
-上面第二种平均 **O(n)** 时间、**O(n)** 额外空间。若你需要与原版完全一致的「第一次两两相等即收录」语义，告诉我业务规则我可以把版本收紧到逐行等价。`,
+上面第二种平均 **O(n)** 时间、**O(n)** 额外空间。若你需要与原版完全一致的「第一次两两相等即收录」语义，告诉我业务规则我可以把版本收紧到逐行等价。
+
+另外已顺手生成了 \`src/utils/validate.ts\`，包含 \`isNonEmptyString\`、\`isPositiveNumber\`、\`assertDefined\` 三个常用校验函数，可按需引入。`,
           inputTokens: 1120,
           outputTokens: 420,
           cost: 0,
@@ -316,7 +355,7 @@ def find_duplicates_set(items):
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-20T01:30:00.000Z'),
+        timestamp: new Date('2026-03-16T01:30:00.000Z'),
         type: 'user',
         content:
           '帮我分析 Notion、Obsidian、Logseq 这三个笔记工具的竞品对比，要表格、结论和选型建议，面向个人知识管理 + 小团队协作用途。',
@@ -327,7 +366,7 @@ def find_duplicates_set(items):
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-20T01:30:08.000Z'),
+        timestamp: new Date('2026-03-16T01:30:08.000Z'),
         type: 'thinking',
         model: 'gpt-4o',
         content:
@@ -339,7 +378,7 @@ def find_duplicates_set(items):
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-20T01:30:22.000Z'),
+        timestamp: new Date('2026-03-16T01:30:22.000Z'),
         type: 'tool_call',
         model: 'gpt-4o',
         content: '',
@@ -355,7 +394,7 @@ def find_duplicates_set(items):
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-20T01:30:45.000Z'),
+        timestamp: new Date('2026-03-16T01:30:45.000Z'),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -373,7 +412,7 @@ def find_duplicates_set(items):
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-20T01:30:58.000Z'),
+        timestamp: new Date('2026-03-16T01:30:58.000Z'),
         type: 'tool_call',
         model: 'gpt-4o',
         content: '',
@@ -386,7 +425,7 @@ def find_duplicates_set(items):
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-20T01:31:18.000Z'),
+        timestamp: new Date('2026-03-16T01:31:18.000Z'),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -404,7 +443,7 @@ def find_duplicates_set(items):
       },
       {
         index: 6,
-        timestamp: new Date('2026-03-20T01:31:42.000Z'),
+        timestamp: new Date('2026-03-16T01:31:42.000Z'),
         type: 'thinking',
         model: 'gpt-4o',
         content:
@@ -416,7 +455,7 @@ def find_duplicates_set(items):
       },
       {
         index: 7,
-        timestamp: new Date('2026-03-20T01:33:00.000Z'),
+        timestamp: new Date('2026-03-16T01:33:00.000Z'),
         type: 'response',
         model: 'gpt-4o',
         content: `## Notion / Obsidian / Logseq 竞品对比（个人 PKM + 小团队）
@@ -462,7 +501,7 @@ def find_duplicates_set(items):
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-21T08:05:00.000Z'),
+        timestamp: new Date('2026-03-15T08:05:00.000Z'),
         type: 'user',
         content: `帮我把下面 JSON 整理成可以用 Excel 打开的表格，列名用英文 snake_case，日期保持 ISO 字符串即可。
 
@@ -480,7 +519,7 @@ def find_duplicates_set(items):
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-21T08:05:06.000Z'),
+        timestamp: new Date('2026-03-15T08:05:06.000Z'),
         type: 'thinking',
         model: 'deepseek-chat',
         content:
@@ -492,7 +531,7 @@ def find_duplicates_set(items):
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-21T08:05:14.000Z'),
+        timestamp: new Date('2026-03-15T08:05:14.000Z'),
         type: 'tool_call',
         model: 'deepseek-chat',
         content: '',
@@ -510,7 +549,7 @@ def find_duplicates_set(items):
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-21T08:05:28.000Z'),
+        timestamp: new Date('2026-03-15T08:05:28.000Z'),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -526,7 +565,7 @@ def find_duplicates_set(items):
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-21T08:05:45.000Z'),
+        timestamp: new Date('2026-03-15T08:05:45.000Z'),
         type: 'response',
         model: 'deepseek-chat',
         content: `已将 JSON 数组整理为 **CSV**（路径 \`exports/inventory_from_json.csv\`），表头为 \`sku,name,qty,unit_price,updated_at\`，与源字段一一对应，没有丢弃列。
@@ -557,7 +596,7 @@ def find_duplicates_set(items):
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-22T03:20:00.000Z'),
+        timestamp: new Date('2026-03-14T03:20:00.000Z'),
         type: 'user',
         content: `Please translate the following technical documentation into natural, professional Chinese. Keep terms like Pod, kube-scheduler, and affinity as commonly used in the Chinese cloud-native community (you may keep English in parentheses where helpful).
 
@@ -570,7 +609,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-22T03:20:07.000Z'),
+        timestamp: new Date('2026-03-14T03:20:07.000Z'),
         type: 'thinking',
         model: 'deepseek-chat',
         content:
@@ -582,7 +621,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-22T03:20:32.000Z'),
+        timestamp: new Date('2026-03-14T03:20:32.000Z'),
         type: 'response',
         model: 'deepseek-chat',
         content: `Kubernetes 调度器（kube-scheduler）会根据 **资源请求（requests）**、**资源上限（limits）** 以及 **调度约束** 将 **Pod** 分配到 **Node（节点）** 上。
@@ -599,11 +638,72 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-22T03:20:33.500Z'),
+        timestamp: new Date('2026-03-14T03:20:33.500Z'),
         type: 'system',
         content: '会话完成：翻译已输出，未检测到进一步追问。',
         inputTokens: 0,
         outputTokens: 0,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 4,
+        timestamp: new Date('2026-03-14T03:20:45.000Z'),
+        type: 'tool_call',
+        model: 'deepseek-chat',
+        content: '',
+        toolName: 'web_search',
+        toolInput: JSON.stringify({ query: 'neural architecture 中文专业术语翻译 云原生 AI 领域', max_results: 5 }),
+        inputTokens: 720,
+        outputTokens: 65,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 5,
+        timestamp: new Date('2026-03-14T03:20:58.000Z'),
+        type: 'tool_result',
+        content: '',
+        toolOutput: JSON.stringify({
+          terms: [
+            { en: 'neural architecture', zh_options: ['神经网络架构', '神经架构'], recommended: '神经网络架构', note: '学术论文与工程文档中更常见' },
+            { en: 'neural architecture search', zh_options: ['神经架构搜索', '神经网络架构搜索'], recommended: '神经架构搜索 (NAS)', note: 'NAS 缩写已成行业通用' },
+          ],
+          source: 'ACL Anthology 术语库 + 中文 AI 社区惯例',
+        }),
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 6,
+        timestamp: new Date('2026-03-14T03:21:10.000Z'),
+        type: 'user',
+        content: '第二段的"neural architecture"翻译成"神经网络架构"更准确，帮我改一下',
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 7,
+        timestamp: new Date('2026-03-14T03:21:28.000Z'),
+        type: 'response',
+        model: 'deepseek-chat',
+        content: `已将第二段中的"神经架构"统一替换为**"神经网络架构"**，以下是修订终稿：
+
+---
+
+Kubernetes 调度器（kube-scheduler）会根据 **资源请求（requests）**、**资源上限（limits）** 以及 **调度约束** 将 **Pod** 分配到 **Node（节点）** 上。
+
+当一个 Pod 被创建但尚未绑定到节点时，它会进入 **调度队列**。默认调度器会先执行 **过滤谓词（filtering predicates）** 评估——例如 **node selector（节点选择器）**、**taints 与 tolerations（污点和容忍）**、**资源可用性** 等——随后在仍可行的节点上使用 **优先级函数（priority functions）** 进行排序。
+
+**Pod 亲和性（affinity）与反亲和性（anti-affinity）** 规则用于让工作负载在拓扑上 **聚拢（co-located）** 或 **分散（spread）** 到不同故障域，以提高可用性或局部性。此类约束通常与 **神经网络架构（neural architecture）** 感知的调度策略结合使用，以优化推理工作负载的节点亲和性配置。
+
+如果没有任何节点满足约束条件，该 Pod 会保持 **Pending（挂起）** 状态，直到集群状态发生变化或 **Pod 规约（Pod specification）** 被更新为止。`,
+        inputTokens: 820,
+        outputTokens: 340,
         cost: 0,
         durationMs: 0,
       },
@@ -620,7 +720,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-22T11:42:00.000Z'),
+        timestamp: new Date('2026-03-13T11:42:00.000Z'),
         type: 'user',
         content: `我的 React 项目报错：Cannot read properties of undefined (reading 'map')。下面是组件代码，帮我看看咋修。
 
@@ -652,7 +752,7 @@ export function List() {
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-22T11:42:05.000Z'),
+        timestamp: new Date('2026-03-13T11:42:05.000Z'),
         type: 'thinking',
         model: 'gpt-4o-mini',
         content:
@@ -664,7 +764,7 @@ export function List() {
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-22T11:42:12.000Z'),
+        timestamp: new Date('2026-03-13T11:42:12.000Z'),
         type: 'tool_call',
         model: 'gpt-4o-mini',
         content: '',
@@ -677,7 +777,7 @@ export function List() {
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-22T11:42:18.000Z'),
+        timestamp: new Date('2026-03-13T11:42:18.000Z'),
         type: 'tool_result',
         content: '',
         toolOutput: `import { useEffect, useState } from "react";
@@ -706,7 +806,7 @@ export function List() {
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-22T11:42:32.000Z'),
+        timestamp: new Date('2026-03-13T11:42:32.000Z'),
         type: 'thinking',
         model: 'gpt-4o-mini',
         content:
@@ -718,7 +818,45 @@ export function List() {
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-22T11:43:18.000Z'),
+        timestamp: new Date('2026-03-13T11:42:48.000Z'),
+        type: 'tool_call',
+        model: 'gpt-4o-mini',
+        content: '',
+        toolName: 'shell',
+        toolInput: 'npm test -- --run',
+        inputTokens: 820,
+        outputTokens: 55,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 6,
+        timestamp: new Date('2026-03-13T11:43:05.000Z'),
+        type: 'tool_result',
+        content: '',
+        toolOutput: `> react-app@0.1.0 test
+> vitest --run
+
+ RUN  v1.6.0
+
+ ✓ src/components/List.test.tsx (2 tests) 312ms
+   ✓ renders loading state initially
+   ✗ renders items after fetch
+
+ FAIL  src/components/List.test.tsx > renders items after fetch
+TypeError: Cannot read properties of undefined (reading 'map')
+    at List (src/components/List.tsx:14:12)
+
+Test Files  1 failed (1)
+Tests       1 failed | 1 passed (2)`,
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 7,
+        timestamp: new Date('2026-03-13T11:43:18.000Z'),
         type: 'response',
         model: 'gpt-4o-mini',
         content: `## 原因
@@ -769,7 +907,7 @@ const [items, setItems] = useState<string[]>([]);
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-23T00:10:00.000Z'),
+        timestamp: new Date('2026-03-12T00:10:00.000Z'),
         type: 'user',
         content: '帮我整理今天的 AI 行业热点新闻，每条要有标题、摘要和来源，风格像简报，不要太长。',
         inputTokens: 0,
@@ -779,9 +917,9 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-23T00:10:06.000Z'),
+        timestamp: new Date('2026-03-12T00:10:06.000Z'),
         type: 'thinking',
-        model: 'deepseek-chat',
+        model: 'gemini-2.0-flash',
         content:
           '做两轮检索：一轮泛搜「AI 行业新闻 today」，一轮聚焦「大模型最新发布 2026」，合并去重后挑 5 条，统一标题+一两句摘要+来源名。',
         inputTokens: 290,
@@ -791,9 +929,9 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-23T00:10:18.000Z'),
+        timestamp: new Date('2026-03-12T00:10:18.000Z'),
         type: 'tool_call',
-        model: 'deepseek-chat',
+        model: 'gemini-2.0-flash',
         content: '',
         toolName: 'web_search',
         toolInput: JSON.stringify({ query: 'AI 行业新闻 today', freshness: 'day', lang: 'zh' }),
@@ -804,7 +942,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-23T00:10:38.000Z'),
+        timestamp: new Date('2026-03-12T00:10:38.000Z'),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -821,9 +959,9 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-23T00:10:52.000Z'),
+        timestamp: new Date('2026-03-12T00:10:52.000Z'),
         type: 'tool_call',
-        model: 'deepseek-chat',
+        model: 'gemini-2.0-flash',
         content: '',
         toolName: 'web_search',
         toolInput: JSON.stringify({ query: '大模型最新发布 2026', max_results: 6 }),
@@ -834,7 +972,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-23T00:11:18.000Z'),
+        timestamp: new Date('2026-03-12T00:11:18.000Z'),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -850,9 +988,9 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 6,
-        timestamp: new Date('2026-03-23T00:12:00.000Z'),
+        timestamp: new Date('2026-03-12T00:12:00.000Z'),
         type: 'response',
-        model: 'deepseek-chat',
+        model: 'gemini-2.0-flash',
         content: `## 今日 AI 行业热点速报（简报）
 
 **1. 多国监管机构讨论生成式 AI 透明义务草案**  
@@ -896,7 +1034,7 @@ const [items, setItems] = useState<string[]>([]);
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-24T07:50:00.000Z'),
+        timestamp: new Date('2026-03-16T07:50:00.000Z'),
         type: 'user',
         content:
           '我要申请字节跳动的前端工程师岗位，帮我写一封求职邮件。我有 4 年前端经验，熟悉 React、TypeScript，做过中后台与活动页，附过简历 PDF。语气正式但不僵硬。',
@@ -907,9 +1045,9 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-24T07:50:06.000Z'),
+        timestamp: new Date('2026-03-16T07:50:06.000Z'),
         type: 'thinking',
-        model: 'qwen-max',
+        model: 'claude-3.5-sonnet',
         content:
           '了解了，需要突出 React/TypeScript、工程化与业务落地；结构：主题行、称呼、自我介绍、与岗位匹配的三点、作品集/简历、收尾与联系方式；避免夸大，用可核实表述。',
         inputTokens: 260,
@@ -919,9 +1057,9 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-24T07:50:28.000Z'),
+        timestamp: new Date('2026-03-16T07:50:28.000Z'),
         type: 'response',
-        model: 'qwen-max',
+        model: 'claude-3.5-sonnet',
         content: `**邮件主题**：应聘前端工程师—张三—4年React/TypeScript经验
 
 尊敬的招聘负责人：
@@ -951,7 +1089,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-24T07:50:29.200Z'),
+        timestamp: new Date('2026-03-16T07:50:29.200Z'),
         type: 'system',
         content: '会话完成：求职邮件草稿已生成，用户可自行替换姓名与联系方式后发送。',
         inputTokens: 0,

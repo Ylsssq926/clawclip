@@ -29,7 +29,7 @@ function rectsOverlap(a: BBox, b: BBox): boolean {
   return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom)
 }
 
-export default function WordCloud({ keywords, onWordClick, width = 700, height = 300 }: WordCloudProps) {
+export default function WordCloud({ keywords, onWordClick, width = 700, height = 260 }: WordCloudProps) {
   const { t } = useI18n()
   const [hovered, setHovered] = useState<string | null>(null)
 
@@ -46,19 +46,19 @@ export default function WordCloud({ keywords, onWordClick, width = 700, height =
 
     for (const kw of sorted) {
       const t = (kw.count - minC) / range
-      const fontSize = 13 + t * 32
+      const fontSize = 14 + t * 38
       const tw = kw.word.length * fontSize * 0.55
       const th = fontSize * 1.2
       const colors = CATEGORY_COLORS[kw.category] ?? CATEGORY_COLORS.other
 
       let theta = 0
       for (let step = 0; step < 3000; step++) {
-        const r = 3.5 * theta
+        const r = 2.5 * theta
         const x = cx + r * Math.cos(theta)
         const y = cy + r * Math.sin(theta)
         const box: BBox = { left: x - tw/2, top: y - th/2, right: x + tw/2, bottom: y + th/2 }
 
-        if (box.left >= 2 && box.top >= 2 && box.right <= width - 2 && box.bottom <= height - 2) {
+        if (box.left >= 1 && box.top >= 1 && box.right <= width - 1 && box.bottom <= height - 1) {
           let overlap = false
           for (const b of boxes) { if (rectsOverlap(box, b)) { overlap = true; break } }
           if (!overlap) {
@@ -67,7 +67,7 @@ export default function WordCloud({ keywords, onWordClick, width = 700, height =
             break
           }
         }
-        theta += 0.5
+        theta += 0.18
       }
     }
     return out
@@ -85,7 +85,7 @@ export default function WordCloud({ keywords, onWordClick, width = 700, height =
     >
       <defs>
         <filter id="word-glow">
-          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feGaussianBlur stdDeviation="2" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -101,7 +101,7 @@ export default function WordCloud({ keywords, onWordClick, width = 700, height =
             y={p.y}
             fontSize={isHovered ? p.fontSize * 1.1 : p.fontSize}
             fill={p.fill}
-            opacity={isHovered ? 1 : hovered ? 0.3 : p.opacity}
+            opacity={isHovered ? 1 : hovered ? 0.15 : p.opacity}
             textAnchor="middle"
             dominantBaseline="middle"
             fontWeight={p.fontSize > 30 ? 700 : p.fontSize > 20 ? 600 : 400}

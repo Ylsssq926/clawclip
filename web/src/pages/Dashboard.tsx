@@ -212,7 +212,7 @@ export default function Dashboard({ onNavigate }: Props) {
       <div className="animate-fade-in">
         <h2 className="text-3xl font-bold tracking-tight">
           <span className="text-gradient">{t(greetingKey)}</span>
-          <span className="text-white">{t('dashboard.greeting.suffix')}</span>
+          <span className="text-slate-900">{t('dashboard.greeting.suffix')}</span>
         </h2>
         <p className="text-slate-500 mt-2 text-sm">
           {status?.running
@@ -222,7 +222,7 @@ export default function Dashboard({ onNavigate }: Props) {
       </div>
 
       {!loading && status && !status.hasRealSessionData && jsonlTotal === 0 && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90 animate-fade-in">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 animate-fade-in">
           {t('demo.hint.dashboard')}
         </div>
       )}
@@ -237,7 +237,7 @@ export default function Dashboard({ onNavigate }: Props) {
           )}
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-between">
-            <span className={status.hasRealSessionData ? 'text-emerald-300/90' : 'text-amber-200/90'}>
+            <span className={status.hasRealSessionData ? 'text-emerald-700' : 'text-amber-700'}>
               {status.hasRealSessionData
                 ? t('compat.data.real')
                 : hasJsonlButUnparsed
@@ -248,29 +248,29 @@ export default function Dashboard({ onNavigate }: Props) {
             </span>
             <span className="text-xs text-slate-500">
               {t('compat.sessions')}:{' '}
-              <span className="text-slate-400 font-mono">
+              <span className="text-slate-500 font-mono">
                 {jsonlTotal > 0 ? `${parsableCount} / ${jsonlTotal}` : jsonlTotal}
               </span>
             </span>
           </div>
           {(status.sessionDataHintZh || status.sessionDataHintEn) && (
-            <p className="mt-2 text-xs text-amber-200/75 leading-relaxed">
+            <p className="mt-2 text-xs text-amber-700/80 leading-relaxed">
               {locale === 'zh'
                 ? status.sessionDataHintZh ?? status.sessionDataHintEn
                 : status.sessionDataHintEn ?? status.sessionDataHintZh}
             </p>
           )}
           {(status.dataRoots?.length ?? 0) > 0 && (
-            <div className="mt-2 pt-2 border-t border-white/[0.06]">
+            <div className="mt-2 pt-2 border-t border-slate-200">
               <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{t('compat.roots')}</p>
               <div className="flex flex-wrap gap-2">
                 {status.dataRoots!.map(r => (
                   <span
                     key={r.id}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white/[0.04] text-slate-400 border border-white/[0.06]"
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white text-slate-500 border border-slate-200"
                     title={r.homeDir}
                   >
-                    <span className="text-slate-300">{r.label}</span>
+                    <span className="text-slate-700">{r.label}</span>
                     <span className="text-slate-600 mx-1">·</span>
                     {r.sessionJsonlFiles} jsonl
                     {r.hasConfig ? <span className="text-emerald-500/80 ml-1">●</span> : <span className="text-slate-600 ml-1">○</span>}
@@ -280,7 +280,7 @@ export default function Dashboard({ onNavigate }: Props) {
             </div>
           )}
           {(status.ecosystemNotes?.length ?? 0) > 0 && (
-            <div className="mt-2 pt-2 border-t border-white/[0.06]">
+            <div className="mt-2 pt-2 border-t border-slate-200">
               <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">
                 {t('compat.ecosystem')}
               </p>
@@ -288,7 +288,7 @@ export default function Dashboard({ onNavigate }: Props) {
                 {status.ecosystemNotes!.map((n, i) => (
                   <li
                     key={`${n.rootId ?? 'note'}-${i}`}
-                    className={n.severity === 'warn' ? 'text-amber-200/85' : undefined}
+                    className={n.severity === 'warn' ? 'text-amber-700/85' : undefined}
                   >
                     {locale === 'zh' ? n.messageZh : n.messageEn}
                   </li>
@@ -400,7 +400,7 @@ export default function Dashboard({ onNavigate }: Props) {
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-4 h-4 text-blue-400" />
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">{t('dashboard.quick')}</h3>
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{t('dashboard.quick')}</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
@@ -436,7 +436,7 @@ export default function Dashboard({ onNavigate }: Props) {
               style={{ animationDelay: `${200 + i * 80}ms` }}
             >
               <span className="text-3xl block mb-3">{item.icon}</span>
-              <h4 className="font-semibold text-white mb-1">{item.title}</h4>
+              <h4 className="font-semibold text-slate-900 mb-1">{item.title}</h4>
               <p className="text-xs text-slate-500 mb-3">{item.desc}</p>
               <span className={`${item.textColor} text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all`}>
                 {t('dashboard.quick.open')} <ArrowRight className="w-3 h-3" />
@@ -457,10 +457,10 @@ export default function Dashboard({ onNavigate }: Props) {
           <button
             key={item.tab}
             onClick={() => onNavigate(item.tab)}
-            className="card p-4 text-left group hover:bg-white/[0.04] transition-colors flex items-center gap-3"
+            className="card p-4 text-left group hover:bg-slate-100 transition-colors flex items-center gap-3"
           >
             <span className="text-lg">{item.icon}</span>
-            <span className="text-sm text-slate-400 group-hover:text-white transition-colors">{item.title}</span>
+            <span className="text-sm text-slate-500 group-hover:text-slate-900 transition-colors">{item.title}</span>
             <ArrowRight className="w-3 h-3 text-slate-600 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
         ))}
@@ -472,7 +472,7 @@ export default function Dashboard({ onNavigate }: Props) {
         <div className="lg:col-span-2 card p-6 animate-fade-in" style={{ animationDelay: '350ms' }}>
           <div className="flex items-center gap-2 mb-4">
             <Cloud className="w-4 h-4 text-cyan-400" />
-            <h4 className="text-sm font-semibold text-slate-400">{t('dashboard.keywords')}</h4>
+            <h4 className="text-sm font-semibold text-slate-500">{t('dashboard.keywords')}</h4>
           </div>
           {kwLoading ? (
             <div className="space-y-3">
@@ -493,7 +493,7 @@ export default function Dashboard({ onNavigate }: Props) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-400" />
-              <h4 className="text-sm font-semibold text-slate-400">{t('dashboard.recent')}</h4>
+              <h4 className="text-sm font-semibold text-slate-500">{t('dashboard.recent')}</h4>
             </div>
             <button onClick={() => onNavigate('replay')} className="text-xs text-slate-600 hover:text-blue-400 transition-colors">
               {t('dashboard.recent.all')}
@@ -513,13 +513,13 @@ export default function Dashboard({ onNavigate }: Props) {
                 <button
                   key={s.id}
                   onClick={() => onNavigate('replay')}
-                  className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors group"
+                  className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 transition-colors group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
                     <Bot className="w-4 h-4 text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-300 truncate group-hover:text-white transition-colors">
+                    <p className="text-sm text-slate-800 truncate group-hover:text-slate-900 transition-colors">
                       {sessionListTitle(s, locale).slice(0, 50)}
                     </p>
                     {sub && (

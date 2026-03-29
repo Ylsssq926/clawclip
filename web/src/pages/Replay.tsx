@@ -83,11 +83,11 @@ function CollapsibleText({
   const lines = text.split('\n')
   const needsCollapse = lines.length > maxLines || text.length > 200
 
-  if (!needsCollapse) return <pre className="text-sm text-slate-300 whitespace-pre-wrap break-words">{text}</pre>
+  if (!needsCollapse) return <pre className="text-sm text-slate-500 whitespace-pre-wrap break-words">{text}</pre>
 
   return (
     <div>
-      <pre className={`text-sm text-slate-300 whitespace-pre-wrap break-words ${!expanded ? 'line-clamp-3' : ''}`}>{text}</pre>
+      <pre className={`text-sm text-slate-500 whitespace-pre-wrap break-words ${!expanded ? 'line-clamp-3' : ''}`}>{text}</pre>
       <button type="button" onClick={() => setExpanded(!expanded)} className="text-xs text-accent hover:opacity-80 mt-1 flex items-center gap-1">
         {expanded ? <><ChevronUp className="w-3 h-3" />{collapseLabel}</> : <><ChevronDown className="w-3 h-3" />{expandLabel}</>}
       </button>
@@ -122,7 +122,7 @@ function StepCard({ step, startTime }: { step: SessionStep; startTime: string })
                 <Icon className={`w-4 h-4 ${config.color}`} />
               </div>
               <span className={`text-sm font-medium ${config.color}`}>{stepLabel}</span>
-              {step.toolName && <span className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-400 border border-surface-border">{step.toolName}</span>}
+              {step.toolName && <span className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{step.toolName}</span>}
               {step.model && <span className="text-xs text-slate-500">{step.model}</span>}
             </div>
             {tokens > 0 && (
@@ -400,7 +400,7 @@ export default function Replay() {
     return (
       <div>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <button type="button" onClick={() => { setView('list'); setReplay(null) }} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+          <button type="button" onClick={() => { setView('list'); setReplay(null) }} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors">
             <ArrowLeft className="w-4 h-4" /> {t('replay.back')}
           </button>
           {replay && (
@@ -408,14 +408,14 @@ export default function Replay() {
               <a
                 href={`/api/knowledge/export/${encodeURIComponent(replay.meta.id)}?format=json`}
                 download
-                className="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-400 hover:text-blue-400 card transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-500 hover:text-blue-400 card transition-colors"
               >
                 <Download className="w-3.5 h-3.5" /> JSON
               </a>
               <a
                 href={`/api/knowledge/export/${encodeURIComponent(replay.meta.id)}?format=markdown`}
                 download
-                className="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-400 hover:text-blue-400 card transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-500 hover:text-blue-400 card transition-colors"
               >
                 <FileText className="w-3.5 h-3.5" /> MD
               </a>
@@ -432,14 +432,14 @@ export default function Replay() {
         </div>
 
         {loading && <DetailSkeleton />}
-        {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-300 text-sm">{error}</div>}
+        {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}
 
         {replay && (
           <>
             <div className="glass-raised rounded-2xl p-6 mb-6 border border-surface-border border-accent/20">
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <h2 className="text-lg font-bold truncate min-w-0 flex-1">{replaySessionTitle(replay.meta, t('replay.untitled'))}</h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/20 font-medium shrink-0">
+                <h2 className="text-lg font-bold text-slate-900 truncate min-w-0 flex-1">{replaySessionTitle(replay.meta, t('replay.untitled'))}</h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-700 border border-cyan-500/20 font-medium shrink-0">
                   {dataSourceBadge(replay.meta.dataSource)}
                 </span>
               </div>
@@ -454,11 +454,11 @@ export default function Replay() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-slate-500">{t('replay.metric.agent')}</span>
-                  <div className="text-white font-medium">{replay.meta.agentName}</div>
+                  <div className="text-slate-900 font-medium">{replay.meta.agentName}</div>
                 </div>
                 <div>
                   <span className="text-slate-500">{t('replay.metric.time')}</span>
-                  <div className="text-white font-medium">{formatDuration(replay.meta.durationMs, locale)}</div>
+                  <div className="text-slate-900 font-medium">{formatDuration(replay.meta.durationMs, locale)}</div>
                 </div>
                 <div>
                   <span className="text-slate-500">{t('replay.metric.cost')}</span>
@@ -471,7 +471,7 @@ export default function Replay() {
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
                 {(replay.meta.modelUsed ?? []).map(m => (
-                  <span key={m} className="text-xs px-2 py-1 bg-surface-overlay rounded-full text-slate-300 border border-surface-border">{m}</span>
+                  <span key={m} className="text-xs px-2 py-1 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{m}</span>
                 ))}
               </div>
             </div>
@@ -529,7 +529,7 @@ export default function Replay() {
                   {autoPlay && !showAllSteps ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                 </button>
 
-                <div className="flex-1 min-w-[120px] h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                <div className="flex-1 min-w-[120px] h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
                     animate={{ width: `${progressPct}%` }}
@@ -597,7 +597,7 @@ export default function Replay() {
             {playbackComplete && (
               <div className="glass-raised rounded-xl p-5 border border-surface-border text-center border-cyan-500/20">
                 <Zap className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-500">
                   {t('replay.done.lead')
                     .replace('{steps}', String(replay.meta.stepCount))
                     .replace('{duration}', formatDuration(replay.meta.durationMs, locale))}
@@ -613,11 +613,11 @@ export default function Replay() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-1">{t('replay.title')}</h2>
-      <p className="text-slate-400 text-sm mb-6">{t('replay.subtitle')}</p>
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">{t('replay.title')}</h2>
+      <p className="text-slate-500 text-sm mb-6">{t('replay.subtitle')}</p>
 
       {demoReplayHint && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90">
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
           {t('demo.hint.replay')}
         </div>
       )}
@@ -629,7 +629,7 @@ export default function Replay() {
             onClick={() => setSelectedTag(TAG_ALL)}
             className={cn(
               'px-4 py-2 rounded-lg text-sm transition-colors',
-              selectedTag === TAG_ALL ? 'bg-accent text-white' : 'glass-raised text-slate-400 hover:text-white hover:bg-surface-overlay',
+              selectedTag === TAG_ALL ? 'bg-accent text-white' : 'glass-raised text-slate-500 hover:text-slate-900 hover:bg-surface-overlay',
             )}
           >
             {t('replay.tag.all')}
@@ -641,7 +641,7 @@ export default function Replay() {
               onClick={() => setSelectedTag(ti.tag)}
               className={cn(
                 'px-4 py-2 rounded-lg text-sm transition-colors',
-                selectedTag === ti.tag ? 'bg-accent text-white' : 'glass-raised text-slate-400 hover:text-white hover:bg-surface-overlay',
+                selectedTag === ti.tag ? 'bg-accent text-white' : 'glass-raised text-slate-500 hover:text-slate-900 hover:bg-surface-overlay',
               )}
             >
               {ti.tag}
@@ -651,7 +651,7 @@ export default function Replay() {
       )}
 
       {loading && <ListSkeleton />}
-      {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-300 text-sm">{error}</div>}
+      {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}
 
       {!loading && !error && sessions.length === 0 && (
         <div className="text-center py-12 text-slate-500">
@@ -679,7 +679,7 @@ export default function Replay() {
                 >
                   <div className="flex items-start justify-between mb-2 gap-2">
                     <div className="min-w-0 pr-4">
-                      <h3 className="font-medium text-white group-hover:text-accent transition-colors truncate">
+                      <h3 className="font-medium text-slate-900 group-hover:text-accent transition-colors truncate">
                         {replaySessionTitle(session, t('replay.untitled'))}
                       </h3>
                       {lineSub && (
@@ -687,7 +687,7 @@ export default function Replay() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300/90 border border-blue-500/20 font-medium">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 text-[#3b82c4] border border-blue-500/20 font-medium">
                         {dataSourceBadge(session.dataSource)}
                       </span>
                       <span className="text-xs text-slate-500">{formatRelativeTime(session.startTime, locale)}</span>
@@ -701,7 +701,7 @@ export default function Replay() {
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex flex-wrap gap-1.5 items-center">
                       {(session.modelUsed ?? []).slice(0, 3).map(m => (
-                        <span key={m} className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-400 border border-surface-border">{m}</span>
+                        <span key={m} className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{m}</span>
                       ))}
                       {(sessionTags[session.id] ?? []).map(tag => {
                         const tagColor = tagColorByTag.get(tag) ?? '#94a3b8'

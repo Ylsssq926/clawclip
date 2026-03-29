@@ -109,11 +109,11 @@ export default function PromptInsight() {
   const tipStyle = (type: 'good' | 'warning' | 'tip') => {
     switch (type) {
       case 'good':
-        return 'border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-200'
+        return 'border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-700'
       case 'warning':
-        return 'border-amber-500/25 bg-amber-500/[0.07] text-amber-100'
+        return 'border-amber-500/25 bg-amber-500/[0.07] text-amber-700'
       default:
-        return 'border-blue-500/25 bg-blue-500/[0.07] text-blue-100'
+        return 'border-blue-500/25 bg-blue-500/[0.07] text-blue-700'
     }
   }
 
@@ -124,7 +124,7 @@ export default function PromptInsight() {
   if (error || !data) {
     return (
       <FadeIn>
-        <div className="card p-6 text-center text-slate-400">{error ?? t('cost.error')}</div>
+        <div className="card p-6 text-center text-slate-500">{error ?? t('cost.error')}</div>
       </FadeIn>
     )
   }
@@ -138,49 +138,49 @@ export default function PromptInsight() {
           <Lightbulb className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-white">{t('nav.prompt')}</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t('nav.prompt')}</h2>
           <p className="text-xs text-slate-500">30d</p>
         </div>
       </div>
 
       <section>
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-300">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-500">
           <BarChart3 className="h-4 w-4 text-cyan-400" />
           {L.summary}
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="card p-4">
             <span className="text-xs text-slate-500">{L.sessions}</span>
-            <p className="mt-1 text-xl font-semibold text-white tabular-nums">{summary.totalSessions}</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">{summary.totalSessions}</p>
           </div>
           <div className="card p-4">
             <span className="text-xs text-slate-500">{L.avgLen}</span>
-            <p className="mt-1 text-xl font-semibold text-white tabular-nums">{summary.avgPromptLength}</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">{summary.avgPromptLength}</p>
           </div>
           <div className="card p-4">
             <span className="text-xs text-slate-500">{L.ratio}</span>
-            <p className="mt-1 text-xl font-semibold text-white tabular-nums">{summary.avgOutputInputRatio}</p>
+            <p className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">{summary.avgOutputInputRatio}</p>
           </div>
           <div className="card p-4 border-emerald-500/15">
             <span className="flex items-center gap-1 text-xs text-slate-500">
               <ThumbsUp className="h-3.5 w-3.5 text-emerald-400" />
               {L.efficient}
             </span>
-            <p className="mt-1 text-xl font-semibold text-emerald-300 tabular-nums">{summary.efficientCount}</p>
+            <p className="mt-1 text-xl font-semibold text-emerald-600 tabular-nums">{summary.efficientCount}</p>
           </div>
           <div className="card p-4 border-amber-500/15">
             <span className="flex items-center gap-1 text-xs text-slate-500">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
               {L.wasteful}
             </span>
-            <p className="mt-1 text-xl font-semibold text-amber-200 tabular-nums">{summary.wastefulCount}</p>
+            <p className="mt-1 text-xl font-semibold text-amber-600 tabular-nums">{summary.wastefulCount}</p>
           </div>
         </div>
       </section>
 
       <section className="card p-5">
-        <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-300">
-          <Lightbulb className="h-4 w-4 text-amber-300" />
+        <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500">
+          <Lightbulb className="h-4 w-4 text-amber-500" />
           {L.tips}
         </div>
         <ul className="space-y-2">
@@ -196,13 +196,13 @@ export default function PromptInsight() {
       </section>
 
       <section className="card p-5 overflow-x-auto">
-        <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-300">
+        <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500">
           <Zap className="h-4 w-4 text-violet-400" />
           {L.patterns}
         </div>
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
-            <tr className="border-b border-white/[0.08] text-xs uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
               <th className="pb-2 pr-3 font-medium">{L.colSession}</th>
               <th className="pb-2 pr-3 font-medium tabular-nums">{L.colAvgLen}</th>
               <th className="pb-2 pr-3 font-medium tabular-nums">{L.colRatio}</th>
@@ -213,7 +213,7 @@ export default function PromptInsight() {
           </thead>
           <tbody>
             {patterns.map(p => (
-              <tr key={p.sessionId} className="border-b border-white/[0.05] text-slate-300 last:border-0">
+              <tr key={p.sessionId} className="border-b border-slate-200 text-slate-500 last:border-0">
                 <td className="py-2.5 pr-3 max-w-[220px] truncate" title={p.sessionLabel}>
                   {p.sessionLabel || '—'}
                 </td>

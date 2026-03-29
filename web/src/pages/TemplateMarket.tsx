@@ -78,7 +78,7 @@ export default function TemplateMarket() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-2">{t('templates.title')}</h2>
-      <p className="text-slate-400 text-sm mb-6">{t('templates.subtitle')}</p>
+      <p className="text-slate-500 text-sm mb-6">{t('templates.subtitle')}</p>
 
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
@@ -87,7 +87,7 @@ export default function TemplateMarket() {
           className={`px-4 py-2 rounded-xl text-sm transition-all ${
             catIdx === 0
               ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/15'
-              : 'card text-slate-400 hover:text-white'
+              : 'card text-slate-500 hover:text-slate-900'
           }`}
         >
           {t('templates.cat.all')}
@@ -100,7 +100,7 @@ export default function TemplateMarket() {
             className={`px-4 py-2 rounded-xl text-sm transition-all ${
               catIdx === i + 1
                 ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/15'
-                : 'card text-slate-400 hover:text-white'
+                : 'card text-slate-500 hover:text-slate-900'
             }`}
           >
             {CAT_I18N[cat] ? t(CAT_I18N[cat]) : cat}
@@ -126,10 +126,10 @@ export default function TemplateMarket() {
           <div key={template.id} className="card card-blue p-6 hover:border-blue-400/25 transition-all">
             <div className="flex items-start justify-between mb-3">
               <span className="text-3xl">{template.icon}</span>
-              <span className="text-xs px-2 py-1 bg-white/[0.05] rounded-full text-slate-400 border border-white/[0.06]">{template.category}</span>
+              <span className="text-xs px-2 py-1 bg-slate-100 rounded-full text-slate-500 border border-slate-200">{template.category}</span>
             </div>
-            <h3 className="font-semibold text-lg mb-2 text-white">{template.name}</h3>
-            <p className="text-sm text-slate-400 mb-4 leading-relaxed">{template.description}</p>
+            <h3 className="font-semibold text-lg mb-2 text-slate-900">{template.name}</h3>
+            <p className="text-sm text-slate-500 mb-4 leading-relaxed">{template.description}</p>
             <div className="flex flex-wrap gap-1 mb-4">
               {(template.skills ?? []).map(s => (
                 <span key={s} className="text-xs px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded">{s}</span>

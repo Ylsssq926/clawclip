@@ -159,8 +159,8 @@ export default function Knowledge() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-1">{t('knowledge.title')}</h2>
-        <p className="text-slate-400 text-sm">{t('knowledge.subtitle')}</p>
+        <h2 className="text-2xl font-bold text-slate-900 mb-1">{t('knowledge.title')}</h2>
+        <p className="text-slate-500 text-sm">{t('knowledge.subtitle')}</p>
       </div>
 
       <motion.section
@@ -172,7 +172,7 @@ export default function Knowledge() {
           <div className="p-2 rounded-lg bg-blue-500/10">
             <Search className="w-5 h-5 text-blue-400" />
           </div>
-          <h3 className="text-base font-semibold text-white">{t('knowledge.search')}</h3>
+          <h3 className="text-base font-semibold text-slate-900">{t('knowledge.search')}</h3>
         </div>
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
@@ -183,7 +183,7 @@ export default function Knowledge() {
               onChange={e => setQInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && runSearch()}
               placeholder={t('knowledge.search.placeholder')}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
             />
           </div>
           <button
@@ -218,15 +218,15 @@ export default function Knowledge() {
         {!searchLoading && searchResults && searchResults.length > 0 && (
           <ul className="space-y-4 mt-2">
             {searchResults.map(item => (
-              <li key={item.sessionId} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <p className="text-sm font-medium text-slate-200 mb-2">{highlightText(item.summary || t('knowledge.noSummary'), activeQuery)}</p>
+              <li key={item.sessionId} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-medium text-slate-800 mb-2">{highlightText(item.summary || t('knowledge.noSummary'), activeQuery)}</p>
                 <p className="text-[11px] text-slate-600 font-mono mb-2">{item.sessionId}</p>
                 <ul className="space-y-2">
                   {(item.matches ?? []).map((m, idx) => (
-                    <li key={`${m.stepIndex}-${idx}`} className="text-xs text-slate-400 border-l-2 border-cyan-500/40 pl-3">
+                    <li key={`${m.stepIndex}-${idx}`} className="text-xs text-slate-500 border-l-2 border-cyan-500/40 pl-3">
                       <span className="text-cyan-500/80 mr-2">#{m.stepIndex}</span>
                       <span className="text-slate-500">{m.type}</span>
-                      <p className="mt-1 text-slate-300">{highlightText(m.snippet, activeQuery)}</p>
+                      <p className="mt-1 text-slate-500">{highlightText(m.snippet, activeQuery)}</p>
                     </li>
                   ))}
                 </ul>
@@ -246,7 +246,7 @@ export default function Knowledge() {
           <div className="p-2 rounded-lg bg-cyan-500/10">
             <Download className="w-5 h-5 text-cyan-400" />
           </div>
-          <h3 className="text-base font-semibold text-white">{t('knowledge.export.title')}</h3>
+          <h3 className="text-base font-semibold text-slate-900">{t('knowledge.export.title')}</h3>
         </div>
         <p className="text-sm text-slate-500 mb-4">{t('knowledge.export.desc')}</p>
         <div className="flex flex-wrap gap-3">
@@ -284,7 +284,7 @@ export default function Knowledge() {
           <div className="p-2 rounded-lg bg-emerald-500/10">
             <Upload className="w-5 h-5 text-emerald-400" />
           </div>
-          <h3 className="text-base font-semibold text-white">{t('knowledge.import.title')}</h3>
+          <h3 className="text-base font-semibold text-slate-900">{t('knowledge.import.title')}</h3>
         </div>
         <p className="text-sm text-slate-500 mb-4">{t('knowledge.import.desc')}</p>
         <div
@@ -295,7 +295,7 @@ export default function Knowledge() {
           onDrop={onDrop}
           onKeyDown={e => e.key === 'Enter' && document.getElementById('knowledge-file-input')?.click()}
           className={`rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors cursor-pointer ${
-            importDragging ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-white/[0.12] bg-white/[0.02] hover:border-white/20'
+            importDragging ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
           }`}
           onClick={() => document.getElementById('knowledge-file-input')?.click()}
         >
@@ -307,13 +307,13 @@ export default function Knowledge() {
             onChange={onInputChange}
           />
           {importLoading ? (
-            <div className="flex items-center justify-center gap-2 text-slate-400 text-sm">
+            <div className="flex items-center justify-center gap-2 text-slate-500 text-sm">
               <Loader2 className="w-5 h-5 animate-spin" /> {t('knowledge.import.loading')}
             </div>
           ) : (
             <>
               <Upload className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">{t('knowledge.import.drop')}</p>
+              <p className="text-sm text-slate-500">{t('knowledge.import.drop')}</p>
             </>
           )}
         </div>

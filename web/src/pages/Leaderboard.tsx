@@ -27,7 +27,7 @@ const RANK_BADGE: Record<string, string> = {
   S: 'bg-gradient-to-r from-amber-400/25 to-yellow-500/20 text-amber-300 ring-1 ring-amber-400/40',
   A: 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30',
   B: 'bg-cyan-500/15 text-cyan-400 ring-1 ring-cyan-500/30',
-  C: 'bg-slate-500/15 text-slate-400 ring-1 ring-slate-500/25',
+  C: 'bg-slate-500/15 text-slate-500 ring-1 ring-slate-500/25',
   D: 'bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30',
 }
 
@@ -147,12 +147,12 @@ export default function Leaderboard() {
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-white tracking-tight">{t('leaderboard.title')}</h2>
+          <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">{t('leaderboard.title')}</h2>
           <p className="text-sm text-slate-500 mt-1">{t('leaderboard.subtitle')}</p>
       {isDemo && entries.length > 0 && (
         <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.07] px-4 py-3 flex items-start gap-2.5">
           <span className="text-base leading-none mt-px" aria-hidden>💡</span>
-          <p className="text-sm text-cyan-300/90 leading-relaxed">{t('leaderboard.demoBanner')}</p>
+          <p className="text-sm text-cyan-700 leading-relaxed">{t('leaderboard.demoBanner')}</p>
         </div>
       )}
         </div>
@@ -166,7 +166,7 @@ export default function Leaderboard() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center gap-2 py-20 text-slate-400">
+        <div className="flex items-center justify-center gap-2 py-20 text-slate-500">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span className="text-sm">{t('leaderboard.loading')}</span>
         </div>
@@ -194,7 +194,7 @@ export default function Leaderboard() {
                     'border-cyan-400/30 bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10 shadow-lg shadow-cyan-500/10',
                   pos === 2 && 'border-slate-300/25 bg-gradient-to-br from-slate-400/10 to-slate-600/5',
                   pos === 3 && 'border-amber-800/30 bg-gradient-to-br from-amber-900/20 to-amber-950/10',
-                  !isTop3 && 'border-white/[0.08] bg-white/[0.03]',
+                  !isTop3 && 'border-slate-200 bg-white',
                 )}
               >
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -204,14 +204,14 @@ export default function Leaderboard() {
                         <span className="text-2xl leading-none" aria-hidden>
                           {medal}
                         </span>
-                        <span className="text-sm font-mono text-slate-400 tabular-nums">{pos}</span>
+                        <span className="text-sm font-mono text-slate-500 tabular-nums">{pos}</span>
                       </>
                     ) : (
                       <span className="text-base font-mono text-slate-500 tabular-nums w-10">#{pos}</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-[120px]">
-                    <div className="font-medium text-white">{e.nickname}</div>
+                    <div className="font-medium text-slate-900">{e.nickname}</div>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       <span
                         className={cn(
@@ -221,7 +221,7 @@ export default function Leaderboard() {
                       >
                         {e.rank}
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-slate-400 font-mono">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 font-mono">
                         {e.topModel}
                       </span>
                       <span className="text-[10px] text-slate-500">{e.totalSessions} {t('leaderboard.sessions')}</span>
@@ -259,39 +259,39 @@ export default function Leaderboard() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-              className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0f172a] shadow-2xl shadow-cyan-900/20 p-6"
+              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-cyan-900/10 p-6"
               onClick={ev => ev.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Medal className="w-5 h-5 text-cyan-400" />
-                  <h3 className="text-lg font-semibold text-white">{t('leaderboard.modal.title')}</h3>
+                  <h3 className="text-lg font-semibold text-slate-900">{t('leaderboard.modal.title')}</h3>
                 </div>
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={() => setModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/10"
+                  className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                   aria-label={t('leaderboard.modal.close')}
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <label className="block text-xs text-slate-400 mb-1.5">{t('leaderboard.modal.nickname')}</label>
+              <label className="block text-xs text-slate-500 mb-1.5">{t('leaderboard.modal.nickname')}</label>
               <input
                 type="text"
                 maxLength={20}
                 value={nickname}
                 onChange={ev => setNickname(ev.target.value)}
                 placeholder={t('leaderboard.modal.nickPlaceholder')}
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
               />
 
               <div className="mt-5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
                 <p className="text-[11px] uppercase tracking-wide text-cyan-500/80 mb-2">{t('leaderboard.modal.preview')}</p>
                 {previewLoading && (
-                  <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <div className="flex items-center gap-2 text-slate-500 text-sm">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     {t('leaderboard.modal.reading')}
                   </div>
@@ -301,14 +301,14 @@ export default function Leaderboard() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-slate-500">{t('leaderboard.modal.score')}</span>
-                      <div className="text-xl font-bold text-white tabular-nums">{Math.round(preview.overallScore)}</div>
+                      <div className="text-xl font-bold text-slate-900 tabular-nums">{Math.round(preview.overallScore)}</div>
                     </div>
                     <div>
                       <span className="text-slate-500">{t('leaderboard.modal.rank')}</span>
-                      <div className="text-xl font-bold text-cyan-300">{preview.rank}</div>
+                      <div className="text-xl font-bold text-cyan-600">{preview.rank}</div>
                     </div>
-                    <div className="col-span-2 text-slate-400 text-xs">
-                      {t('leaderboard.modal.model')} <span className="text-slate-300 font-mono">{preview.topModel}</span> ·{' '}
+                    <div className="col-span-2 text-slate-500 text-xs">
+                      {t('leaderboard.modal.model')} <span className="text-slate-700 font-mono">{preview.topModel}</span> ·{' '}
                       {preview.totalSessions} {t('leaderboard.sessions')}
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export default function Leaderboard() {
                   type="button"
                   disabled={submitting}
                   onClick={() => setModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-400 border border-white/10 hover:bg-white/5"
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-500 border border-slate-200 hover:bg-slate-100"
                 >
                   {t('leaderboard.modal.cancel')}
                 </button>
@@ -350,16 +350,16 @@ export default function Leaderboard() {
       </AnimatePresence>
 
       {/* Scoring methodology & anti-cheat notice */}
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 text-sm text-slate-500 space-y-3">
-        <h4 className="text-white font-semibold text-base">{t('leaderboard.rules.title')}</h4>
-        <ul className="list-disc list-inside space-y-1.5 text-slate-400 leading-relaxed">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 space-y-3">
+        <h4 className="text-slate-900 font-semibold text-base">{t('leaderboard.rules.title')}</h4>
+        <ul className="list-disc list-inside space-y-1.5 text-slate-500 leading-relaxed">
           <li>{t('leaderboard.rules.r1')}</li>
           <li>{t('leaderboard.rules.r2')}</li>
           <li>{t('leaderboard.rules.r3')}</li>
           <li>{t('leaderboard.rules.r4')}</li>
           <li>{t('leaderboard.rules.r5')}</li>
         </ul>
-        <p className="text-xs text-slate-600 pt-2 border-t border-white/[0.06]">{t('leaderboard.rules.disclaimer')}</p>
+        <p className="text-xs text-slate-600 pt-2 border-t border-slate-200">{t('leaderboard.rules.disclaimer')}</p>
       </div>
     </div>
   )

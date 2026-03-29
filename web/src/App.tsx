@@ -112,7 +112,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
   }, [showTour, finishTour])
 
   return (
-    <div className="min-h-screen bg-[#0b1120] text-slate-200 bg-dots bg-ambient">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 bg-dots bg-ambient">
       <AnimatePresence>
         {showTour && (
         <motion.div
@@ -130,9 +130,9 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.32, ease: [0.25, 0.4, 0.25, 1] }}
-            className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-[#0f172a] p-6 shadow-2xl shadow-black/40"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/60"
           >
-            <h2 id="clawclip-tour-title" className="text-lg font-semibold text-white mb-4">
+            <h2 id="clawclip-tour-title" className="text-lg font-semibold text-slate-900 mb-4">
               {t('app.tour.title')}
             </h2>
             <div className="flex items-center gap-3 mb-4">
@@ -151,7 +151,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
                       'h-1 flex-1 rounded-full transition-colors duration-200',
                       i < tourStep && 'bg-cyan-500/50',
                       i === tourStep && 'bg-gradient-to-r from-blue-500 to-cyan-500',
-                      i > tourStep && 'bg-white/[0.08]',
+                      i > tourStep && 'bg-slate-200',
                     )}
                   />
                 ))}
@@ -167,7 +167,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -6 }}
                 transition={{ duration: 0.22, ease: [0.25, 0.4, 0.25, 1] }}
-                className="text-sm text-slate-400 leading-relaxed mb-6 min-h-[4.5rem]"
+                className="text-sm text-slate-500 leading-relaxed mb-6 min-h-[4.5rem]"
               >
                 {t(TOUR_KEYS[tourStep])}
               </motion.p>
@@ -176,14 +176,14 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
               <button
                 type="button"
                 onClick={finishTour}
-                className="text-xs text-slate-500 hover:text-slate-300 transition-colors rounded-lg px-1 py-0.5 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
+                className="text-xs text-slate-500 hover:text-slate-900 transition-colors rounded-lg px-1 py-0.5 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
                 {t('app.tour.skip')}
               </button>
               <button
                 type="button"
                 onClick={onTourNext}
-                className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-[box-shadow,opacity] duration-200 hover:opacity-95 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-[box-shadow,opacity] duration-200 hover:opacity-95 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
                 {tourStep >= TOUR_KEYS.length - 1 ? t('app.tour.done') : t('app.tour.next')}
               </button>
@@ -197,8 +197,8 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
         <div className="flex items-center gap-3">
           {isDemo && (
             <>
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">{t('app.demo')}</span>
-              <span className="text-xs text-slate-400">{t('app.demo.desc')}</span>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-[#3b82c4]">{t('app.demo')}</span>
+              <span className="text-xs text-slate-500">{t('app.demo.desc')}</span>
             </>
           )}
           {!isDemo && (
@@ -208,27 +208,27 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
         <button
           type="button"
           onClick={onBackToLanding}
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#3b82c4] transition-colors"
         >
           <ArrowLeft className="w-3 h-3" /> {t('app.back')}
         </button>
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0b1120]/80 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 py-3">
+      <header className="sticky top-0 z-50 bg-[#f8fafc]/80 backdrop-blur-xl border-b border-slate-200 px-4 sm:px-6 py-3">
         <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setSidebarOpen(v => !v)}
-              className="lg:hidden p-1.5 -ml-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="lg:hidden p-1.5 -ml-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
               aria-label="Toggle sidebar"
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <span className="text-xl">🍤</span>
             <div>
-              <h1 className="text-base font-semibold tracking-tight text-white">{t('app.name')}</h1>
+              <h1 className="text-base font-semibold tracking-tight text-slate-900">{t('app.name')}</h1>
               <p className="text-[10px] text-slate-500 leading-none">{t('app.subtitle')}{isDemo ? ' Demo' : ''}</p>
             </div>
           </div>
@@ -250,7 +250,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
       <div className="flex max-w-screen-2xl mx-auto relative">
         <nav
           className={cn(
-            'w-56 shrink-0 border-r border-white/[0.08] py-4 px-3 flex flex-col bg-[#0b1120] z-40 transition-transform duration-200 overflow-y-auto',
+            'w-56 shrink-0 border-r border-slate-200 py-4 px-3 flex flex-col bg-[#f8fafc] z-40 transition-transform duration-200 overflow-y-auto',
             'fixed top-[49px] h-[calc(100vh-49px)] lg:sticky lg:top-[49px] lg:h-[calc(100vh-49px-33px)] lg:translate-x-0',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           )}
@@ -264,17 +264,17 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
                   className={cn(
                     'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
                     activeTab === tab.id
-                      ? 'bg-white/[0.06] text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]',
+                      ? 'bg-blue-50 text-[#3b82c4] shadow-sm'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
                   )}
                 >
-                  <tab.icon className={cn('w-[18px] h-[18px]', activeTab === tab.id && 'text-blue-400')} />
+                  <tab.icon className={cn('w-[18px] h-[18px]', activeTab === tab.id && 'text-[#3b82c4]')} />
                   {t(tab.nameKey)}
                 </button>
               </li>
             ))}
           </ul>
-          <div className="pt-4 border-t border-white/[0.08]">
+          <div className="pt-4 border-t border-slate-200">
             <p className="text-[11px] text-slate-600 px-3">{t('app.lobster')}</p>
           </div>
         </nav>

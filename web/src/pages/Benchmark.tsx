@@ -90,13 +90,13 @@ const COMPARE_SERIES_COLOR = '#06b6d4'
 
 const chartTooltipProps = {
   contentStyle: {
-    background: 'rgba(17,24,39,0.9)',
-    border: '1px solid rgba(255,255,255,0.06)',
+    background: 'rgba(248,250,252,0.96)',
+    border: '1px solid rgba(226,232,240,0.9)',
     borderRadius: 12,
     backdropFilter: 'blur(12px)',
   } as const,
-  labelStyle: { color: '#94a3b8' } as const,
-  itemStyle: { color: '#e2e8f0' } as const,
+  labelStyle: { color: '#64748b' } as const,
+  itemStyle: { color: '#0f172a' } as const,
 }
 
 function ScoreBar({ score, color }: { score: number; color: string }) {
@@ -264,14 +264,14 @@ export default function Benchmark() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
-        <p className="text-slate-400 text-sm mb-8">{t('benchmark.subtitle')}</p>
+        <p className="text-slate-500 text-sm mb-8">{t('benchmark.subtitle')}</p>
 
         <FadeIn className="flex flex-col items-center justify-center py-16">
           <div className="text-6xl mb-6">🩺</div>
           <h3 className="text-xl font-semibold mb-2">
             <GradientText animate={false}>{t('benchmark.empty.title')}</GradientText>
           </h3>
-          <p className="text-slate-400 text-sm mb-6 text-center max-w-md">
+          <p className="text-slate-500 text-sm mb-6 text-center max-w-md">
             {t('benchmark.empty.desc')}
           </p>
           <ShimmerButton variant="primary" onClick={runBenchmark} disabled={running} className="px-8 py-3 rounded-xl text-base">
@@ -299,7 +299,7 @@ export default function Benchmark() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
-          <p className="text-slate-400 text-sm">{t('benchmark.subtitle')}</p>
+          <p className="text-slate-500 text-sm">{t('benchmark.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           {result && (
@@ -357,20 +357,20 @@ export default function Benchmark() {
               </div>
               <div className="flex-1">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-4xl font-bold text-white tabular-nums">
+                  <span className="text-4xl font-bold text-slate-900 tabular-nums">
                     <AnimatedCounter value={result.overallScore} duration={1500} decimals={0} />
                   </span>
                   <span className="text-slate-500">/ 100</span>
                   <Trophy className="w-5 h-5 text-accent ml-1" />
                 </div>
-                <p className="text-sm text-slate-300 leading-relaxed">{isZh ? result.summary : (result.summaryEn || result.summary)}</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{isZh ? result.summary : (result.summaryEn || result.summary)}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t border-white/10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t border-slate-200">
               <div>
                 <span className="text-xs text-slate-500">{t('benchmark.metric.sessions')}</span>
-                <div className="text-lg font-semibold text-white">{result.totalSessions}</div>
+                <div className="text-lg font-semibold text-slate-900">{result.totalSessions}</div>
               </div>
               <div>
                 <span className="text-xs text-slate-500">{t('benchmark.metric.tokens')}</span>
@@ -405,14 +405,14 @@ export default function Benchmark() {
             </div>
             <p className="text-xs text-slate-500 mb-4">{t('benchmark.radar.short')}</p>
             {showRadarHelp && (
-              <p className="text-xs text-slate-400 mb-4 leading-relaxed border border-white/[0.06] rounded-lg p-3 bg-white/[0.02]">
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed border border-slate-200 rounded-lg p-3 bg-slate-50">
                 {t('benchmark.radar.long')}
               </p>
             )}
             <div className="h-[320px] w-full mb-6">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
-                  <PolarGrid stroke="rgba(255,255,255,0.08)" />
+                  <PolarGrid stroke="rgba(148,163,184,0.2)" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12 }} />
                   <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 10 }} />
                   <Radar
@@ -477,7 +477,7 @@ export default function Benchmark() {
                   <div key={dim.dimension}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <Icon className={`w-4 h-4 ${color}`} />
-                      <span className="text-sm font-medium text-slate-300">{dim.label}</span>
+                      <span className="text-sm font-medium text-slate-500">{dim.label}</span>
                     </div>
                     <ScoreBar score={dim.score} color={color} />
                     <p className="text-xs text-slate-500 mt-1">{isZh ? dim.details : (dim.detailsEn || dim.details)}</p>
@@ -502,20 +502,20 @@ export default function Benchmark() {
                 {t('benchmark.curve.toggle')}
               </button>
             </div>
-            {curveNote && <p className="text-xs text-blue-200/80 mb-3">{curveNote}</p>}
+            {curveNote && <p className="text-xs text-blue-600 mb-3">{curveNote}</p>}
             {showCurveHelp && (
-              <p className="text-xs text-slate-400 mb-4 leading-relaxed border border-white/[0.06] rounded-lg p-3 bg-white/[0.02]">
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed border border-slate-200 rounded-lg p-3 bg-slate-50">
                 {t('benchmark.curve.long')}
               </p>
             )}
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-4">
-              <label className="flex items-center gap-2 text-sm text-slate-400 shrink-0">
+              <label className="flex items-center gap-2 text-sm text-slate-500 shrink-0">
                 <span>{t('benchmark.compare.label')}</span>
                 <select
                   value={compareId ?? ''}
                   onChange={e => setCompareId(e.target.value || null)}
-                  className="glass-raised border border-surface-border rounded-lg px-3 py-2 text-slate-200 text-sm min-w-[200px] max-w-full bg-surface-raised"
+                  className="glass-raised border border-surface-border rounded-lg px-3 py-2 text-slate-800 text-sm min-w-[200px] max-w-full bg-white"
                 >
                   <option value="">{t('benchmark.compare.none')}</option>
                   {compareOptions.map(h => (
@@ -533,7 +533,7 @@ export default function Benchmark() {
               <div className="h-[280px] w-full mb-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={overallTrendData} margin={{ top: 28, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
                     <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
                     <YAxis domain={[0, 100]} stroke="#64748b" tick={{ fontSize: 12 }} />
                     <Tooltip {...chartTooltipProps} />
@@ -564,7 +564,7 @@ export default function Benchmark() {
               <div className="h-[300px] w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dimTrendData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
                     <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
                     <YAxis domain={[0, 100]} stroke="#64748b" tick={{ fontSize: 12 }} />
                     <Tooltip {...chartTooltipProps} />
@@ -602,8 +602,8 @@ export default function Benchmark() {
             <p className="text-xs text-slate-500">
               {t('benchmark.footer')}
             </p>
-            <div className="mt-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-left">
-              <p className="text-[11px] font-medium text-slate-400 mb-1">{t('savings.hint.title')}</p>
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left">
+              <p className="text-[11px] font-medium text-slate-500 mb-1">{t('savings.hint.title')}</p>
               <p className="text-[11px] text-slate-500 leading-relaxed">{t('savings.hint.body')}</p>
             </div>
             {result.runAt && (

@@ -8,11 +8,11 @@ export default {
     extend: {
       colors: {
         surface: {
-          DEFAULT: '#0b1120',
-          raised: '#111827',
-          overlay: '#1e293b',
-          border: '#1f2937',
-          'border-hover': '#374151',
+          DEFAULT: '#f8fafc',
+          raised: '#ffffff',
+          overlay: '#f1f5f9',
+          border: '#e2e8f0',
+          'border-hover': '#cbd5e1',
         },
         accent: {
           DEFAULT: '#3b82c4',

@@ -46,8 +46,8 @@ interface SavingsReport {
 }
 
 const chartTooltipStyle = {
-  background: 'rgba(17,24,39,0.9)',
-  border: '1px solid rgba(255,255,255,0.06)',
+  background: 'rgba(248,250,252,0.96)',
+  border: '1px solid rgba(226,232,240,0.9)',
   borderRadius: 12,
   backdropFilter: 'blur(12px)',
 } as const
@@ -112,7 +112,7 @@ export default function CostMonitor() {
   }, [days, t])
 
   const TrendIcon = summary?.trend === 'up' ? TrendingUp : summary?.trend === 'down' ? TrendingDown : Minus
-  const trendColor = summary?.trend === 'up' ? 'text-red-400' : summary?.trend === 'down' ? 'text-green-400' : 'text-slate-400'
+  const trendColor = summary?.trend === 'up' ? 'text-red-400' : summary?.trend === 'down' ? 'text-green-400' : 'text-slate-500'
 
   return (
     <div>
@@ -126,7 +126,7 @@ export default function CostMonitor() {
               onClick={() => setDays(d)}
               className={cn(
                 'px-3 py-1.5 rounded-lg text-sm transition-colors',
-                days === d ? 'bg-accent text-white' : 'glass-raised text-slate-400 hover:text-white hover:bg-surface-overlay',
+                days === d ? 'bg-accent text-white' : 'glass-raised text-slate-500 hover:text-slate-900 hover:bg-slate-100',
               )}
             >
               {t('cost.days').replace('{n}', String(d))}
@@ -161,7 +161,7 @@ export default function CostMonitor() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <GlowCard>
               <div className="p-5">
-                <span className="text-sm text-slate-400">{t('cost.card.total')}</span>
+                <span className="text-sm text-slate-500">{t('cost.card.total')}</span>
                 <div className="text-2xl font-bold text-accent mt-1 tabular-nums">
                   <AnimatedCounter value={summary?.totalCost ?? 0} prefix="$" decimals={2} duration={1000} />
                 </div>
@@ -175,7 +175,7 @@ export default function CostMonitor() {
             </GlowCard>
             <GlowCard>
               <div className="p-5">
-                <span className="text-sm text-slate-400">{t('cost.card.tokens')}</span>
+                <span className="text-sm text-slate-500">{t('cost.card.tokens')}</span>
                 <div className="text-2xl font-bold text-blue-400 mt-1 tabular-nums">
                   <AnimatedCounter value={summary?.totalTokens ?? 0} decimals={0} duration={1000} />
                 </div>
@@ -188,7 +188,7 @@ export default function CostMonitor() {
             </GlowCard>
             <GlowCard>
               <div className="p-5">
-                <span className="text-sm text-slate-400">{t('cost.card.budget')}</span>
+                <span className="text-sm text-slate-500">{t('cost.card.budget')}</span>
                 <div className="text-2xl font-bold text-purple-400 mt-1 tabular-nums">
                   <AnimatedCounter value={summary?.budget?.percentage ?? 0} decimals={1} suffix="%" duration={1000} />
                 </div>
@@ -215,7 +215,7 @@ export default function CostMonitor() {
                       'flex items-start gap-3 px-4 py-3 rounded-xl text-sm',
                       ins.type === 'warning' ? 'bg-amber-500/10 border border-amber-500/20 text-amber-200' :
                       ins.type === 'tip' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-200' :
-                      'bg-white/[0.03] border border-white/[0.06] text-slate-300',
+                      'bg-slate-50 border border-slate-200 text-slate-500',
                     )}
                   >
                     <span className="text-lg shrink-0 mt-0.5">{ins.icon}</span>
@@ -231,15 +231,15 @@ export default function CostMonitor() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">{t('cost.savings.title')}</h3>
                 <div className="text-right">
-                  <span className="text-xs text-slate-400">{t('cost.savings.total')}</span>
+                  <span className="text-xs text-slate-500">{t('cost.savings.total')}</span>
                   <span className="text-lg font-bold text-green-400 ml-2">${savings.totalPotentialSaving.toFixed(2)}</span>
                 </div>
               </div>
               <div className="space-y-3">
                 {savings.suggestions.map((sug, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
                     <div className="flex items-center gap-3 text-sm min-w-0">
-                      <span className="font-medium text-slate-200 truncate">{sug.currentModel}</span>
+                      <span className="font-medium text-slate-800 truncate">{sug.currentModel}</span>
                       <span className="text-slate-500">→</span>
                       <span className="text-green-400 truncate">{sug.alternativeModel}</span>
                     </div>
@@ -255,7 +255,7 @@ export default function CostMonitor() {
 
           {!loading && savings && savings.suggestions.length === 0 && summary && summary.totalCost > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6 text-center">
-              <p className="text-sm text-slate-400">✅ {t('cost.savings.empty')}</p>
+              <p className="text-sm text-slate-500">✅ {t('cost.savings.empty')}</p>
             </div>
           )}
 
@@ -270,13 +270,13 @@ export default function CostMonitor() {
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={daily}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
                   <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
                   <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
                   <Tooltip
                     contentStyle={chartTooltipStyle}
-                    labelStyle={{ color: '#94a3b8' }}
-                    itemStyle={{ color: '#e2e8f0' }}
+                    labelStyle={{ color: '#64748b' }}
+                    itemStyle={{ color: '#0f172a' }}
                   />
                   <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={t('cost.chart.series')} />
                 </LineChart>

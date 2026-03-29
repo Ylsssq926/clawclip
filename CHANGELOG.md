@@ -7,6 +7,34 @@ Version scheme: `YYYY.MM.DD` (CalVer, daily). Patch suffix `.N` for same-day rel
 
 ---
 
+## [2026.03.29] — 2026-03-29
+
+### Added
+- **Light Theme**: Full site redesign from dark to light blue-white theme, matching Landing page style
+- **Parse Diagnostics**: JSONL parse diagnostics API (`GET /api/replay/diagnostics`) + Dashboard warning banner for sessions with parsing issues
+- **Multi-line JSON Recovery**: Session parser now recovers pretty-printed JSON across up to 20 lines
+- **Large File Diagnostics**: Files exceeding 28MB limit are logged and exposed via diagnostics API
+
+### Improved
+- **Brand Color Unification**: All colors converged to brand blue `#3b82c4` — Tailwind tokens, component defaults (GlowCard/GradientText/ShimmerButton), Benchmark page
+- **Word Cloud**: Denser spiral layout, larger font range, significantly better fill rate
+- **Demo Data**: 6 model types (added Claude, Gemini), 7-day time span, new shell/file_write tool calls, translator session expanded to 8 steps
+- **Session Parser**: SessionStep extended with `toolCallId`, `error`, `isError`, `reasoning` fields; assistant text+tool_calls now split into separate steps
+- **Landing → AppShell Transition**: Gradient background transition from light to dark at page bottom
+- **Language Detection**: `navigator.languages` traversal + timezone-based fallback (Asia/Shanghai → zh)
+- **Language Switcher**: Added 🌐 globe icon
+- **README**: Narrative rewrite with problem storytelling, flat-square badges, 30-second setup
+- **glass-raised CSS**: Added missing `.glass-raised` utility class
+- **TemplateMarket**: Fixed missing `card` base class on `card-blue` elements
+
+### Fixed
+- Landing hero title overlap on Chinese fonts (`leading-[1.1]` → `leading-tight`)
+- Light theme text readability: `text-slate-400` → `text-slate-500` across 6 pages
+- ShimmerButton secondary variant text color for light backgrounds
+- LanguageSwitcher shell variant styling for light header
+
+[2026.03.29]: https://github.com/Ylsssq926/clawclip/compare/2026.03.25.1...2026.03.29
+
 ## [2026.03.25.1] — 2026-03-25
 
 ### Improved

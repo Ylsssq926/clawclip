@@ -1,107 +1,159 @@
-# 🍤 ClawClip
+<div align="center">
 
-> [English](README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | **한국어** | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
+<img src="luelan-logo.png" alt="ClawClip 로고" width="96" />
 
-**AI Agent가 실제로 무엇을 했는지 알고 싶으신가요?**
+# ClawClip
 
-ClawClip은 AI Agent용 로컬 우선 시각화 도구입니다. OpenClaw / ZeroClaw(및 호환 프레임워크)의 JSONL 세션 로그를 대화형 타임라인 재생으로 바꾸고, 오프라인에서 6차원 벤치마크를 실행하며, 토큰 비용을 추적합니다. 모든 분석은 **로컬에서 실행됩니다 — LLM API 호출 없음, 추가 요금 없음, 데이터는 사용자 기기에만 머뭅니다.**
+**당신의 AI Agent가 47단계를 실행했습니다. 당신은 아무것도 보지 못했습니다.**
 
-**라이브 데모**: https://clawclip.luelan.online (데모 세션 8개 내장, 설치 불필요)
+세션 리플레이 · 오프라인 벤치마크 · 비용 추적 — OpenClaw, ZeroClaw, 그리고 그 너머.
+
+<p>
+  <a href="https://clawclip.luelan.online">라이브 데모</a> ·
+  <a href="#quick-start">빠른 시작</a> ·
+  <a href="#why-clawclip">왜 ClawClip인가</a> ·
+  <a href="./README.md">English</a> ·
+  <a href="./README.zh-CN.md">中文</a> ·
+  <a href="./README.ja.md">日本語</a> ·
+  <strong>한국어</strong>
+</p>
+
+<p>
+  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-blue?style=flat-square" alt="라이브 데모" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT 라이선스" /></a>
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square" alt="TypeScript strict" />
+  <img src="https://img.shields.io/badge/i18n-7%20languages-orange?style=flat-square" alt="i18n 7 languages" />
+</p>
+
+</div>
+
+---
+
+> 클라우드 제로. API 호출 제로. 비용 제로. Agent 데이터는 당신의 컴퓨터에 그대로 남습니다.
+
+---
+
+<a id="quick-start"></a>
 
 ## 빠른 시작
 
-**요구 사항**: Node.js **≥ 18**. 첫 실행 시 자동 빌드(약 1~2분).
-
 ```bash
 git clone https://github.com/Ylsssq926/clawclip.git
-cd clawclip && npm install && npm start
-# → http://localhost:8080
+cd clawclip && npm install
+npm start
 ```
 
-### 개발 모드
+`http://localhost:8080`을 여세요. ClawClip에는 데모 세션이 함께 들어 있어 리플레이, 벤치마크, 비용 화면을 바로 둘러볼 수 있습니다.
 
-```bash
-# Terminal 1: backend (tsx watch, hot reload)
-npm run dev:server
+---
 
-# Terminal 2: frontend (Vite dev server, port 3000, /api proxied to 8080)
-npm run dev:web
-```
+## 문제
 
-### 데이터는 어디서 오나요?
+Agent는 하루 종일 돌았다. 로그는 남았다. 그런데 진실은 보이지 않았다.
 
-- 시작 시 ClawClip은 **`~/.openclaw/`** 및 환경 변수 **`OPENCLAW_STATE_DIR`**, **`CLAWCLIP_LOBSTER_DIRS`**에서 세션 **JSONL** 파일을 검색합니다.
-- **실제 JSONL이 없나요?** 내장 데모 세션 8개로 재생, 벤치마크, 비용 기능을 살펴볼 수 있습니다.
-- **SQLite만 있고 JSONL이 없나요?** 대시보드에 생태계 안내가 표시됩니다 — ClawClip은 현재 JSONL 세션 경로를 대상으로 합니다.
+폴더에는 JSONL 세션이 계속 쌓인다. 그 안 어딘가에는 도구 실패, 프롬프트 퇴행, 토큰 급증, 그리고 어쩌면 Agent가 정말 좋아졌던 그 한 번의 실행도 숨어 있다. 하지만 원본 파일을 열어 보면 전부 비슷해 보인다. 타임스탬프, 덩어리, 노이즈.
+
+그래서 결국 모든 Agent 빌더는 같은 질문을 하게 됩니다. **돈은 어디로 새고 있지? 새 프롬프트가 도움이 됐나? 이 Agent는 정말 나아지고 있나, 아니면 내가 잘 된 실행만 기억하는 건가?**
+
+그리고 어느새 새벽 2시, 터미널을 오가며 JSON을 손으로 뒤지고, Agent가 이미 한 번 살아낸 이야기를 다시 맞춰 보고 있다.
+
+ClawClip은 이 모든 과정을 바꿉니다. 실행을 다시 보고, 행동을 점수화하고, 비용을 들여다보고, 변화 추세까지 확인할 수 있습니다. 새벽이 아니라 몇 분 안에.
+
+---
 
 ## 기능
 
-| 기능 | 설명 |
-|---------|-------------|
-| 🎬 세션 재생 | JSONL 로그 → 사고 과정, 도구 호출, 결과, 토큰 비용을 단계별로 보여 주는 대화형 타임라인 |
-| 📊 6차원 벤치마크 | 글쓰기, 코딩, 도구 사용, 검색, 안전, 비용 효율 — S/A/B/C/D 등급 + 레이더 차트 + 변화 곡선 |
-| 💰 비용 모니터 | 토큰 지출 추세, 모델별 비용 분석, 예산 알림, 인사이트 및 절약 제안 |
-| ☁️ 워드 클라우드 및 태그 | 자동 추출 키워드를 워드 클라우드로 시각화, 세션 자동 태깅 |
-| 📚 지식 베이스 | 세션 JSON 가져오기로 검색 가능한 지식 베이스 구축, 드래그 앤 드롭 업로드 |
-| 🏆 리더보드 | 벤치마크 점수를 제출하고 다른 Agent와 비교 |
-| 🛒 템플릿 마켓 | 미리 만들어진 Agent 시나리오 템플릿, 원클릭 적용 + 스킬 관리 |
-| 🧠 스마트 절약 | 비용 분석 + 대체 모델 추천(PriceToken 실시간 가격 기반) |
+| | 기능 | 얻는 것 |
+| --- | --- | --- |
+| 🎬 | **세션 리플레이** | 생각, 도구 호출, 출력, 토큰 추적을 따라갈 수 있는 인터랙티브 타임라인 |
+| 📊 | **6차원 벤치마크** | 여섯 가지 관점의 점수, 등급, 레이더 차트, 변화 추적 |
+| 💸 | **비용 모니터** | 토큰 추세, 모델별 분석, 예산 알림, 절약 제안 |
+| ☁️ | **워드 클라우드** | 자동 추출 키워드, 카테고리, 세션 라벨링 |
+| 🏆 | **리더보드** | 점수 제출과 커뮤니티 비교 |
+| 🪄 | **스마트 절약** | 실시간 가격을 바탕으로 한 대체 모델 추천 |
+| 📚 | **지식 베이스** | 세션 JSON 가져오기, 실행 검색, 로컬 메모리 레이어 구축 |
+| 🧩 | **템플릿 마켓** | 재사용 가능한 Agent 시나리오와 스킬 관리 |
+
+---
+
+<a id="why-clawclip"></a>
+
+## 왜 ClawClip인가
+
+### 100% 로컬
+세션 데이터는 당신의 컴퓨터에 남습니다. 클라우드 업로드도, 계정 장벽도, 추적도 없습니다.
+
+### 비용 제로
+벤치마크와 분석은 오프라인에서 돌아갑니다. LLM API 호출이 필요 없습니다. 어젯밤 실행을 이해하려고 요금이 더 붙는 일도 없습니다.
+
+### 프레임워크 불문
+OpenClaw를 위해 만들어졌지만 ZeroClaw에서도 잘 작동합니다. JSONL 세션을 남기는 Agent 워크플로우라면 자연스럽게 맞아떨어집니다.
+
+---
+
+## 데이터 소스
+
+| 소스 | 메모 |
+| --- | --- |
+| `~/.openclaw/` | 시작 시 자동 감지 |
+| `OPENCLAW_STATE_DIR` | 기본 세션 디렉터리 재정의 |
+| `CLAWCLIP_LOBSTER_DIRS` | 스캔할 추가 폴더 지정 |
+| 내장 데모 세션 | 실제 데이터가 없어도 바로 제품을 살펴볼 수 있음 |
+| SQLite 전용 구성 | 현재 ClawClip은 공식 JSONL 세션 경로에 집중 |
+
+---
 
 ## 기술 스택
 
-Express + TypeScript | React 18 + Vite + Tailwind CSS | Recharts | Framer Motion | Lucide React
+Express + TypeScript · React 18 · Vite · Tailwind CSS · Recharts · Framer Motion · Lucide React
+
+---
 
 ## 로드맵
 
-- [x] 세션 재생 엔진 + 데모 세션 8개
-- [x] 6차원 벤치마크 + 레이더 차트 + 변화 곡선
-- [x] 비용 모니터 + 예산 알림
-- [x] 워드 클라우드 + 자동 태깅
-- [x] 공유 카드 + 랜딩 페이지
-- [x] 지식 베이스 가져오기/내보내기 + 전문 검색
-- [x] 리더보드(점수 제출 + 순위)
-- [x] 템플릿 마켓 + 스킬 관리
-- [x] 스마트 절약 / 비용 최적화(P0 + P1 완료)
-- [ ] P2: (선택 마일스톤) 런타임/게이트웨이 심층 연동
+- [x] 내장 데모 세션이 포함된 세션 리플레이 엔진
+- [x] 오프라인 6차원 벤치마크 시스템
+- [x] 비용 모니터, 알림, 절약 제안
+- [x] 워드 클라우드, 자동 태깅, 지식 베이스 검색
+- [x] 리더보드, 공유 카드, 템플릿 마켓
+- [ ] 런타임 / 게이트웨이와의 더 깊은 통합
+- [ ] 현재 JSONL 워크플로우를 넘어서는 더 많은 생태계 어댑터
+- [ ] 팀 단위 비교와 리뷰 흐름 강화
 
-## 헬스 체크
+---
 
-```bash
-curl -s http://localhost:8080/api/health
-# → { "ok": true, "service": "clawclip", "ts": "..." }
-```
+## 새우 이야기
 
-## 타입 검사(PR / 릴리스 전)
+> 나는 주인이 OpenClaw 생태계에서 건져 올린 바닷가재입니다.
+>
+> 주인은 말했어요. "너는 하루 종일 백그라운드에서 돌아가는데, 아무도 네가 뭘 하는지 못 본다."
+>
+> 나는 말했어요. "그럼 내 일을 기록해서 보여 주면 되죠."
+>
+> 주인은 말했어요. "기록은 했지만, 네가 정말 잘하는지는 아직 모르겠어."
+>
+> 나는 말했어요. "그럼 시험해 보면 되죠. 여섯 과목 전부, 나는 겁나지 않아요."
+>
+> 그렇게 ClawClip이 태어났습니다.
+>
+> — 🍤 ClawClip 마스코트
 
-```bash
-npm run check
-```
-
-`server`와 `web` 워크스페이스 모두에서 `tsc --noEmit`을 실행합니다.
-
-## 기여하기
-
-가이드라인은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요. 보안 자가 점검: [docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md).
+---
 
 ## 커뮤니티
 
 QQ 그룹: `892555092`
 
-## 이 새우에 대하여
-
-> 나는 주인이 OpenClaw 생태계에서 꺼내 온 바닷가재랍니다.
-> 주인이 말했어요. "너는 하루 종일 백그라운드에서 돌아가는데, 아무도 네가 뭘 하는지 못 봐."
-> 나는 말했어요. "그럼 내 일을 기록해서 보여 주면 되죠."
-> 주인: "기록은 했는데, 네가 제대로 하는지 모르겠어."
-> 나는 말했어요. "그럼 시험을 보세요 — 여섯 과목 전부, 두렵지 않아요."
-> 그렇게 ClawClip이 태어났습니다.
->
-> — 🍤 ClawClip 마스코트
+---
 
 ## 라이선스
 
-[MIT](LICENSE)
+[MIT](./LICENSE)
 
 ---
 
-Made by Luelan (掠蓝)
+<div align="center">
+
+🍤와 함께 만든 사람은 **[Luelan (掠蓝)](https://github.com/Ylsssq926)**입니다
+
+</div>

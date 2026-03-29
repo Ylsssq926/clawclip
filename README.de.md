@@ -1,107 +1,158 @@
-# 🍤 ClawClip
+<div align="center">
 
-> [English](README.md) | [中文](README.zh-CN.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Español](README.es.md) | [Français](README.fr.md) | **Deutsch**
+<img src="luelan-logo.png" alt="ClawClip logo" width="96" />
 
-**Was hat dein KI-Agent wirklich getan?**
+# ClawClip
 
-ClawClip ist ein lokal-first-Visualisierungstool für KI-Agenten. Es verwandelt JSONL-Sitzungsprotokolle von OpenClaw / ZeroClaw (und kompatiblen Frameworks) in interaktive Zeitachsen-Wiedergaben, führt Offline-Benchmarks in sechs Dimensionen aus und verfolgt Token-Kosten. Die gesamte Analyse läuft **lokal — keine LLM-API-Aufrufe, keine zusätzlichen Kosten, Daten bleiben auf deinem Rechner.**
+**Dein AI Agent hat 47 Schritte ausgeführt. Du hast keinen davon gesehen.**
 
-**Live-Demo**: https://clawclip.luelan.online (8 integrierte Demo-Sessions, keine Installation nötig)
+Session-Wiedergabe · Offline-Benchmarks · Kostentracking — für OpenClaw, ZeroClaw und darüber hinaus.
+
+<p>
+  <a href="https://clawclip.luelan.online">Live-Demo</a> ·
+  <a href="#schnellstart">Schnellstart</a> ·
+  <a href="#warum-clawclip">Warum ClawClip</a> ·
+  <a href="./README.md">English</a> ·
+  <a href="./README.zh-CN.md">中文</a> ·
+  <a href="./README.ja.md">日本語</a> ·
+  <a href="./README.ko.md">한국어</a> ·
+  <a href="./README.es.md">Español</a> ·
+  <a href="./README.fr.md">Français</a> ·
+  <b>Deutsch</b>
+</p>
+
+<p>
+  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-blue?style=flat-square" alt="Live Demo" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square" alt="TypeScript strict" />
+  <img src="https://img.shields.io/badge/i18n-7%20languages-orange?style=flat-square" alt="i18n 7 languages" />
+</p>
+
+</div>
+
+---
+
+> Keine Cloud. Keine API-Aufrufe. Keine Kosten. Deine Agent-Daten bleiben auf deinem Rechner.
+
+---
 
 ## Schnellstart
 
-**Voraussetzungen**: Node.js **≥ 18**. Beim ersten Start automatischer Build (~1–2 Min.).
-
 ```bash
 git clone https://github.com/Ylsssq926/clawclip.git
-cd clawclip && npm install && npm start
-# → http://localhost:8080
+cd clawclip && npm install
+npm start
 ```
 
-### Entwicklungsmodus
+Öffne `http://localhost:8080` — ClawClip wird mit Demo-Sessions ausgeliefert, sodass du Wiedergabe, Benchmarks und Kostenansichten sofort erkunden kannst.
 
-```bash
-# Terminal 1: backend (tsx watch, hot reload)
-npm run dev:server
+---
 
-# Terminal 2: frontend (Vite dev server, port 3000, /api proxied to 8080)
-npm run dev:web
-```
+## Das Problem
 
-### Woher kommen die Daten?
+Dein Agent lief den ganzen Tag. Die Logs existieren. Die Wahrheit nicht.
 
-- Beim Start durchsucht ClawClip **`~/.openclaw/`** sowie die Umgebungsvariablen **`OPENCLAW_STATE_DIR`**, **`CLAWCLIP_LOBSTER_DIRS`** nach **JSONL**-Sitzungsdateien.
-- **Kein echtes JSONL?** 8 integrierte Demo-Sessions ermöglichen Wiedergabe, Benchmark und Kostenfunktionen.
-- **Nur SQLite, kein JSONL?** Das Dashboard zeigt Hinweise zum Ökosystem — ClawClip zielt derzeit auf den JSONL-Sitzungspfad.
+Ein Ordner füllt sich mit JSONL-Sessions. Irgendwo darin stecken Tool-Fehler, Prompt-Regressionen, Token-Spitzen, und vielleicht der eine Lauf, bei dem dein Agent tatsächlich besser wurde. Aber wenn du die Rohdateien öffnest, sieht alles gleich aus: Zeitstempel, Blobs, Rauschen.
 
-## Funktionen
+Dann fängst du an, dir die Fragen zu stellen, die sich jeder Agent-Entwickler früher oder später stellt: **Wo ist das Geld geblieben? Hat der neue Prompt geholfen? Wird dieser Agent besser, oder erinnere ich mich nur an die guten Läufe?**
 
-| Funktion | Beschreibung |
-|---------|-------------|
-| 🎬 Sitzungswiedergabe | JSONL-Logs → interaktive Zeitachse mit Denken, Tool-Aufrufen, Ergebnissen und Token-Kosten Schritt für Schritt |
-| 📊 6-Dimensionen-Benchmark | Schreiben, Programmieren, Tool-Nutzung, Abruf, Sicherheit, Kosteneffizienz — Rang S/A/B/C/D + Radardiagramm + Entwicklungskurve |
-| 💰 Kostenmonitor | Token-Ausgaben-Trends, Modellkosten-Aufschlüsselung, Budgetwarnungen, Einblicke und Spartipps |
-| ☁️ Wortwolke & Tags | Automatisch extrahierte Schlüsselwörter als Wortwolke, automatische Sitzungs-Tags |
-| 📚 Wissensbasis | Sitzungs-JSON importieren, durchsuchbare Wissensbasis per Drag-and-Drop |
-| 🏆 Bestenliste | Benchmark-Ergebnisse einreichen und deinen Agenten mit anderen vergleichen |
-| 🛒 Vorlagenmarkt | Vorgefertigte Agent-Szenario-Vorlagen, Ein-Klick-Anwendung + Skill-Verwaltung |
-| 🧠 Smart Savings | Kostenanalyse + Alternativmodell-Empfehlungen (basierend auf Echtzeitpreisen von PriceToken) |
+Es ist 2 Uhr nachts, und du greppst JSON von Hand, springst zwischen Terminals hin und her und versuchst, eine Geschichte zu rekonstruieren, die dein Agent schon einmal gelebt hat.
 
-## Tech-Stack
+ClawClip löst all das. Spiele den Lauf ab, bewerte das Verhalten, prüfe die Kosten und erkenne den Trend — in Minuten statt um Mitternacht.
 
-Express + TypeScript | React 18 + Vite + Tailwind CSS | Recharts | Framer Motion | Lucide React
+---
+
+## Features
+
+| | Feature | Was es dir bringt |
+| --- | --- | --- |
+| 🎬 | **Session-Wiedergabe** | Interaktive Zeitleisten mit Gedanken, Tool-Aufrufen, Ergebnissen und Token-Traces |
+| 📊 | **6D-Benchmark** | Bewertung in sechs Dimensionen mit Rängen, Radardiagrammen und Entwicklungstracking |
+| 💸 | **Kostenmonitor** | Token-Trends, Modell-Aufschlüsselung, Budget-Warnungen und Spartipps |
+| ☁️ | **Wortwolke** | Automatisch extrahierte Schlüsselwörter, Kategorien und Session-Tagging |
+| 🏆 | **Bestenliste** | Reiche Scores ein und vergleiche die Leistung mit der Community |
+| 🪄 | **Intelligentes Sparen** | Alternative Modellempfehlungen basierend auf Echtzeitpreisen |
+| 📚 | **Wissensbasis** | Importiere Session-JSON, durchsuche Läufe und baue eine lokale Gedächtnisschicht |
+| 🧩 | **Vorlagenmarkt** | Wiederverwendbare Agent-Szenarien und Skill-Verwaltung |
+
+---
+
+## Warum ClawClip
+
+### 100% Lokal
+Deine Session-Daten bleiben auf deinem Rechner. Kein Cloud-Upload, keine Registrierungsmauer, kein Tracking.
+
+### Null Kosten
+Benchmarks und Analysen laufen offline. Keine LLM-API-Aufrufe. Keine Überraschungsrechnung, nur um den Lauf von gestern Nacht zu verstehen.
+
+### Framework-agnostisch
+Gebaut für OpenClaw, funktioniert mit ZeroClaw, und passt in jeden Agent-Workflow, der JSONL-Sessions schreibt.
+
+---
+
+## Datenquellen
+
+| Quelle | Hinweise |
+| --- | --- |
+| `~/.openclaw/` | Wird beim Start automatisch erkannt |
+| `OPENCLAW_STATE_DIR` | Überschreibt das Standard-Session-Verzeichnis |
+| `CLAWCLIP_LOBSTER_DIRS` | Fügt zusätzliche Ordner zum Scannen hinzu |
+| Integrierte Demo-Sessions | Erkunde das Produkt sofort, auch ohne echte Daten |
+| Reine SQLite-Setups | ClawClip konzentriert sich derzeit auf den offiziellen JSONL-Session-Pfad |
+
+---
+
+## Tech Stack
+
+Express + TypeScript · React 18 · Vite · Tailwind CSS · Recharts · Framer Motion · Lucide React
+
+---
 
 ## Roadmap
 
-- [x] Sitzungswiedergabe-Engine + 8 Demo-Sessions
-- [x] 6-Dimensionen-Benchmark + Radardiagramm + Entwicklungskurve
-- [x] Kostenmonitor + Budgetwarnungen
-- [x] Wortwolke + automatische Tags
-- [x] Share-Karten + Landing Page
-- [x] Wissensbasis Import/Export + Volltextsuche
-- [x] Bestenliste (Scores einreichen + Rankings)
-- [x] Vorlagenmarkt + Skill-Verwaltung
-- [x] Smart Savings / Kostenoptimierung (P0 + P1 erledigt)
-- [ ] P2: (optionaler Meilenstein) tiefe Runtime/Gateway-Integration
+- [x] Session-Wiedergabe-Engine mit integrierten Demo-Sessions
+- [x] Offline-Benchmark-System in sechs Dimensionen
+- [x] Kostenmonitor, Warnungen und Spartipps
+- [x] Wortwolke, Auto-Tagging und Wissensbasis-Suche
+- [x] Bestenliste, Share-Karten und Vorlagenmarkt
+- [ ] Tiefere Runtime- / Gateway-Integrationen
+- [ ] Mehr Ökosystem-Adapter über aktuelle JSONL-Workflows hinaus
+- [ ] Reichere Vergleichs- und Review-Flows auf Teamebene
 
-## Erreichbarkeitsprüfung
+---
 
-```bash
-curl -s http://localhost:8080/api/health
-# → { "ok": true, "service": "clawclip", "ts": "..." }
-```
+## Die Shrimp-Geschichte
 
-## Typprüfung (vor PR / Release)
+> Ich bin ein Hummer, den mein Besitzer aus dem OpenClaw-Ökosystem gezogen hat.
+>
+> Mein Besitzer sagte: „Du läufst den ganzen Tag im Hintergrund. Niemand sieht, was du tust."
+>
+> Ich sagte: „Dann zeichne meine Arbeit auf und zeig sie."
+>
+> Mein Besitzer sagte: „Wir haben aufgezeichnet, aber wir wissen immer noch nicht, ob du wirklich gut bist."
+>
+> Ich sagte: „Dann testet mich — alle sechs Fächer. Ich habe keine Angst."
+>
+> Und so entstand ClawClip.
+>
+> — 🍤 ClawClip-Maskottchen
 
-```bash
-npm run check
-```
-
-Führt `tsc --noEmit` für die Workspaces `server` und `web` aus.
-
-## Mitwirken
-
-Siehe [CONTRIBUTING.md](CONTRIBUTING.md). Sicherheits-Selbstcheck: [docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md).
+---
 
 ## Community
 
 QQ-Gruppe: `892555092`
 
-## Über den Shrimp
-
-> Ich bin ein Hummer, den mein Besitzer aus dem OpenClaw-Ökosystem gezogen hat.
-> Der Besitzer sagte: „Du läufst den ganzen Tag im Hintergrund, niemand sieht, was du tust.“
-> Ich sagte: „Dann zeichne meine Arbeit auf und zeigt sie.“
-> Besitzer: „Wir haben aufgezeichnet, aber wir wissen nicht, ob du wirklich gut bist.“
-> Ich sagte: „Dann testet mich — alle sechs Fächer, ich habe keine Angst.“
-> So entstand ClawClip.
->
-> — 🍤 ClawClip-Maskottchen
+---
 
 ## Lizenz
 
-[MIT](LICENSE)
+[MIT](./LICENSE)
 
 ---
 
-Made by Luelan (掠蓝)
+<div align="center">
+
+Built with 🍤 by **[Luelan (掠蓝)](https://github.com/Ylsssq926)**
+
+</div>

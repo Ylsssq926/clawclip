@@ -285,7 +285,7 @@ export default function Leaderboard() {
                 value={nickname}
                 onChange={ev => setNickname(ev.target.value)}
                 placeholder={t('leaderboard.modal.nickPlaceholder')}
-                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
               />
 
               <div className="mt-5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">

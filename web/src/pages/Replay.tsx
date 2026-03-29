@@ -65,7 +65,7 @@ const STEP_STYLES: Record<string, { color: string; border: string; bg: string; i
   tool_call:   { color: 'text-cyan-400',   border: 'border-l-cyan-500',   bg: 'bg-cyan-500/10',   icon: Wrench },
   tool_result: { color: 'text-green-400',  border: 'border-l-green-500',  bg: 'bg-green-500/10',  icon: CheckCircle },
   response:    { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10',   icon: Bot },
-  system:      { color: 'text-slate-400',  border: 'border-l-slate-500',  bg: 'bg-slate-500/10',  icon: Settings },
+  system:      { color: 'text-slate-500',  border: 'border-l-slate-500',  bg: 'bg-slate-500/10',  icon: Settings },
 }
 
 function CollapsibleText({
@@ -549,7 +549,7 @@ export default function Replay() {
                       onClick={() => setSpeed(s)}
                       className={cn(
                         'text-[10px] px-2 py-1 rounded transition-colors',
-                        speed === s ? 'bg-blue-500/20 text-blue-400' : 'text-slate-600 hover:text-slate-400',
+                        speed === s ? 'bg-blue-500/20 text-blue-400' : 'text-slate-600 hover:text-slate-500',
                       )}
                     >
                       {s === 'slow' ? '0.5x' : s === 'normal' ? '1x' : '2x'}

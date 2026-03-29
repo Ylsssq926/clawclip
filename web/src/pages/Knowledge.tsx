@@ -183,7 +183,7 @@ export default function Knowledge() {
               onChange={e => setQInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && runSearch()}
               placeholder={t('knowledge.search.placeholder')}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
             />
           </div>
           <button

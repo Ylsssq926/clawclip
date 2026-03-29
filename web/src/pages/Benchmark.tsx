@@ -81,7 +81,7 @@ const RANK_STYLES: Record<string, { bg: string; text: string; glow: string }> = 
   S: { bg: 'bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10', text: 'text-blue-300', glow: 'shadow-cyan-500/10 shadow-lg' },
   A: { bg: 'bg-gradient-to-br from-green-500/20 to-emerald-500/10', text: 'text-green-400', glow: 'shadow-green-500/10 shadow-md' },
   B: { bg: 'bg-gradient-to-br from-blue-500/20 to-cyan-500/10', text: 'text-blue-400', glow: '' },
-  C: { bg: 'bg-gradient-to-br from-slate-500/20 to-slate-500/10', text: 'text-slate-400', glow: '' },
+  C: { bg: 'bg-gradient-to-br from-slate-500/20 to-slate-500/10', text: 'text-slate-500', glow: '' },
   D: { bg: 'bg-gradient-to-br from-red-500/20 to-red-500/10', text: 'text-red-400', glow: '' },
 }
 
@@ -472,7 +472,7 @@ export default function Benchmark() {
             <div className="space-y-4">
               {(result.dimensions ?? []).map(dim => {
                 const Icon = DIMENSION_ICONS[dim.dimension] || Zap
-                const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-400'
+                const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-500'
                 return (
                   <div key={dim.dimension}>
                     <div className="flex items-center gap-2 mb-1.5">

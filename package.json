@@ -2,7 +2,10 @@
   "name": "clawclip",
   "version": "2026.03.29",
   "description": "🍤 虾片 (ClawClip) — AI Agent 回放可视化 + 能力评测 + 成本优化",
-  "workspaces": ["server", "web"],
+  "workspaces": [
+    "server",
+    "web"
+  ],
   "bin": {
     "clawclip": "bin/clawclip.mjs"
   },
@@ -34,5 +37,9 @@
   ],
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.2",
+    "gifenc": "^1.0.3"
   }
 }

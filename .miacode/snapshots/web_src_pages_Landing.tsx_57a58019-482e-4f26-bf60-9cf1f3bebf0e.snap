@@ -6,16 +6,6 @@ interface Props {
   onEnterDemo: () => void
 }
 
-const CURVE_Y_AXIS_LABEL: Record<string, string> = {
-  zh: '评分',
-  en: 'Score',
-  ja: 'スコア',
-  ko: '점수',
-  es: 'Puntuación',
-  fr: 'Score',
-  de: 'Score',
-}
-
 const FEATURES = [
   {
     icon: Play,
@@ -83,7 +73,7 @@ const HIGHLIGHTS = [
 ]
 
 export default function Landing({ onEnterDemo }: Props) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-slate-50 text-slate-800 overflow-hidden">
@@ -356,7 +346,7 @@ export default function Landing({ onEnterDemo }: Props) {
                 ].map(([cx, cy], i) => (
                   <circle key={i} cx={cx} cy={cy} r="3.5" fill="white" stroke="rgba(59,130,196,0.8)" strokeWidth="2" />
                 ))}
-                <text x="8" y="12" fontSize="9" fill="rgba(100,116,139,0.6)">{CURVE_Y_AXIS_LABEL[locale] ?? CURVE_Y_AXIS_LABEL.en}</text>
+                <text x="8" y="12" fontSize="9" fill="rgba(100,116,139,0.6)">Score</text>
                 <text x="280" y="118" fontSize="9" fill="rgba(100,116,139,0.6)">{t('landing.curve.axis')}</text>
               </svg>
             </div>
@@ -491,7 +481,7 @@ export default function Landing({ onEnterDemo }: Props) {
                 <Github className="w-4 h-4" /> GitHub
               </a>
               <a href="https://luelan.online" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">
-                更多作品
+                More Tools
               </a>
               <span className="flex items-center gap-1.5">
                 <MessageCircle className="w-4 h-4" /> {t('landing.footer.qq')}

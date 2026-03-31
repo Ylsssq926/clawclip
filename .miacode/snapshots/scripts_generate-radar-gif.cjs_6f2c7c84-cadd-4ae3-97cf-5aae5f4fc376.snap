@@ -7,35 +7,33 @@ const lang = process.argv[2] || 'zh';
 const I18N = {
   zh: {
     title: 'ClawClip',
-    subtitle: 'AI Agent 诊断与优化报告',
-    phaseBefore: '问题已定位',
-    phaseBeforeDesc: '关键短板与成本浪费已被识别',
-    phaseTransition: '正在生成优化方向...',
-    phaseAfter: '优化效果已验证',
-    phaseAfterDesc: '表现与成本效率同步改善',
+    subtitle: 'AI Agent 性能报告',
+    phaseBefore: 'Before - Current Status',
+    phaseBeforeDesc: 'Agent 性能有待提升',
+    phaseTransition: 'Optimizing in Progress...',
+    phaseAfter: 'After Optimization - Target Reached!',
+    phaseAfterDesc: 'Agent 已达到最佳表现',
     overallLabel: '综合评分',
-    panelTitle: '优化建议',
+    panelTitle: '优化详情',
     scoreFrom: '优化前',
     scoreTo: '优化后',
-    labels: ['写作', '代码', '工具', '检索', '安全', '成本'],
   },
   en: {
     title: 'ClawClip',
-    subtitle: 'AI Agent Diagnostics & Optimization Report',
-    phaseBefore: 'Issues detected',
-    phaseBeforeDesc: 'Key bottlenecks and waste have been identified',
-    phaseTransition: 'Generating optimization directions...',
-    phaseAfter: 'Improvement verified',
-    phaseAfterDesc: 'Performance and cost efficiency improved together',
+    subtitle: 'AI Agent Performance Report',
+    phaseBefore: 'Before - Current Status',
+    phaseBeforeDesc: 'Agent performance needs improvement',
+    phaseTransition: 'Optimizing in Progress...',
+    phaseAfter: 'After Optimization - Target Reached!',
+    phaseAfterDesc: 'Agent is now performing at peak level',
     overallLabel: 'Overall Score',
-    panelTitle: 'Optimization Plan',
+    panelTitle: 'Optimization Details',
     scoreFrom: 'Before',
     scoreTo: 'After',
-    labels: ['Writing', 'Coding', 'Tools', 'Search', 'Safety', 'Cost'],
   }
 };
 
-const t = I18N[lang] || I18N.en;
+const t = I18N[lang];
 
 console.log(`ClawClip Radar GIF Generator (${lang === 'zh' ? '中文版' : 'English'})\n`);
 
@@ -48,24 +46,25 @@ const CX = W / 2 - 100;
 const CY = H / 2;
 const R = 180;
 
+const DIMENSIONS = ['Writing', 'Coding', 'Tools', 'Search', 'Safety', 'Cost'];
 const DIM_COLORS = ['#f472b6', '#60a5fa', '#fb923c', '#22d3ee', '#4ade80', '#facc15'];
 
 const IMPROVEMENTS = {
   zh: [
-    { dim: '写作', from: 42, to: 82, tip: '把 Prompt 改成结构化输入，并补少样本示例' },
-    { dim: '代码', from: 28, to: 88, tip: '复杂任务切到更强模型，减少一次性失败' },
-    { dim: '工具', from: 35, to: 80, tip: '精简工具链路并加入失败重试策略' },
-    { dim: '检索', from: 48, to: 85, tip: '检索后加重排序，提升结果命中率' },
-    { dim: '安全', from: 55, to: 92, tip: '补充双层安全检查，减少高风险输出' },
-    { dim: '成本', from: 22, to: 75, tip: '简单任务路由到低成本模型，避免过度配置' },
+    { dim: 'Writing', from: 42, to: 82, tip: '结构化 Prompt + 少样本学习' },
+    { dim: 'Coding', from: 28, to: 88, tip: 'Claude Opus 4.6 复杂任务专项' },
+    { dim: 'Tools', from: 35, to: 80, tip: 'MCP 协议 + 智能重试机制' },
+    { dim: 'Search', from: 48, to: 85, tip: '混合检索 + Rerank 重排序' },
+    { dim: 'Safety', from: 55, to: 92, tip: '双层内容安全过滤引擎' },
+    { dim: 'Cost', from: 22, to: 75, tip: '简单任务路由至 Gemini 3.1 Flash' },
   ],
   en: [
-    { dim: 'Writing', from: 42, to: 82, tip: 'Restructure prompts and add a few-shot pattern for consistency' },
-    { dim: 'Coding', from: 28, to: 88, tip: 'Route harder coding tasks to a stronger model' },
-    { dim: 'Tools', from: 35, to: 80, tip: 'Trim tool chains and add retry logic for failures' },
-    { dim: 'Search', from: 48, to: 85, tip: 'Add reranking after retrieval to improve hit quality' },
-    { dim: 'Safety', from: 55, to: 92, tip: 'Layer extra safety checks before final output' },
-    { dim: 'Cost', from: 22, to: 75, tip: 'Route simpler work to cheaper models to cut waste' },
+    { dim: 'Writing', from: 42, to: 82, tip: 'Structured Prompt + Few-shot Learning' },
+    { dim: 'Coding', from: 28, to: 88, tip: 'Claude Opus 4.6 for Complex Tasks' },
+    { dim: 'Tools', from: 35, to: 80, tip: 'MCP Protocol + Smart Retry' },
+    { dim: 'Search', from: 48, to: 85, tip: 'Hybrid Search + Rerank' },
+    { dim: 'Safety', from: 55, to: 92, tip: 'Dual-layer Safety Filter' },
+    { dim: 'Cost', from: 22, to: 75, tip: 'Simple Tasks → Gemini 3.1 Flash' },
   ]
 };
 
@@ -157,7 +156,7 @@ function drawRadarFrame(ctx, scores, overallScore) {
   ctx.font = 'bold 13px system-ui, sans-serif';
   ctx.fillStyle = '#64748b';
   ctx.textAlign = 'center';
-  t.labels.forEach((dim, i) => {
+  DIMENSIONS.forEach((dim, i) => {
     const { x, y } = polarToCartesian(i * 60, R + 28);
     ctx.fillText(dim, x, y + 5);
   });
@@ -185,7 +184,7 @@ function drawScorePanel(ctx, currentScores) {
   ctx.textAlign = 'center';
   ctx.fillText(t.panelTitle, panelX + panelW / 2, panelY + 30);
 
-  const improvements = IMPROVEMENTS[lang] || IMPROVEMENTS.en;
+  const improvements = IMPROVEMENTS[lang];
   improvements.forEach((item, i) => {
     const y = panelY + 60 + i * 82;
     const currentScore = currentScores[i];
@@ -199,7 +198,7 @@ function drawScorePanel(ctx, currentScores) {
 
     ctx.font = '9px system-ui, sans-serif';
     ctx.fillStyle = '#94a3b8';
-    const tipText = item.tip.length > 32 ? item.tip.substring(0, 30) + '...' : item.tip;
+    const tipText = item.tip.length > 26 ? item.tip.substring(0, 24) + '...' : item.tip;
     ctx.fillText(tipText, panelX + 12, y + 12);
 
     ctx.fillStyle = '#f1f5f9';
@@ -298,7 +297,7 @@ const TRANSITION_FRAMES = 55;
 const AFTER_FRAMES = 35;
 const HOLD_FRAMES = 25;
 
-const improvements = IMPROVEMENTS[lang] || IMPROVEMENTS.en;
+const improvements = IMPROVEMENTS[lang];
 const startScores = improvements.map(i => i.from);
 const endScores = improvements.map(i => i.to);
 const startOverall = Math.round(startScores.reduce((a, b) => a + b, 0) / startScores.length);

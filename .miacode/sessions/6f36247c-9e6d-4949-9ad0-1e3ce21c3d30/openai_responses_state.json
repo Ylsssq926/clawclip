@@ -1278,6 +1278,16 @@
       ],
       "role": "user",
       "type": "message"
+    },
+    {
+      "content": [
+        {
+          "text": "[动态上下文]\n[当前任务列表]\n- [x] step-1: 确认转型主叙事与品牌口径 (completed)\n- [x] step-2: 建立统一命名矩阵 (completed)\n- [x] step-3: 优先改核心触点文案 (completed)\n- [x] step-4: 制定多语言同步策略 (completed)\n- [x] gif-step-1: 定位现有 GIF 生成脚本与素材链路 (completed)\n- [x] gif-step-2: 评估可复用能力并给出生成方案 (completed)\n- [x] gif-step-3: 准备下一版文案与 GIF 分镜建议 (completed)\n- [x] exec-step-1: 梳理待改文案与脚本落点 (completed)\n- [x] exec-step-2: 更新 README / 中文 README / Landing 文案 (completed)\n- [x] exec-step-3: 升级 GIF 脚本叙事与字幕 (completed)\n- [!] exec-step-4: 执行验证并整理交付结果 (failed)\n\n继续",
+          "type": "input_text"
+        }
+      ],
+      "role": "user",
+      "type": "message"
     }
   ],
   "active_epoch": 0,

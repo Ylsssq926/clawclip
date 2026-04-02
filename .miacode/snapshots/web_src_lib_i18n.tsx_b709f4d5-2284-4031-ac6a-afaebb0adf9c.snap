@@ -869,7 +869,7 @@ const ko: Record<string, string> = {
   'landing.stats.languages': '지원 언어',
   'landing.stats.apicost': '분석 API 비용',
   'feat.replay': '실행 진단',
-  'feat.replay.desc': 'JSONL 세션을 진단 가능한 실행 증거로 바꿔 실패 지점, 재시도, 도구 동작, 핵심 병목을 추적합니다.',
+  'feat.replay.desc': 'JSONL 세션을 재생 가능한 증거로 바꿔 실패 지점, 재시도, 도구 동작, 중요한 판단 흐름을 추적합니다.',
   'feat.benchmark': 'Agent 스코어카드',
   'feat.benchmark.desc': '글쓰기·코드·도구·검색·안전·가성비 약점을 드러내고, 최적화가 실제로 효과 있었는지 검증합니다.',
   'feat.cost': '비용 분석',

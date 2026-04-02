@@ -58,7 +58,7 @@ That is where ClawClip comes in. It turns local agent runs into replayable evide
 
 | | Feature | What it gives you |
 | --- | --- | --- |
-| 🎬 | **Run Diagnostics** | Reconstruct each run as step-by-step evidence so you can see where failures, retries, and wasted effort actually happened |
+| 🎬 | **Run Replay** | Reconstruct each run as step-by-step evidence so you can see where failures, retries, and wasted effort actually happened |
 | 📊 | **Agent Scorecards** | Score core capabilities, surface weak dimensions, and prove whether optimization work is making the agent stronger |
 | 💸 | **Cost Analysis** | Break down spend by model, task, and trend so you can spot waste and optimize routing decisions |
 | ☁️ | **Word Cloud & Tags** | Auto-extract keywords, categories, and session labels to quickly understand what your agents have been doing |
@@ -105,9 +105,9 @@ Express + TypeScript · React 18 · Vite · Tailwind CSS · Recharts · Framer M
 
 ## Roadmap
 
-- [x] Diagnostics engine with built-in demo sessions
+- [x] Session replay engine with built-in demo sessions
 - [x] Offline six-dimension benchmark system
-- [x] Cost analysis, alerts, and savings suggestions
+- [x] Cost monitor, alerts, and savings suggestions
 - [x] Word cloud, auto-tagging, and knowledge base search
 - [x] Leaderboard, share cards, and template market
 - [ ] Deeper runtime / gateway integrations

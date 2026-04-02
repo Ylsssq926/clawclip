@@ -1338,6 +1338,16 @@
       ],
       "role": "user",
       "type": "message"
+    },
+    {
+      "content": [
+        {
+          "text": "继续",
+          "type": "input_text"
+        }
+      ],
+      "role": "user",
+      "type": "message"
     }
   ],
   "active_epoch": 0,

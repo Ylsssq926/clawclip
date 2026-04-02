@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -41,6 +41,9 @@ Thumbs.db
 
 # Narrafork (internal planning)
 .narrafork/
+
+# MiaCode local state
+.miacode/
 
 # Reference / archived projects (not ours, don't leak)
 _reference/

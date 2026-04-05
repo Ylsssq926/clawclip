@@ -7,6 +7,24 @@ Version scheme: `YYYY.MM.DD` (CalVer, daily). Patch suffix `.N` for same-day rel
 
 ---
 
+## [2026.04.05] — 2026-04-05
+
+### Added
+- **Demo Experience Overhaul**: Cost monitor, Prompt Insight, and Benchmark now fully functional in Demo mode with meaningful data
+- **Navigation Flow**: Landing feature cards click-through to corresponding pages; Dashboard sessions link to Replay; word cloud keywords link to Knowledge search
+- **Template Persistence**: Template install state persisted via localStorage; template detail preview with expand/collapse
+- **Knowledge UX**: Session count display, recommended search tags (React, 小红书, Notion, Python, Kubernetes)
+- **Compare UX**: Session selector dropdown replaces manual ID input
+
+### Improved
+- **Light Theme Polish**: Alert/warning text colors unified (text-red-300→600, text-amber-200→700) across 8 pages
+- **Benchmark Demo**: Now runs real evaluation on Demo sessions instead of hardcoded results (73/B score)
+- **Cost Demo Fallback**: Demo sessions feed cost trend (7 days), model breakdown (6 models), and savings suggestions
+- **Prompt Analyzer**: Falls back to Demo sessions when no real data available
+- **5-Language README**: ja/ko/es/fr/de READMEs rewritten to match narrative style of en/zh versions
+
+[2026.04.05]: https://github.com/Ylsssq926/clawclip/compare/2026.03.29...2026.04.05
+
 ## [2026.03.29] — 2026-03-29
 
 ### Added

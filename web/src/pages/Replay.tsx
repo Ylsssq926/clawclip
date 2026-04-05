@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Play, Pause, Brain, Wrench, CheckCircle, Bot, MessageSquare, Settings, Clock, ChevronDown, ChevronUp, Zap, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Bot, Clock, ChevronDown, ChevronUp, Zap, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import { cn } from '../lib/cn'
@@ -28,12 +28,14 @@ function dataSourceBadge(src?: string): string {
 interface SessionStep {
   index: number
   timestamp: string
-  type: 'thinking' | 'tool_call' | 'tool_result' | 'response' | 'user' | 'system'
+  type: 'thinking' | 'tool_call' | 'tool_result' | 'response' | 'user' | 'system' | 'error'
   content: string
   model?: string
   toolName?: string
   toolInput?: string
   toolOutput?: string
+  error?: string
+  isError?: boolean
   inputTokens: number
   outputTokens: number
   cost: number
@@ -59,13 +61,14 @@ function formatStepOffset(stepTime: string, startTime: string): string {
   return `+${m}:${s.toString().padStart(2, '0')}`
 }
 
-const STEP_STYLES: Record<string, { color: string; border: string; bg: string; icon: typeof Brain }> = {
-  user:        { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10',   icon: MessageSquare },
-  thinking:    { color: 'text-purple-400', border: 'border-l-purple-500', bg: 'bg-purple-500/10', icon: Brain },
-  tool_call:   { color: 'text-cyan-400',   border: 'border-l-cyan-500',   bg: 'bg-cyan-500/10',   icon: Wrench },
-  tool_result: { color: 'text-green-400',  border: 'border-l-green-500',  bg: 'bg-green-500/10',  icon: CheckCircle },
-  response:    { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10',   icon: Bot },
-  system:      { color: 'text-slate-500',  border: 'border-l-slate-500',  bg: 'bg-slate-500/10',  icon: Settings },
+const STEP_STYLES: Record<SessionStep['type'], { color: string; border: string; bg: string; emoji: string }> = {
+  user:        { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10',   emoji: '👤' },
+  thinking:    { color: 'text-purple-400', border: 'border-l-purple-500', bg: 'bg-purple-500/10', emoji: '🧠' },
+  tool_call:   { color: 'text-cyan-400',   border: 'border-l-cyan-500',   bg: 'bg-cyan-500/10',   emoji: '🔧' },
+  tool_result: { color: 'text-green-400',  border: 'border-l-green-500',  bg: 'bg-green-500/10',  emoji: '📋' },
+  response:    { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10',   emoji: '💬' },
+  system:      { color: 'text-slate-500',  border: 'border-l-slate-500',  bg: 'bg-slate-500/10',  emoji: '⚙️' },
+  error:       { color: 'text-red-500',    border: 'border-l-red-500',    bg: 'bg-red-500/10',    emoji: '❌' },
 }
 
 function CollapsibleText({
@@ -95,13 +98,19 @@ function CollapsibleText({
   )
 }
 
-function StepCard({ step, startTime }: { step: SessionStep; startTime: string }) {
-  const { t } = useI18n()
-  const config = STEP_STYLES[step.type] || STEP_STYLES.system
-  const Icon = config.icon
+function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; startTime: string; totalCost?: number }) {
+  const { t, locale } = useI18n()
+  const isZh = locale.startsWith('zh')
+  const baseConfig = STEP_STYLES[step.type] || STEP_STYLES.system
+  const config = step.isError || step.error ? STEP_STYLES.error : baseConfig
   const tokens = step.inputTokens + step.outputTokens
   const typeKey = `replay.step.${step.type}`
-  const stepLabel = t(typeKey) !== typeKey ? t(typeKey) : t('replay.step.system')
+  const defaultLabel = step.type === 'error' ? (isZh ? '错误' : 'Error') : t('replay.step.system')
+  const stepLabel = t(typeKey) !== typeKey ? t(typeKey) : defaultLabel
+  const isHighCost = totalCost > 0 && step.cost / totalCost > 0.3
+  const toolFailurePattern = /error|failed|failure|失败|异常/i
+  const isToolFailure = step.type === 'tool_result' && toolFailurePattern.test(`${step.content} ${step.toolOutput ?? ''} ${step.error ?? ''}`)
+  const hasError = Boolean(step.isError || step.error)
 
   return (
     <motion.div
@@ -116,23 +125,38 @@ function StepCard({ step, startTime }: { step: SessionStep; startTime: string })
           <div className="flex-1 w-px bg-surface-border" />
         </div>
         <div className={cn('flex-1 glass-raised rounded-xl p-4 border border-surface-border border-l-4 mb-3', config.border)}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className={`p-1.5 rounded-lg ${config.bg}`}>
-                <Icon className={`w-4 h-4 ${config.color}`} />
+          <div className="flex items-center justify-between mb-2 gap-3">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <div className={cn('p-1.5 rounded-lg text-base leading-none', config.bg)}>
+                <span aria-hidden="true">{config.emoji}</span>
               </div>
               <span className={`text-sm font-medium ${config.color}`}>{stepLabel}</span>
               {step.toolName && <span className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{step.toolName}</span>}
               {step.model && <span className="text-xs text-slate-500">{step.model}</span>}
+              {isHighCost && (
+                <span className="bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded">
+                  💰 {isZh ? '高成本' : 'High Cost'}
+                </span>
+              )}
+              {isToolFailure && (
+                <span className="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-200">
+                  ❌ {isZh ? '调用失败' : 'Call Failed'}
+                </span>
+              )}
             </div>
             {tokens > 0 && (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 shrink-0">
                 {tokens.toLocaleString()} {t('replay.list.tokensUnit')} · ${step.cost.toFixed(4)}
               </span>
             )}
           </div>
           {step.content && (
-            <CollapsibleText text={step.content} expandLabel={t('replay.expand')} collapseLabel={t('replay.collapse')} />
+            <div className="flex items-start gap-2">
+              {hasError && <span className="shrink-0 mt-0.5 text-red-500">⚠️</span>}
+              <div className="min-w-0 flex-1">
+                <CollapsibleText text={step.content} expandLabel={t('replay.expand')} collapseLabel={t('replay.collapse')} />
+              </div>
+            </div>
           )}
           {step.toolInput && (
             <div className="mt-2 p-2 glass-raised rounded text-xs border border-surface-border">
@@ -161,6 +185,7 @@ function StepCard({ step, startTime }: { step: SessionStep; startTime: string })
     </motion.div>
   )
 }
+
 
 function ListSkeleton() {
   return (
@@ -584,10 +609,10 @@ export default function Replay() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ duration: 0.3, ease: 'easeOut' }}
                       >
-                        <StepCard step={step} startTime={replay.meta.startTime} />
+                        <StepCard step={step} startTime={replay.meta.startTime} totalCost={replay.meta.totalCost} />
                       </motion.div>
                     ) : (
-                      <StepCard step={step} startTime={replay.meta.startTime} />
+                      <StepCard step={step} startTime={replay.meta.startTime} totalCost={replay.meta.totalCost} />
                     )}
                   </div>
                 )

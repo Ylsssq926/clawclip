@@ -33,6 +33,8 @@ interface DimensionScore {
   maxScore: number
   details: string
   detailsEn?: string
+  evidence?: string
+  evidenceEn?: string
 }
 
 interface BenchmarkResult {
@@ -127,6 +129,32 @@ function mergeTimelineHistory(history: BenchmarkResult[], latest: BenchmarkResul
 
 function dimLabel(d: { label: string; labelEn?: string }, zh: boolean): string {
   return zh ? d.label : (d.labelEn || d.label)
+}
+
+function dimEvidence(d: { evidence?: string; evidenceEn?: string }, zh: boolean): string {
+  return zh ? (d.evidence || '') : (d.evidenceEn || d.evidence || '')
+}
+
+function BenchmarkScoringMethod({ isZh }: { isZh: boolean }) {
+  return (
+    <details className="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+      <summary className="cursor-pointer font-medium text-slate-700">
+        {isZh ? '评分方法说明' : 'How scoring works'}
+      </summary>
+      <div className="mt-3 space-y-2 text-xs leading-relaxed text-slate-500">
+        <p>
+          {isZh
+            ? 'Agent 成绩单基于启发式规则评分（Heuristic Scorecard），分析日志中的行为特征。'
+            : 'The Agent scorecard uses a heuristic scorecard to analyze behavior patterns in your logs.'}
+        </p>
+        <p>
+          {isZh
+            ? '它不是基于标准测试集的严格评测，而是运行质量的快速诊断信号。'
+            : 'It is not a strict benchmark on a standard test set, but a quick diagnostic signal for runtime quality.'}
+        </p>
+      </div>
+    </details>
+  )
 }
 
 export default function Benchmark() {
@@ -265,6 +293,7 @@ export default function Benchmark() {
       <div>
         <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
         <p className="text-slate-500 text-sm mb-8">{t('benchmark.subtitle')}</p>
+        <BenchmarkScoringMethod isZh={isZh} />
 
         <FadeIn className="flex flex-col items-center justify-center py-16">
           <div className="text-6xl mb-6">🩺</div>
@@ -338,6 +367,8 @@ export default function Benchmark() {
           {t('demo.hint.benchmark')}
         </div>
       )}
+
+      <BenchmarkScoringMethod isZh={isZh} />
 
       {result && (
         <>
@@ -473,13 +504,15 @@ export default function Benchmark() {
               {(result.dimensions ?? []).map(dim => {
                 const Icon = DIMENSION_ICONS[dim.dimension] || Zap
                 const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-500'
+                const evidenceText = dimEvidence(dim, isZh)
                 return (
                   <div key={dim.dimension}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <Icon className={`w-4 h-4 ${color}`} />
-                      <span className="text-sm font-medium text-slate-500">{dim.label}</span>
+                      <span className="text-sm font-medium text-slate-500">{dimLabel(dim, isZh)}</span>
                     </div>
                     <ScoreBar score={dim.score} color={color} />
+                    {evidenceText && <p className="text-xs text-slate-400 mt-1">{evidenceText}</p>}
                     <p className="text-xs text-slate-500 mt-1">{isZh ? dim.details : (dim.detailsEn || dim.details)}</p>
                   </div>
                 )

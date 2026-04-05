@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useState, useEffect, useCallback } from 'react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar } from 'recharts'
 import { TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
-import { apiGet, apiGetSafe } from '../lib/api'
+import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
 
 interface DailyData {
   date: string
@@ -40,9 +40,24 @@ interface SavingSuggestion {
   saving: number
   tokens: number
 }
+
 interface SavingsReport {
   totalPotentialSaving: number
   suggestions: SavingSuggestion[]
+}
+
+interface BudgetConfig {
+  monthly: number
+  alertThreshold: number
+}
+
+type ModelBreakdown = Record<string, { tokens: number; cost: number }>
+
+interface ModelBreakdownRow {
+  model: string
+  cost: number
+  tokens: number
+  percentage: number
 }
 
 const chartTooltipStyle = {
@@ -79,37 +94,120 @@ export default function CostMonitor() {
   const [summary, setSummary] = useState<CostSummary | null>(null)
   const [insights, setInsights] = useState<CostInsight[]>([])
   const [savings, setSavings] = useState<SavingsReport | null>(null)
+  const [modelBreakdown, setModelBreakdown] = useState<ModelBreakdown>({})
+  const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null)
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false)
+  const [budgetForm, setBudgetForm] = useState({ monthly: '', alertThreshold: '80' })
+  const [budgetSaving, setBudgetSaving] = useState(false)
+  const [budgetError, setBudgetError] = useState<string | null>(null)
   const [days, setDays] = useState(7)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [demoCostHint, setDemoCostHint] = useState(false)
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
 
-    Promise.all([
-      apiGet<DailyData[]>(`/api/cost/daily?days=${days}`),
-      apiGet<CostSummary>(`/api/cost/summary?days=${days}`),
-      apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
-        .then(s => !(s?.hasRealSessionData ?? false)),
-      apiGet<CostInsight[]>(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
-      apiGetSafe<SavingsReport>(`/api/cost/savings?days=${days}`),
-    ])
-      .then(([d, s, isDemo, ins, sav]) => {
-        setDaily(Array.isArray(d) ? d : [])
-        setSummary(s)
-        setDemoCostHint(Boolean(isDemo))
-        setInsights(Array.isArray(ins) ? ins : [])
-        setSavings(sav)
-      })
-      .catch(() => {
-        setError(t('cost.error'))
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+    try {
+      const [d, s, isDemo, ins, sav, models, budget] = await Promise.all([
+        apiGet<DailyData[]>(`/api/cost/daily?days=${days}`),
+        apiGet<CostSummary>(`/api/cost/summary?days=${days}`),
+        apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
+          .then(status => !(status?.hasRealSessionData ?? false)),
+        apiGet<CostInsight[]>(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
+        apiGetSafe<SavingsReport>(`/api/cost/savings?days=${days}`),
+        apiGetSafe<ModelBreakdown>(`/api/cost/models?days=${days}`),
+        apiGetSafe<BudgetConfig>('/api/cost/budget'),
+      ])
+
+      const normalizedModels: ModelBreakdown = {}
+      if (models && typeof models === 'object' && !Array.isArray(models)) {
+        for (const [model, data] of Object.entries(models)) {
+          normalizedModels[model] = {
+            cost: Number(data?.cost ?? 0),
+            tokens: Number(data?.tokens ?? 0),
+          }
+        }
+      }
+
+      const normalizedBudget =
+        budget && typeof budget.monthly === 'number' && typeof budget.alertThreshold === 'number'
+          ? { monthly: budget.monthly, alertThreshold: budget.alertThreshold }
+          : null
+
+      setDaily(Array.isArray(d) ? d : [])
+      setSummary(s)
+      setDemoCostHint(Boolean(isDemo))
+      setInsights(Array.isArray(ins) ? ins : [])
+      setSavings(sav)
+      setModelBreakdown(normalizedModels)
+      setBudgetConfig(normalizedBudget)
+    } catch {
+      setError(t('cost.error'))
+    } finally {
+      setLoading(false)
+    }
   }, [days, t])
+
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
+  const rawModelRows = Object.entries(modelBreakdown)
+    .map(([model, data]) => ({
+      model,
+      cost: Number(data.cost ?? 0),
+      tokens: Number(data.tokens ?? 0),
+    }))
+    .filter(row => row.cost > 0)
+  const modelTotalCost = rawModelRows.reduce((sum, row) => sum + row.cost, 0)
+  const modelBreakdownRows: ModelBreakdownRow[] = modelTotalCost > 0
+    ? [...rawModelRows]
+      .sort((a, b) => b.cost - a.cost)
+      .map(row => ({
+        ...row,
+        percentage: (row.cost / modelTotalCost) * 100,
+      }))
+    : []
+  const averageDailyCost = daily.length > 0 ? daily.reduce((sum, item) => sum + item.cost, 0) / daily.length : 0
+
+  const openBudgetModal = () => {
+    setBudgetError(null)
+    setBudgetForm({
+      monthly: budgetConfig ? String(budgetConfig.monthly) : '',
+      alertThreshold: budgetConfig ? String(budgetConfig.alertThreshold) : '80',
+    })
+    setBudgetModalOpen(true)
+  }
+
+  const handleBudgetSave = async () => {
+    const monthly = Number(budgetForm.monthly)
+    const alertThreshold = Number(budgetForm.alertThreshold)
+
+    if (!Number.isFinite(monthly) || monthly <= 0) {
+      setBudgetError(isZh ? '请输入有效的月预算金额' : 'Please enter a valid monthly budget amount')
+      return
+    }
+
+    if (!Number.isFinite(alertThreshold) || alertThreshold < 1 || alertThreshold > 100) {
+      setBudgetError(isZh ? '告警阈值必须在 1 到 100 之间' : 'Alert threshold must be between 1 and 100')
+      return
+    }
+
+    setBudgetSaving(true)
+    setBudgetError(null)
+
+    try {
+      await apiPost('/api/cost/budget', { monthly, alertThreshold })
+      setBudgetModalOpen(false)
+      await loadData()
+    } catch (err) {
+      setBudgetError(parseApiErrorMessage(err, isZh ? '保存预算设置失败' : 'Failed to save budget settings'))
+    } finally {
+      setBudgetSaving(false)
+    }
+  }
 
   const TrendIcon = summary?.trend === 'up' ? TrendingUp : summary?.trend === 'down' ? TrendingDown : Minus
   const trendColor = summary?.trend === 'up' ? 'text-red-400' : summary?.trend === 'down' ? 'text-green-400' : 'text-slate-500'
@@ -118,7 +216,7 @@ export default function CostMonitor() {
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h2 className="text-2xl font-bold">{t('cost.title')}</h2>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {([7, 14, 30] as const).map(d => (
             <button
               key={d}
@@ -132,6 +230,13 @@ export default function CostMonitor() {
               {t('cost.days').replace('{n}', String(d))}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={openBudgetModal}
+            className="px-3 py-1.5 rounded-lg text-sm bg-slate-900 text-white hover:opacity-90 transition-opacity"
+          >
+            {isZh ? '预算设置' : 'Budget Settings'}
+          </button>
         </div>
       </div>
 
@@ -204,6 +309,40 @@ export default function CostMonitor() {
             </GlowCard>
           </div>
 
+          {modelBreakdownRows.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                <h3 className="text-lg font-semibold">{isZh ? '模型成本占比' : 'Cost by model'}</h3>
+                <span className="text-xs text-slate-500">
+                  {isZh ? '显示各模型在当前周期内的成本占比' : 'Share of spend by model in the selected range'}
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={Math.max(220, modelBreakdownRows.length * 46)}>
+                <BarChart
+                  data={modelBreakdownRows}
+                  layout="vertical"
+                  margin={{ top: 4, right: 24, left: 12, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.14)" />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    stroke="#64748b"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={value => `${value}%`}
+                  />
+                  <YAxis type="category" dataKey="model" stroke="#64748b" tick={{ fontSize: 12 }} width={140} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={{ color: '#64748b' }}
+                    itemStyle={{ color: '#0f172a' }}
+                  />
+                  <Bar dataKey="percentage" name={isZh ? '成本占比' : 'Cost share'} fill="#3b82c4" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
           {!loading && insights.length > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
               <h3 className="text-lg font-semibold mb-4">{t('cost.insights.title')}</h3>
@@ -249,7 +388,10 @@ export default function CostMonitor() {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-600 mt-3">{t('cost.savings.disclaimer')}</p>
+              <div className="mt-3 space-y-1">
+                <p className="text-xs text-amber-700">⚠️ {isZh ? '注意：更换模型可能影响输出质量' : 'Note: switching models may affect output quality'}</p>
+                <p className="text-xs text-slate-600">{t('cost.savings.disclaimer')}</p>
+              </div>
             </div>
           )}
 
@@ -268,19 +410,29 @@ export default function CostMonitor() {
                 <p className="text-sm text-center max-w-md">{t('cost.empty.desc')}</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={daily}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
-                  <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={chartTooltipStyle}
-                    labelStyle={{ color: '#64748b' }}
-                    itemStyle={{ color: '#0f172a' }}
-                  />
-                  <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={t('cost.chart.series')} />
-                </LineChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={daily}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
+                    <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
+                    <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      labelStyle={{ color: '#64748b' }}
+                      itemStyle={{ color: '#0f172a' }}
+                    />
+                    {averageDailyCost > 0 && (
+                      <ReferenceLine y={averageDailyCost} stroke="#94a3b8" strokeDasharray="6 6" />
+                    )}
+                    <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={t('cost.chart.series')} />
+                  </LineChart>
+                </ResponsiveContainer>
+                {averageDailyCost > 0 && (
+                  <p className="mt-3 text-xs text-slate-500">
+                    {isZh ? '虚线表示日均成本' : 'Dashed line shows average daily cost'} · ${averageDailyCost.toFixed(2)}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -306,6 +458,75 @@ export default function CostMonitor() {
             </div>
           )}
         </FadeIn>
+      )}
+
+      {budgetModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => !budgetSaving && setBudgetModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-cyan-900/10"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">{isZh ? '预算设置' : 'Budget Settings'}</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                {isZh ? '设置月预算金额和触发告警的阈值。' : 'Set your monthly budget and alert threshold.'}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="block text-xs text-slate-500 mb-1.5">{isZh ? '月预算金额' : 'Monthly budget'}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={budgetForm.monthly}
+                  onChange={event => setBudgetForm(form => ({ ...form, monthly: event.target.value }))}
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  placeholder={isZh ? '例如 500' : 'e.g. 500'}
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs text-slate-500 mb-1.5">{isZh ? '告警阈值（%）' : 'Alert threshold (%)'}</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={budgetForm.alertThreshold}
+                  onChange={event => setBudgetForm(form => ({ ...form, alertThreshold: event.target.value }))}
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  placeholder="80"
+                />
+              </label>
+            </div>
+
+            {budgetError && <p className="mt-4 text-sm text-red-600">{budgetError}</p>}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                disabled={budgetSaving}
+                onClick={() => setBudgetModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-500 border border-slate-200 hover:bg-slate-100 disabled:opacity-50"
+              >
+                {isZh ? '取消' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={budgetSaving}
+                onClick={handleBudgetSave}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#3b82c4] to-teal-500 disabled:opacity-50"
+              >
+                {budgetSaving ? (isZh ? '保存中...' : 'Saving...') : (isZh ? '保存' : 'Save')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Pricing disclaimer */}

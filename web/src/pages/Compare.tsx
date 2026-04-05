@@ -1,4 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import FadeIn from '../components/ui/FadeIn'
 import { cn } from '../lib/cn'
 import { apiGet, apiPost, parseApiErrorMessage } from '../lib/api'
@@ -8,6 +18,7 @@ import type { SessionMeta } from '../types/session'
 
 interface CompareSession {
   id: string
+  agentName: string
   label: string
   totalCost: number
   totalTokens: number
@@ -22,6 +33,12 @@ interface ComparePayload {
   sessions: CompareSession[]
 }
 
+interface SessionReplayLite {
+  steps: Array<{
+    type: string
+  }>
+}
+
 const BAR_COLORS = [
   'bg-blue-500',
   'bg-cyan-400',
@@ -30,7 +47,16 @@ const BAR_COLORS = [
   'bg-violet-400',
 ]
 
+const COST_CHART_COLORS = ['#3b82c4', '#22d3ee', '#34d399', '#f59e0b', '#8b5cf6']
+
 const SESSION_SUMMARY_PREVIEW_LENGTH = 40
+
+const chartTooltipStyle = {
+  background: 'rgba(248,250,252,0.96)',
+  border: '1px solid rgba(226,232,240,0.9)',
+  borderRadius: 12,
+  backdropFilter: 'blur(12px)',
+} as const
 
 function formatSessionSummary(summary: string) {
   const normalized = summary.replace(/\s+/g, ' ').trim()
@@ -43,6 +69,14 @@ function formatSessionSummary(summary: string) {
 function formatSessionOptionLabel(session: SessionMeta) {
   const agentName = session.agentName.trim() || session.id
   return `${agentName} - ${formatSessionSummary(session.summary)}`
+}
+
+function sessionAlias(index: number, isZh: boolean) {
+  const letter = String.fromCharCode(65 + index)
+  return {
+    short: letter,
+    full: isZh ? `会话 ${letter}` : `Session ${letter}`,
+  }
 }
 
 function MetricBar({
@@ -67,6 +101,7 @@ function MetricBar({
 
 export default function Compare() {
   const { t, locale } = useI18n()
+  const isZh = locale === 'zh'
   const [slots, setSlots] = useState<string[]>(['', ''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,13 +110,18 @@ export default function Compare() {
   const [availableSessions, setAvailableSessions] = useState<SessionMeta[]>([])
   const [availableSessionsLoading, setAvailableSessionsLoading] = useState(true)
   const [availableSessionsError, setAvailableSessionsError] = useState<string | null>(null)
+  const [toolCallCounts, setToolCallCounts] = useState<Record<string, number | null>>({})
 
-  const selectPlaceholder = locale === 'zh' ? '请选择会话' : 'Please select a session'
-  const compareHint =
-    locale === 'zh'
-      ? '从最近 50 个会话中选择 2–5 个进行对比'
-      : 'Select 2–5 sessions from the latest 50 to compare'
-  const sessionsLoadErrorText = locale === 'zh' ? '会话列表加载失败' : 'Failed to load sessions'
+  const selectPlaceholder = isZh ? '请选择会话' : 'Please select a session'
+  const compareHint = isZh
+    ? '从最近 50 个会话中选择 2–5 个进行对比'
+    : 'Select 2–5 sessions from the latest 50 to compare'
+  const sessionsLoadErrorText = isZh ? '会话列表加载失败' : 'Failed to load sessions'
+  const costChartTitle = isZh ? '成本对比' : 'Cost comparison'
+  const costChartSeries = isZh ? '总成本' : 'Total cost'
+  const costChartEmpty = isZh ? '暂无可展示的成本数据' : 'No cost data to display'
+  const conclusionTitle = isZh ? '自动结论' : 'Auto conclusion'
+  const conclusionEmpty = isZh ? '完成对比后会自动生成结论。' : 'Conclusions will appear after comparison.'
 
   useEffect(() => {
     let cancelled = false
@@ -108,6 +148,39 @@ export default function Compare() {
     }
   }, [sessionsLoadErrorText])
 
+  useEffect(() => {
+    let cancelled = false
+
+    if (!sessions?.length) {
+      setToolCallCounts({})
+      return () => {
+        cancelled = true
+      }
+    }
+
+    Promise.all(
+      sessions.map(async session => {
+        try {
+          const replay = await apiGet<SessionReplayLite>(`/api/replay/sessions/${encodeURIComponent(session.id)}`)
+          const toolCalls = Array.isArray(replay.steps)
+            ? replay.steps.filter(step => step.type === 'tool_call').length
+            : 0
+          return [session.id, toolCalls] as const
+        } catch {
+          return [session.id, null] as const
+        }
+      }),
+    ).then(entries => {
+      if (!cancelled) {
+        setToolCallCounts(Object.fromEntries(entries))
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sessions])
+
   const maxima = useMemo(() => {
     if (!sessions?.length) {
       return {
@@ -128,6 +201,100 @@ export default function Compare() {
       costStep: Math.max(...sessions.map(s => s.costPerStep), 0),
     }
   }, [sessions])
+
+  const costChartData = useMemo(
+    () =>
+      (sessions ?? []).map((session, index) => {
+        const alias = sessionAlias(index, isZh)
+        return {
+          id: session.id,
+          shortName: alias.short,
+          alias: alias.full,
+          label: session.label || session.agentName || session.id,
+          totalCost: session.totalCost,
+          color: COST_CHART_COLORS[index % COST_CHART_COLORS.length],
+        }
+      }),
+    [sessions, isZh],
+  )
+
+  const toolCallStatus = useMemo(() => {
+    if (!sessions?.length) return 'idle' as const
+    const values = sessions.map(session => toolCallCounts[session.id])
+    if (values.every(value => typeof value === 'number')) return 'ready' as const
+    if (values.some(value => value === null)) return 'partial' as const
+    return 'loading' as const
+  }, [sessions, toolCallCounts])
+
+  const conclusions = useMemo(() => {
+    if (!sessions || sessions.length < 2) return [] as string[]
+
+    const sessionEntries = sessions.map((session, index) => ({
+      ...session,
+      alias: sessionAlias(index, isZh).full,
+    }))
+
+    const cheapest = sessionEntries.reduce((best, current) =>
+      current.totalCost < best.totalCost ? current : best,
+    )
+    const mostExpensive = sessionEntries.reduce((best, current) =>
+      current.totalCost > best.totalCost ? current : best,
+    )
+
+    const messages: string[] = []
+
+    if (cheapest.totalCost === mostExpensive.totalCost) {
+      messages.push(
+        isZh
+          ? `各会话成本接近，当前最低与最高均为 $${cheapest.totalCost.toFixed(4)}；可更多关注步数和工具使用差异。`
+          : `Session costs are currently very close at $${cheapest.totalCost.toFixed(4)}. Focus on steps and tool usage for the next comparison.`,
+      )
+    } else {
+      const stepPhrase =
+        cheapest.stepCount <= mostExpensive.stepCount
+          ? isZh
+            ? '步数更少'
+            : 'and also uses fewer steps'
+          : isZh
+            ? '但步数更多'
+            : 'but uses more steps'
+
+      messages.push(
+        isZh
+          ? `${cheapest.alias} 成本更低（$${cheapest.totalCost.toFixed(4)} vs $${mostExpensive.totalCost.toFixed(4)}），${stepPhrase}（${cheapest.stepCount} vs ${mostExpensive.stepCount}）。`
+          : `${cheapest.alias} has the lower cost ($${cheapest.totalCost.toFixed(4)} vs $${mostExpensive.totalCost.toFixed(4)}), ${stepPhrase} (${cheapest.stepCount} vs ${mostExpensive.stepCount}).`,
+      )
+    }
+
+    if (toolCallStatus === 'ready') {
+      const toolSessions = sessionEntries.map(session => ({
+        ...session,
+        toolCalls: toolCallCounts[session.id] ?? 0,
+      }))
+      const mostTools = toolSessions.reduce((best, current) =>
+        current.toolCalls > best.toolCalls ? current : best,
+      )
+      const fewestTools = toolSessions.reduce((best, current) =>
+        current.toolCalls < best.toolCalls ? current : best,
+      )
+
+      if (mostTools.toolCalls === fewestTools.toolCalls) {
+        messages.push(
+          isZh
+            ? `各会话工具调用次数接近，当前都是 ${mostTools.toolCalls} 次。`
+            : `Tool-call counts are currently aligned at ${mostTools.toolCalls} for each session.`,
+        )
+      } else {
+        messages.push(
+          isZh
+            ? `${mostTools.alias} 使用了更多工具调用（${mostTools.toolCalls} 次 vs ${fewestTools.toolCalls} 次）。`
+            : `${mostTools.alias} used more tool calls (${mostTools.toolCalls} vs ${fewestTools.toolCalls}).`,
+        )
+      }
+    }
+
+    return messages
+  }, [sessions, toolCallCounts, toolCallStatus, isZh])
 
   const addSlot = () => {
     setSlots(s => (s.length < 5 ? [...s, ''] : s))
@@ -154,6 +321,7 @@ export default function Compare() {
     }
     setError(null)
     setPartialWarning(false)
+    setToolCallCounts({})
     setLoading(true)
     try {
       const data = await apiPost<ComparePayload>('/api/replay/compare', { ids })
@@ -315,45 +483,137 @@ export default function Compare() {
         )}
 
         {!loading && sessions && sessions.length > 0 && (
-          <div className="card p-0 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse min-w-[640px]">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="text-left py-3 px-4 text-slate-500 font-medium w-40">{t('compare.col.metric')}</th>
-                    {sessions.map((s, i) => (
-                      <th key={s.id + String(i)} className="text-left py-3 px-4 text-slate-500 font-medium min-w-[140px]">
-                        <span className="line-clamp-2" title={s.id}>
-                          {s.label || s.id}
-                        </span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rowDefs.map(row => (
-                    <tr key={row.key} className="border-b border-slate-200 last:border-0">
-                      <td className="py-3 px-4 text-slate-500 align-top">{row.label}</td>
-                      {sessions.map((s, col) => {
-                        const color = BAR_COLORS[col % BAR_COLORS.length]
-                        const showBar = row.kind === 'numeric' && row.getValue && row.maxKey
-                        const max = showBar ? maxima[row.maxKey!] : 0
-                        const val = row.getValue?.(s) ?? 0
-                        return (
-                          <td key={`${row.key}-${s.id}-${col}`} className="py-3 px-4 align-top">
-                            <div className="text-slate-800 tabular-nums break-words">{row.format(s)}</div>
-                            {showBar && (
-                              <MetricBar value={val} max={max} colorClass={color} />
-                            )}
-                          </td>
-                        )
-                      })}
+          <>
+            <div className="card p-0 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse min-w-[640px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="text-left py-3 px-4 text-slate-500 font-medium w-40">{t('compare.col.metric')}</th>
+                      {sessions.map((s, i) => (
+                        <th key={s.id + String(i)} className="text-left py-3 px-4 text-slate-500 font-medium min-w-[140px]">
+                          <span className="line-clamp-2" title={s.id}>
+                            {s.label || s.id}
+                          </span>
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rowDefs.map(row => (
+                      <tr key={row.key} className="border-b border-slate-200 last:border-0">
+                        <td className="py-3 px-4 text-slate-500 align-top">{row.label}</td>
+                        {sessions.map((s, col) => {
+                          const color = BAR_COLORS[col % BAR_COLORS.length]
+                          const showBar = row.kind === 'numeric' && row.getValue && row.maxKey
+                          const max = showBar ? maxima[row.maxKey!] : 0
+                          const val = row.getValue?.(s) ?? 0
+                          return (
+                            <td key={`${row.key}-${s.id}-${col}`} className="py-3 px-4 align-top">
+                              <div className="text-slate-800 tabular-nums break-words">{row.format(s)}</div>
+                              {showBar && (
+                                <MetricBar value={val} max={max} colorClass={color} />
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+
+            <div className="card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-lg font-semibold text-slate-900">{costChartTitle}</h3>
+                <span className="text-xs text-slate-500">{costChartSeries}</span>
+              </div>
+              {costChartData.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-500">{costChartEmpty}</p>
+              ) : (
+                <>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={costChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
+                        <XAxis dataKey="shortName" stroke="#64748b" tick={{ fontSize: 12 }} />
+                        <YAxis
+                          stroke="#64748b"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={value => `$${Number(value).toFixed(2)}`}
+                        />
+                        <Tooltip
+                          contentStyle={chartTooltipStyle}
+                          labelStyle={{ color: '#64748b' }}
+                          itemStyle={{ color: '#0f172a' }}
+                          labelFormatter={(_, payload) => {
+                            const entry = payload?.[0]?.payload as (typeof costChartData)[number] | undefined
+                            return entry ? `${entry.alias} · ${entry.label}` : ''
+                          }}
+                          formatter={(value: number) => [`$${value.toFixed(4)}`, costChartSeries]}
+                        />
+                        <Bar dataKey="totalCost" radius={[10, 10, 0, 0]}>
+                          {costChartData.map(entry => (
+                            <Cell key={entry.id} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    {costChartData.map(entry => (
+                      <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: entry.color }}
+                          />
+                          <span className="shrink-0 text-sm font-semibold text-slate-900">{entry.alias}</span>
+                          <span className="truncate text-sm text-slate-500" title={entry.label}>
+                            {entry.label}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-lg font-semibold text-slate-900">{conclusionTitle}</h3>
+                <span className="text-xs text-slate-500">
+                  {toolCallStatus === 'ready'
+                    ? isZh
+                      ? '已包含工具调用统计'
+                      : 'Tool calls included'
+                    : toolCallStatus === 'partial'
+                      ? isZh
+                        ? '部分工具调用统计不可用'
+                        : 'Some tool-call stats unavailable'
+                      : isZh
+                        ? '正在统计工具调用'
+                        : 'Counting tool calls'}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {conclusions.length === 0 ? (
+                  <p className="text-sm text-slate-500">{conclusionEmpty}</p>
+                ) : (
+                  conclusions.map((message, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-blue-500/15 bg-blue-500/[0.05] px-4 py-3 text-sm leading-relaxed text-slate-700"
+                    >
+                      {message}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
         )}
 
         {!loading && sessions && sessions.length === 0 && (

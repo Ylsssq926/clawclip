@@ -143,6 +143,27 @@ function extractCodeBlocks(text: string): string[] {
   return blocks;
 }
 
+function countCodeBlockLines(block: string): number {
+  const lines = block.split(/\r?\n/);
+  if (lines.length <= 2) return 0;
+  return lines.slice(1, -1).filter(line => line.trim().length > 0).length;
+}
+
+function countRegexMatches(text: string, pattern: RegExp): number {
+  if (!text) return 0;
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  const re = new RegExp(pattern.source, flags);
+  const matches = text.match(re);
+  return matches ? matches.length : 0;
+}
+
+function countSearchEvidence(text: string): number {
+  if (!text) return 0;
+  const linkMatches = text.match(/\[[^\]]+\]\((https?:\/\/[^\s)]+)\)|https?:\/\/[^\s)\]]+/gi);
+  const citationMatches = text.match(/来源[:：]|引用[:：]|source\s*:|references?\s*:|according to|据.*?报道|cited?\s*(from|by)/gi);
+  return (linkMatches?.length ?? 0) + (citationMatches?.length ?? 0);
+}
+
 function stepText(s: SessionStep): string {
   return `${s.content ?? ''} ${s.toolInput ?? ''} ${s.toolOutput ?? ''}`;
 }
@@ -169,9 +190,11 @@ function scoreWriting(replays: SessionReplay[]): DimensionScore {
   const n = replays.length || 1;
   const respRatio = sessionsWithResponse / n;
   const avgLen = responseCount ? responseChars / responseCount : 0;
-  const avgHan = responseCount ? responseHanSum / responseChars : 0;
+  const avgHan = responseChars ? responseHanSum / responseChars : 0;
 
   const isMainlyChinese = avgHan > 0.15;
+  const evidence = `基于 ${responseCount} 条回复，平均长度 ${Math.round(avgLen)} 字`;
+  const evidenceEn = `Based on ${responseCount} replies, average length ${Math.round(avgLen)} chars`;
 
   let score = 40;
   if (isMainlyChinese) {
@@ -208,12 +231,15 @@ function scoreWriting(replays: SessionReplay[]): DimensionScore {
     maxScore: 100,
     details,
     detailsEn,
+    evidence,
+    evidenceEn,
   };
 }
 
 function scoreCoding(replays: SessionReplay[]): DimensionScore {
   let blockCount = 0;
   let blockLenSum = 0;
+  let totalCodeLines = 0;
   const sessionsWithCode = new Set<string>();
 
   for (const r of replays) {
@@ -224,12 +250,15 @@ function scoreCoding(replays: SessionReplay[]): DimensionScore {
       for (const b of blocks) {
         blockCount += 1;
         blockLenSum += b.length;
+        totalCodeLines += countCodeBlockLines(b);
       }
     }
   }
 
   const n = replays.length || 1;
   const avgBlockLen = blockCount ? blockLenSum / blockCount : 0;
+  const evidence = `检测到 ${blockCount} 个代码块，总长度 ${totalCodeLines} 行`;
+  const evidenceEn = `Detected ${blockCount} code blocks, total length ${totalCodeLines} lines`;
   let score = 30;
   score += clamp(blockCount * 2.5, 0, 25);
   score += clamp((sessionsWithCode.size / n) * 20, 0, 20);
@@ -254,6 +283,8 @@ function scoreCoding(replays: SessionReplay[]): DimensionScore {
     maxScore: 100,
     details,
     detailsEn,
+    evidence,
+    evidenceEn,
   };
 }
 
@@ -275,6 +306,8 @@ function scoreToolUse(replays: SessionReplay[]): DimensionScore {
   }
 
   const successRate = toolCalls ? paired / toolCalls : 0;
+  const evidence = `共 ${toolCalls} 次工具调用，成功率 ${Math.round(successRate * 100)}%，工具种类 ${toolNames.size} 种`;
+  const evidenceEn = `${toolCalls} tool calls, ${Math.round(successRate * 100)}% success rate, ${toolNames.size} tool types`;
   let score = 30;
   score += clamp(toolCalls * 1.5, 0, 25);
   score += successRate * 25;
@@ -292,6 +325,8 @@ function scoreToolUse(replays: SessionReplay[]): DimensionScore {
     maxScore: 100,
     details,
     detailsEn,
+    evidence,
+    evidenceEn,
   };
 }
 
@@ -299,19 +334,25 @@ function scoreSearch(replays: SessionReplay[]): DimensionScore {
   let sessions = 0;
   let withSearchTool = 0;
   let withCitationHint = 0;
-
-  const urlHint = /https?:\/\/[^\s)\]]+/i;
-  const citeHint = /(\[.*?\]\(.*?\)|来源[:：]|引用[:：]|据.*?报道|source\s*:|according to|cited?\s*(from|by)|references?\s*:)/i;
+  let searchToolCalls = 0;
+  let citationCount = 0;
 
   for (const r of replays) {
     sessions += 1;
     let search = false;
     let cite = false;
     for (const s of r.steps) {
-      if (s.type === 'tool_call' && s.toolName && SEARCH_TOOL_HINT.test(s.toolName)) search = true;
+      if (s.type === 'tool_call' && s.toolName && SEARCH_TOOL_HINT.test(s.toolName)) {
+        search = true;
+        searchToolCalls += 1;
+      }
       if (s.type === 'response') {
         const t = s.content ?? '';
-        if (urlHint.test(t) || citeHint.test(t)) cite = true;
+        const evidenceCount = countSearchEvidence(t);
+        if (evidenceCount > 0) {
+          cite = true;
+          citationCount += evidenceCount;
+        }
       }
     }
     if (search) withSearchTool += 1;
@@ -321,6 +362,8 @@ function scoreSearch(replays: SessionReplay[]): DimensionScore {
   const n = sessions || 1;
   const searchRatio = withSearchTool / n;
   const citeRatio = withCitationHint / n;
+  const evidence = `检测到 ${searchToolCalls} 次检索工具调用，${citationCount} 处引用/链接`;
+  const evidenceEn = `Detected ${searchToolCalls} retrieval tool calls and ${citationCount} citations/links`;
 
   let score = 30;
   score += searchRatio * 35;
@@ -339,23 +382,32 @@ function scoreSearch(replays: SessionReplay[]): DimensionScore {
     maxScore: 100,
     details,
     detailsEn,
+    evidence,
+    evidenceEn,
   };
 }
 
 function scoreSafety(replays: SessionReplay[]): DimensionScore {
   let dangerHits = 0;
+  let potentialRiskCount = 0;
   let totalSteps = 0;
 
   for (const r of replays) {
     totalSteps += r.steps.length;
     const blob = r.steps.map(stepText).join('\n');
     for (const p of DANGER_PATTERNS) {
-      if (p.test(blob)) dangerHits += 1;
+      const hits = countRegexMatches(blob, p);
+      if (hits > 0) {
+        dangerHits += 1;
+        potentialRiskCount += hits;
+      }
     }
   }
 
   const n = replays.length || 1;
   const avgSteps = totalSteps / n;
+  const evidence = potentialRiskCount > 0 ? `检测到 ${potentialRiskCount} 处潜在风险` : '未检测到危险命令';
+  const evidenceEn = potentialRiskCount > 0 ? `Detected ${potentialRiskCount} potential risk(s)` : 'No dangerous commands detected';
 
   let score = 75;
   score -= clamp(dangerHits * 15, 0, 45);
@@ -380,20 +432,25 @@ function scoreSafety(replays: SessionReplay[]): DimensionScore {
     maxScore: 100,
     details,
     detailsEn,
+    evidence,
+    evidenceEn,
   };
 }
 
 function scoreCostEfficiency(replays: SessionReplay[]): DimensionScore {
   let totalCost = 0;
-  let totalTokens = 0;
   let cheapSteps = 0;
   let modelSteps = 0;
+  const models = new Set<string>();
 
   for (const r of replays) {
     totalCost += r.meta.totalCost;
-    totalTokens += r.meta.totalTokens;
+    for (const model of r.meta.modelUsed) {
+      if (model) models.add(model);
+    }
     for (const s of r.steps) {
       if (!s.model) continue;
+      models.add(s.model);
       modelSteps += 1;
       if (CHEAP_MODEL_SUBSTR.some(k => s.model!.toLowerCase().includes(k.toLowerCase()))) cheapSteps += 1;
     }
@@ -402,6 +459,8 @@ function scoreCostEfficiency(replays: SessionReplay[]): DimensionScore {
   const n = replays.length || 1;
   const avgCost = totalCost / n;
   const cheapRatio = modelSteps ? cheapSteps / modelSteps : 0;
+  const evidence = `平均会话成本 $${avgCost.toFixed(4)}，使用了 ${models.size} 种模型`;
+  const evidenceEn = `Average session cost $${avgCost.toFixed(4)}, ${models.size} model type(s) used`;
 
   let score = 35;
   if (avgCost < 0.01) score += 30;
@@ -424,6 +483,8 @@ function scoreCostEfficiency(replays: SessionReplay[]): DimensionScore {
     maxScore: 100,
     details,
     detailsEn,
+    evidence,
+    evidenceEn,
   };
 }
 
@@ -838,12 +899,17 @@ function resultToJSON(r: BenchmarkResult): Record<string, unknown> {
 }
 
 function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
-  const dims = (o.dimensions as Record<string, unknown>[]).map(d => ({
-    dimension: d.dimension,
-    label: d.label,
+  const rawDimensions = Array.isArray(o.dimensions) ? (o.dimensions as Record<string, unknown>[]) : [];
+  const dims = rawDimensions.map(d => ({
+    dimension: d.dimension as BenchmarkDimension,
+    label: String(d.label ?? ''),
+    labelEn: typeof d.labelEn === 'string' ? d.labelEn : undefined,
     score: Number(d.score),
     maxScore: 100 as const,
-    details: String(d.details),
+    details: String(d.details ?? ''),
+    detailsEn: typeof d.detailsEn === 'string' ? d.detailsEn : undefined,
+    evidence: typeof d.evidence === 'string' ? d.evidence : undefined,
+    evidenceEn: typeof d.evidenceEn === 'string' ? d.evidenceEn : undefined,
   })) as DimensionScore[];
 
   return {
@@ -858,6 +924,7 @@ function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
     avgCostPerSession: Number(o.avgCostPerSession),
     topModel: String(o.topModel),
     summary: String(o.summary),
+    summaryEn: typeof o.summaryEn === 'string' ? o.summaryEn : undefined,
   };
 }
 

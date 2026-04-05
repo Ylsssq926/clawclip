@@ -15,6 +15,8 @@ export interface DimensionScore {
   maxScore: 100;
   details: string;
   detailsEn?: string;
+  evidence?: string;
+  evidenceEn?: string;
 }
 
 export interface BenchmarkResult {

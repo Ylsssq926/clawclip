@@ -222,7 +222,7 @@ export default function Dashboard({ onNavigate }: Props) {
       </div>
 
       {!loading && status && !status.hasRealSessionData && jsonlTotal === 0 && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 animate-fade-in">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-800 animate-fade-in">
           {t('demo.hint.dashboard')}
         </div>
       )}
@@ -309,14 +309,14 @@ export default function Dashboard({ onNavigate }: Props) {
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-4 py-3 text-sm animate-fade-in">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
               <div>
-                <p className="font-medium text-amber-100">
+                <p className="font-medium text-amber-700">
                   {locale === 'en'
                     ? `${diagnosticSessions.length} sessions have parsing issues`
                     : `${diagnosticSessions.length} 个会话存在解析问题`}
                 </p>
-                <p className="mt-1 text-xs leading-relaxed text-amber-100/70">
+                <p className="mt-1 text-xs leading-relaxed text-amber-700/70">
                   {locale === 'en'
                     ? `Parsable sessions: ${diagnostics?.parsableCount ?? 0} / JSONL files: ${diagnostics?.totalJsonlFiles ?? 0}`
                     : `可解析会话：${diagnostics?.parsableCount ?? 0} / JSONL 文件：${diagnostics?.totalJsonlFiles ?? 0}`}
@@ -327,7 +327,7 @@ export default function Dashboard({ onNavigate }: Props) {
               <button
                 type="button"
                 onClick={() => setDiagnosticsOpen(open => !open)}
-                className="inline-flex items-center gap-1 rounded-lg border border-amber-400/20 px-2.5 py-1 text-xs text-amber-100 transition-colors hover:bg-amber-400/10"
+                className="inline-flex items-center gap-1 rounded-lg border border-amber-400/20 px-2.5 py-1 text-xs text-amber-700 transition-colors hover:bg-amber-400/10"
               >
                 {diagnosticsOpen
                   ? locale === 'en'
@@ -341,7 +341,7 @@ export default function Dashboard({ onNavigate }: Props) {
               <button
                 type="button"
                 onClick={() => setDiagnosticsDismissed(true)}
-                className="rounded-lg p-1 text-amber-100/80 transition-colors hover:bg-amber-400/10 hover:text-amber-50"
+                className="rounded-lg p-1 text-amber-700/80 transition-colors hover:bg-amber-400/10 hover:text-amber-800"
                 aria-label={locale === 'en' ? 'Dismiss diagnostics' : '关闭诊断提示'}
               >
                 <X className="h-4 w-4" />
@@ -354,16 +354,16 @@ export default function Dashboard({ onNavigate }: Props) {
               {diagnosticSessions.map(session => (
                 <div key={session.id} className="rounded-lg border border-amber-400/10 bg-black/10 px-3 py-2.5">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-sm font-medium text-amber-50">{session.agentName}</span>
-                    <span className="text-[11px] text-amber-100/70">
+                    <span className="text-sm font-medium text-amber-800">{session.agentName}</span>
+                    <span className="text-[11px] text-amber-700/70">
                       {locale === 'en'
                         ? `total ${session.totalLines} · parsed ${session.parsedLines} · skipped ${session.skippedLines}`
                         : `总计 ${session.totalLines} · 解析 ${session.parsedLines} · 跳过 ${session.skippedLines}`}
                     </span>
                   </div>
-                  <p className="mt-1 break-all font-mono text-[11px] text-amber-100/55">{session.id}</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-amber-700/55">{session.id}</p>
                   {session.errorSamples?.length ? (
-                    <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-amber-100/80">
+                    <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-amber-700/80">
                       {session.errorSamples.map(sample => (
                         <li key={`${session.id}-${sample}`} className="break-words">
                           • {sample}

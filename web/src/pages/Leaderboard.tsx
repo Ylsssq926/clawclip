@@ -24,7 +24,7 @@ interface BenchmarkPreview {
 }
 
 const RANK_BADGE: Record<string, string> = {
-  S: 'bg-gradient-to-r from-amber-400/25 to-yellow-500/20 text-amber-300 ring-1 ring-amber-400/40',
+  S: 'bg-gradient-to-r from-amber-400/25 to-yellow-500/20 text-amber-700 ring-1 ring-amber-400/40',
   A: 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30',
   B: 'bg-cyan-500/15 text-cyan-400 ring-1 ring-cyan-500/30',
   C: 'bg-slate-500/15 text-slate-500 ring-1 ring-slate-500/25',

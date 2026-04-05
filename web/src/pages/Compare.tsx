@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import FadeIn from '../components/ui/FadeIn'
 import { cn } from '../lib/cn'
-import { apiPost, parseApiErrorMessage } from '../lib/api'
+import { apiGet, apiPost, parseApiErrorMessage } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { formatDuration } from '../lib/formatSession'
+import type { SessionMeta } from '../types/session'
 
 interface CompareSession {
   id: string
@@ -28,6 +29,21 @@ const BAR_COLORS = [
   'bg-amber-400',
   'bg-violet-400',
 ]
+
+const SESSION_SUMMARY_PREVIEW_LENGTH = 40
+
+function formatSessionSummary(summary: string) {
+  const normalized = summary.replace(/\s+/g, ' ').trim()
+  if (!normalized) return '—'
+  const chars = Array.from(normalized)
+  if (chars.length <= SESSION_SUMMARY_PREVIEW_LENGTH) return normalized
+  return `${chars.slice(0, SESSION_SUMMARY_PREVIEW_LENGTH).join('')}…`
+}
+
+function formatSessionOptionLabel(session: SessionMeta) {
+  const agentName = session.agentName.trim() || session.id
+  return `${agentName} - ${formatSessionSummary(session.summary)}`
+}
 
 function MetricBar({
   value,
@@ -56,6 +72,41 @@ export default function Compare() {
   const [error, setError] = useState<string | null>(null)
   const [sessions, setSessions] = useState<CompareSession[] | null>(null)
   const [partialWarning, setPartialWarning] = useState(false)
+  const [availableSessions, setAvailableSessions] = useState<SessionMeta[]>([])
+  const [availableSessionsLoading, setAvailableSessionsLoading] = useState(true)
+  const [availableSessionsError, setAvailableSessionsError] = useState<string | null>(null)
+
+  const selectPlaceholder = locale === 'zh' ? '请选择会话' : 'Please select a session'
+  const compareHint =
+    locale === 'zh'
+      ? '从最近 50 个会话中选择 2–5 个进行对比'
+      : 'Select 2–5 sessions from the latest 50 to compare'
+  const sessionsLoadErrorText = locale === 'zh' ? '会话列表加载失败' : 'Failed to load sessions'
+
+  useEffect(() => {
+    let cancelled = false
+
+    setAvailableSessionsLoading(true)
+    setAvailableSessionsError(null)
+
+    apiGet<SessionMeta[]>('/api/replay/sessions?limit=50')
+      .then(data => {
+        if (cancelled) return
+        setAvailableSessions(Array.isArray(data) ? data : [])
+      })
+      .catch(e => {
+        if (cancelled) return
+        setAvailableSessions([])
+        setAvailableSessionsError(parseApiErrorMessage(e, sessionsLoadErrorText))
+      })
+      .finally(() => {
+        if (!cancelled) setAvailableSessionsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sessionsLoadErrorText])
 
   const maxima = useMemo(() => {
     if (!sessions?.length) {
@@ -196,7 +247,7 @@ export default function Compare() {
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-semibold text-slate-900 tracking-tight">{t('compare.title')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('compare.hint')}</p>
+          <p className="text-sm text-slate-500 mt-1">{compareHint}</p>
         </div>
 
         <div className="card p-5 space-y-4">
@@ -206,14 +257,21 @@ export default function Compare() {
                 <span className="text-[11px] text-slate-500 uppercase tracking-wide">
                   {t('compare.placeholder')} {i + 1}
                 </span>
-                <input
-                  type="text"
+                <select
                   value={value}
                   onChange={e => setSlot(i, e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-500 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20"
-                  placeholder={t('compare.placeholder')}
-                  autoComplete="off"
-                />
+                  disabled={availableSessionsLoading || availableSessions.length === 0}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20 disabled:bg-white disabled:text-slate-400"
+                >
+                  <option value="" disabled>
+                    {selectPlaceholder}
+                  </option>
+                  {availableSessions.map(session => (
+                    <option key={session.id} value={session.id}>
+                      {formatSessionOptionLabel(session)}
+                    </option>
+                  ))}
+                </select>
               </label>
             ))}
           </div>
@@ -240,6 +298,7 @@ export default function Compare() {
               {loading ? t('compare.loading') : t('compare.submit')}
             </button>
           </div>
+          {availableSessionsError && <p className="text-sm text-rose-400">{availableSessionsError}</p>}
           {error && <p className="text-sm text-rose-400">{error}</p>}
         </div>
 

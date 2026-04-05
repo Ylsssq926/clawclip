@@ -136,7 +136,7 @@ export default function CostMonitor() {
       </div>
 
       {demoCostHint && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200/90">
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-700/90">
           {t('demo.hint.cost')}
         </div>
       )}
@@ -144,15 +144,15 @@ export default function CostMonitor() {
       {loading && <CostSkeleton />}
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-300 text-sm">
+        <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-600 text-sm">
           {error}
         </div>
       )}
 
       {!loading && summary?.budget?.isAlert && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 flex items-center gap-3">
+        <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
-          <span className="text-red-300 text-sm">{summary.budget.message}</span>
+          <span className="text-red-600 text-sm">{summary.budget.message}</span>
         </div>
       )}
 
@@ -213,8 +213,8 @@ export default function CostMonitor() {
                     key={i}
                     className={cn(
                       'flex items-start gap-3 px-4 py-3 rounded-xl text-sm',
-                      ins.type === 'warning' ? 'bg-amber-500/10 border border-amber-500/20 text-amber-200' :
-                      ins.type === 'tip' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-200' :
+                      ins.type === 'warning' ? 'bg-amber-50 border border-amber-500/20 text-amber-700' :
+                      ins.type === 'tip' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600' :
                       'bg-slate-50 border border-slate-200 text-slate-500',
                     )}
                   >

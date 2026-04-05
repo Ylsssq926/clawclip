@@ -14,15 +14,21 @@ import {
 } from '../types/index.js';
 import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
 import { sessionParser } from './session-parser.js';
+import { DEMO_SESSIONS } from './demo-sessions.js';
 import { getModelPricing, getDetailedModelPricing } from './pricing-fetcher.js';
 import { resolveModelDetail, computeDetailedCost } from './pricing-utils.js';
 import type { ModelPriceDetail } from '../types/index.js';
+import type { SessionReplay } from '../types/replay.js';
 
 const ALT_TIERS: { threshold: number; models: string[] }[] = [
   { threshold: 50, models: ['gpt-5.4-mini', 'claude-sonnet-4.6', 'gemini-2.5-pro'] },
   { threshold: 5, models: ['gpt-5-mini', 'deepseek-chat', 'gemini-2.5-flash'] },
   { threshold: 1, models: ['deepseek-chat', 'qwen-turbo', 'yi-lightning'] },
 ];
+
+const DEMO_MODEL_OVERRIDES: Record<string, string> = {
+  [encodeURIComponent('demo/email-helper')]: 'qwen-max',
+};
 
 function suggestAlternative(
   pricePerMillion: number,
@@ -79,6 +85,30 @@ export class CostParser {
     this.config = this.loadConfig();
   }
 
+  private getReplayData(): { replays: SessionReplay[]; isDemo: boolean } {
+    const replays = sessionParser.getRealReplays();
+    if (replays.length > 0) {
+      return { replays, isDemo: false };
+    }
+    return { replays: DEMO_SESSIONS, isDemo: true };
+  }
+
+  private getReferenceNow(usages: TokenUsage[]): number {
+    if (sessionParser.getRealReplays().length > 0) {
+      return Date.now();
+    }
+
+    let latest = 0;
+    for (const usage of usages) {
+      const ts = usage.timestamp.getTime();
+      if (!Number.isNaN(ts) && ts > latest) {
+        latest = ts;
+      }
+    }
+
+    return latest > 0 ? latest : Date.now();
+  }
+
   private getCacheDir(): string {
     return getClawclipStateDir();
   }
@@ -128,25 +158,34 @@ export class CostParser {
   parseLogFiles(): TokenUsage[] {
     const usages: TokenUsage[] = [];
     const seen = new Set<string>();
-    const replays = sessionParser.getRealReplays();
+    const { replays, isDemo } = this.getReplayData();
     for (const replay of replays) {
+      const demoModelOverride = isDemo ? DEMO_MODEL_OVERRIDES[replay.meta.id] : undefined;
       for (const step of replay.steps) {
         if (step.inputTokens === 0 && step.outputTokens === 0) continue;
-        const key = `${replay.meta.id}|${step.model || ''}|${step.timestamp.getTime()}`;
+        const model = demoModelOverride && step.model ? demoModelOverride : step.model || 'unknown';
+        const cost = demoModelOverride && step.model
+          ? computeDetailedCost(this.priceDetailForModel(model), step.inputTokens, step.outputTokens)
+          : step.cost;
+        const key = `${replay.meta.id}|${model}|${step.timestamp.getTime()}`;
         seen.add(key);
         usages.push({
           timestamp: step.timestamp,
           taskId: replay.meta.id,
-          model: step.model || 'unknown',
+          model,
           inputTokens: step.inputTokens,
           outputTokens: step.outputTokens,
-          cost: step.cost,
+          cost,
           sessionId: replay.meta.id,
         });
       }
     }
 
     this.logDedupeKeys = seen;
+    if (isDemo) {
+      return usages;
+    }
+
     const roots = getLobsterDataRoots();
     if (roots.length === 0) {
       const fallbackLogs = path.join(os.homedir(), '.openclaw', 'logs');
@@ -240,7 +279,7 @@ export class CostParser {
 
   getUsageStats(days: number = 30): CostStats {
     const usages = this.getCachedUsages();
-    const now = Date.now();
+    const now = this.getReferenceNow(usages);
     const cutoff = now - days * 24 * 60 * 60 * 1000;
     const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
 
@@ -293,9 +332,10 @@ export class CostParser {
   getDailyUsage(days: number = 7): DailyUsage[] {
     const usages = this.getCachedUsages();
     const dailyMap = new Map<string, DailyUsage>();
+    const now = this.getReferenceNow(usages);
 
     for (let i = 0; i < days; i++) {
-      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const date = new Date(now - i * 24 * 60 * 60 * 1000);
       const dateStr = date.toISOString().split('T')[0];
       dailyMap.set(dateStr, { date: dateStr, inputTokens: 0, outputTokens: 0, totalTokens: 0, cost: 0 });
     }
@@ -317,16 +357,36 @@ export class CostParser {
 
   getModelBreakdown(days: number = 30): Record<string, { tokens: number; cost: number }> {
     const usages = this.getCachedUsages();
-    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const cutoff = this.getReferenceNow(usages) - days * 24 * 60 * 60 * 1000;
     const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
 
     const models: Record<string, { tokens: number; cost: number }> = {};
+    if (sessionParser.getRealReplays().length === 0) {
+      for (const replay of DEMO_SESSIONS) {
+        for (const step of replay.steps) {
+          if (step.model && !models[step.model]) {
+            models[step.model] = { tokens: 0, cost: 0 };
+          }
+        }
+        const override = DEMO_MODEL_OVERRIDES[replay.meta.id];
+        if (override && !models[override]) {
+          models[override] = { tokens: 0, cost: 0 };
+        }
+      }
+    }
+
     for (const u of filtered) {
       if (!models[u.model]) models[u.model] = { tokens: 0, cost: 0 };
       models[u.model].tokens += u.inputTokens + u.outputTokens;
       models[u.model].cost += u.cost;
     }
     return models;
+  }
+
+  getRequestCount(days: number = 30): number {
+    const usages = this.getCachedUsages();
+    const cutoff = this.getReferenceNow(usages) - days * 24 * 60 * 60 * 1000;
+    return usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff).length;
   }
 
   checkBudgetAlert(): { isAlert: boolean; percentage: number; message: string } {

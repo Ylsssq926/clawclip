@@ -15,8 +15,9 @@ router.get('/summary', (req, res) => {
   const days = parseDays(req);
   try {
     const stats = costParser.getUsageStats(days);
+    const requestCount = costParser.getRequestCount(days);
     const budget = costParser.checkBudgetAlert();
-    res.json({ ...stats, budget });
+    res.json({ ...stats, requestCount, budget });
   } catch (e) {
     res.status(500).json({ error: '获取费用数据失败 / Failed to get cost data', detail: String(e) });
   }
@@ -33,6 +34,17 @@ router.get('/daily', (req, res) => {
   }
 });
 
+/** 趋势数据（兼容 /trend） */
+router.get('/trend', (req, res) => {
+  const days = parseDays(req, 7);
+  try {
+    const daily = costParser.getDailyUsage(days);
+    res.json(daily);
+  } catch (e) {
+    res.status(500).json({ error: '获取趋势数据失败 / Failed to get trend data', detail: String(e) });
+  }
+});
+
 /** 按模型分组 */
 router.get('/models', (req, res) => {
   const days = parseDays(req);
@@ -41,6 +53,16 @@ router.get('/models', (req, res) => {
     res.json(models);
   } catch (e) {
     res.status(500).json({ error: '获取模型数据失败 / Failed to get model data', detail: String(e) });
+  }
+});
+
+/** 高消耗会话排行 */
+router.get('/top-sessions', (req, res) => {
+  const days = parseDays(req);
+  try {
+    res.json(costParser.getUsageStats(days).topTasks);
+  } catch (e) {
+    res.status(500).json({ error: '获取高消耗会话失败 / Failed to get top sessions', detail: String(e) });
   }
 });
 

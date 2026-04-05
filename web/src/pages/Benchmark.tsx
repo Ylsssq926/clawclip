@@ -78,7 +78,7 @@ const DIMENSION_LINE_STROKES: Record<string, string> = {
 }
 
 const RANK_STYLES: Record<string, { bg: string; text: string; glow: string }> = {
-  S: { bg: 'bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10', text: 'text-blue-300', glow: 'shadow-cyan-500/10 shadow-lg' },
+  S: { bg: 'bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10', text: 'text-blue-600', glow: 'shadow-cyan-500/10 shadow-lg' },
   A: { bg: 'bg-gradient-to-br from-green-500/20 to-emerald-500/10', text: 'text-green-400', glow: 'shadow-green-500/10 shadow-md' },
   B: { bg: 'bg-gradient-to-br from-blue-500/20 to-cyan-500/10', text: 'text-blue-400', glow: '' },
   C: { bg: 'bg-gradient-to-br from-slate-500/20 to-slate-500/10', text: 'text-slate-500', glow: '' },
@@ -331,7 +331,7 @@ export default function Benchmark() {
         </div>
       </div>
 
-      {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-300 text-sm">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-600 text-sm">{error}</div>}
 
       {dataSource === 'demo' && (
         <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.06] px-4 py-3 text-xs text-cyan-200/90">

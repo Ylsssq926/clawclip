@@ -432,7 +432,7 @@ export default function Replay() {
         </div>
 
         {loading && <DetailSkeleton />}
-        {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}
+        {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}
 
         {replay && (
           <>
@@ -481,7 +481,7 @@ export default function Replay() {
                 <button
                   type="button"
                   onClick={() => setInsightsOpen(v => !v)}
-                  className="flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors mb-3"
+                  className="flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-600 transition-colors mb-3"
                 >
                   <Lightbulb className="w-4 h-4" />
                   {locale === 'zh' ? `智能诊断（${insights.length}）` : `Smart Insights (${insights.length})`}
@@ -492,7 +492,7 @@ export default function Replay() {
                     {insights.map((ins, i) => {
                       const Icon = ins.type === 'good' ? ThumbsUp : ins.type === 'warning' ? AlertTriangle : Lightbulb
                       const color = ins.type === 'good' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                        : ins.type === 'warning' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                        : ins.type === 'warning' ? 'text-amber-400 bg-amber-50 border-amber-500/20'
                         : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
                       return (
                         <div key={i} className={`rounded-xl border p-4 ${color}`}>
@@ -617,7 +617,7 @@ export default function Replay() {
       <p className="text-slate-500 text-sm mb-6">{t('replay.subtitle')}</p>
 
       {demoReplayHint && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {t('demo.hint.replay')}
         </div>
       )}
@@ -651,7 +651,7 @@ export default function Replay() {
       )}
 
       {loading && <ListSkeleton />}
-      {error && <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}
 
       {!loading && !error && sessions.length === 0 && (
         <div className="text-center py-12 text-slate-500">

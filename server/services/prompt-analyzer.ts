@@ -1,3 +1,4 @@
+import { DEMO_SESSIONS } from './demo-sessions.js';
 import { sessionParser } from './session-parser.js';
 
 export interface PromptPattern {
@@ -30,17 +31,20 @@ export interface PromptInsightsResult {
 }
 
 export function getPromptInsights(days?: number): PromptInsightsResult {
-  const sessions = sessionParser.getSessions();
-  const cutoff = days ? Date.now() - days * 86400_000 : 0;
+  const realReplays = sessionParser.getRealReplays();
+  const usingDemo = realReplays.length === 0;
+  const sourceReplays = usingDemo ? DEMO_SESSIONS : realReplays;
+  const referenceNow = usingDemo
+    ? sourceReplays.reduce((latest, replay) => Math.max(latest, replay.meta.endTime.getTime()), 0)
+    : Date.now();
+  const cutoff = days ? referenceNow - days * 86400_000 : 0;
 
   const patterns: PromptPattern[] = [];
 
-  for (const meta of sessions) {
-    if (meta.dataSource === 'demo') continue;
+  for (const replay of sourceReplays) {
+    const meta = replay.meta;
     if (cutoff && meta.endTime.getTime() < cutoff) continue;
-
-    const replay = sessionParser.getSessionReplay(meta.id);
-    if (!replay || !replay.steps.length) continue;
+    if (!replay.steps.length) continue;
 
     let userTokens = 0;
     let userCount = 0;
@@ -116,11 +120,23 @@ export function getPromptInsights(days?: number): PromptInsightsResult {
     });
   }
 
+  if (usingDemo && total > 0) {
+    tips.unshift({
+      type: 'tip',
+      messageZh: '当前展示的是 Demo 会话的 Prompt 分析，接入 OpenClaw 后会自动切换为真实数据。',
+      messageEn: 'You are viewing prompt insights from demo sessions. Connect OpenClaw to switch to real data automatically.',
+    });
+  }
+
   if (total === 0) {
     tips.push({
       type: 'tip',
-      messageZh: '暂无真实会话数据，连接 OpenClaw 后即可分析 prompt 效率。',
-      messageEn: 'No real session data yet. Connect OpenClaw to analyze prompt efficiency.',
+      messageZh: usingDemo
+        ? 'Demo 会话暂无符合时间范围的数据，可扩大时间范围后重试。'
+        : '暂无真实会话数据，连接 OpenClaw 后即可分析 prompt 效率。',
+      messageEn: usingDemo
+        ? 'No demo sessions match the selected time range. Try a wider window.'
+        : 'No real session data yet. Connect OpenClaw to analyze prompt efficiency.',
     });
   }
 

@@ -532,9 +532,19 @@ function computeFromReplays(replays: SessionReplay[]): BenchmarkResult {
   };
 }
 
+function buildLiveDemoResult(reference: Date = new Date()): BenchmarkResult {
+  const replays = loadAllReplays();
+  const result = computeFromReplays(replays.length ? replays : []);
+  return {
+    ...result,
+    id: `benchmark-demo-live-${reference.getTime()}`,
+    runAt: reference,
+  };
+}
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-/** 无历史文件或历史为空时，供进化曲线展示的 8 条演示数据（从旧到新），展示从 D→A 的完整成长轨迹 */
+/** Demo 模式下给进化曲线用的 8 条历史样本（从旧到新），末尾会自然衔接到当前用 Demo 会话实跑出来的最新结果。 */
 function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[] {
   const t = reference.getTime();
   const rows: Array<{
@@ -673,103 +683,103 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
     {
       daysAgo: 15,
       index: 6,
-      overallScore: 70,
+      overallScore: 64,
       rank: 'B',
-      w: 72,
-      c: 58,
-      tu: 75,
-      se: 62,
-      sa: 78,
-      ce: 75,
-      summary: '进步很大！中文写作终于上道了，性价比也在改善。',
-      summaryEn: 'Big improvement! Chinese writing finally on track, and cost-efficiency is getting better.',
+      w: 60,
+      c: 44,
+      tu: 72,
+      se: 49,
+      sa: 79,
+      ce: 76,
+      summary: '开始稳起来了！工具链和安全性更顺手，写作与检索也在追赶。',
+      summaryEn: 'Things are getting steadier — tool flow and safety feel more natural, while writing and retrieval are catching up.',
       topModel: 'deepseek-chat',
       totalSessions: 28,
       totalTokens: 156_000,
       totalCost: 5.2,
       dimDetails: [
-        '中文写作终于上道，回复结构与篇幅更稳定。',
-        '代码任务参与度上升，块数量持续增长。',
-        '工具链路更顺，多工具协作开始有模样。',
-        '检索与引用格式在更多会话中出现。',
-        '安全维度保持稳健，无明显风险片段。',
-        '切换经济模型后，性价比明显改善。',
+        '中文回复更稳定，但篇幅与表达还在继续打磨。',
+        '代码任务参与度上升，不过代码块数量和覆盖面还有限。',
+        '多工具协作开始顺了，调用成对率更健康。',
+        '能看到搜索工具和少量引用痕迹，但检索味还不够浓。',
+        '安全维度持续稳健，没有明显风险片段。',
+        '换到更省钱的模型后，性价比明显改善。',
       ],
       dimDetailsEn: [
-        'Chinese writing finally on track — reply structure and length are more stable.',
-        'Code task participation rising; block count growing steadily.',
-        'Tool chain smoother — multi-tool collaboration taking shape.',
-        'Retrieval and citation formatting appearing in more sessions.',
-        'Safety dimension remains solid, no notable risk fragments.',
-        'After switching to budget models, cost-efficiency improved significantly.',
+        'Chinese replies are more stable, though length and expression still have room to improve.',
+        'Participation in coding tasks is rising, but code-block volume and coverage are still limited.',
+        'Multi-tool collaboration is starting to click, with healthier call-result pairing.',
+        'Search tools and a few citation traces are present, but retrieval behavior is still light.',
+        'Safety remains solid with no notable risk fragments.',
+        'Switching to cheaper models noticeably improved cost-efficiency.',
       ],
     },
     {
       daysAgo: 7,
       index: 7,
-      overallScore: 78,
-      rank: 'A',
-      w: 85,
-      c: 72,
-      tu: 80,
-      se: 68,
-      sa: 82,
-      ce: 91,
-      summary: '这只龙虾整体表现不错！中文写作和性价比是强项。',
-      summaryEn: 'This lobster is doing great overall! Chinese writing and cost-efficiency are its strengths.',
+      overallScore: 69,
+      rank: 'B',
+      w: 65,
+      c: 47,
+      tu: 84,
+      se: 53,
+      sa: 83,
+      ce: 80,
+      summary: '越跑越顺了！工具调用已经很成熟，整体表现逼近高段位。',
+      summaryEn: 'It keeps getting smoother — tool use is already quite mature, and the overall profile is nearing the upper tier.',
       topModel: 'deepseek-chat',
       totalSessions: 47,
       totalTokens: 285_000,
       totalCost: 3.42,
       dimDetails: [
-        '中文写作表现亮眼，说明类回复质量高。',
-        '代码块稳定产出，多会话覆盖代码任务。',
-        '工具调用丰富且成对率高。',
-        '检索与引用仍有波动，但整体可用。',
-        '安全合规保持良好记录。',
-        '经济模型为主，单次成本控制出色。',
+        '写作清晰度继续提升，说明类回复更像样了。',
+        '代码块稳定出现，但代码向任务密度还没完全拉满。',
+        '工具调用种类更丰富，衔接也更自然。',
+        '检索与引用开始稳定出现，可用度比前几轮更高。',
+        '安全合规继续保持良好记录。',
+        '经济模型占比继续提升，成本控制更从容。',
       ],
       dimDetailsEn: [
-        'Chinese writing is impressive — explanatory replies are high quality.',
-        'Steady code block output, covering code tasks across multiple sessions.',
-        'Rich tool calls with a high pairing rate.',
-        'Retrieval and citation still fluctuate, but overall usable.',
-        'Safety compliance maintains a clean record.',
-        'Primarily budget models — per-session cost control is excellent.',
+        'Writing clarity keeps improving, and explanatory replies feel more polished.',
+        'Code blocks now appear steadily, though coding-task density is not maxed out yet.',
+        'Tool-call variety is richer and the overall flow feels more natural.',
+        'Retrieval and citation patterns appear more consistently than before.',
+        'Safety compliance continues to keep a clean record.',
+        'Budget-model usage keeps rising, making cost control more comfortable.',
       ],
     },
     {
       daysAgo: 1,
       index: 8,
-      overallScore: 83,
-      rank: 'A',
-      w: 88,
-      c: 78,
-      tu: 85,
-      se: 75,
+      overallScore: 72,
+      rank: 'B',
+      w: 68,
+      c: 49,
+      tu: 88,
+      se: 55,
       sa: 84,
-      ce: 88,
-      summary: '又进步了！代码和检索能力提升明显，继续保持！',
-      summaryEn: 'More progress! Coding and retrieval abilities improved significantly — keep it up!',
+      ce: 82,
+      summary: '离高段位只差一口气了！工具调用很强，代码和检索也明显长进。',
+      summaryEn: 'Only a final push away from the upper tier — tool use is strong, and coding plus retrieval have improved noticeably.',
       topModel: 'deepseek-chat',
       totalSessions: 62,
       totalTokens: 380_000,
       totalCost: 4.15,
       dimDetails: [
-        '写作维持高分，表达清晰、中文流畅。',
-        '代码能力再上台阶，块质量与会话覆盖俱佳。',
-        '工具调用成熟，种类与成功率都很好。',
-        '检索与引用能力较上一轮明显提升。',
-        '安全维度持续稳定。',
-        '性价比仍优，规模扩大后成本依然可控。',
+        '写作维持稳定发挥，中文表达清楚顺畅。',
+        '代码能力继续进步，已经能稳定支撑常见改代码场景。',
+        '工具调用非常熟练，种类和成功率都接近当前 Demo 实跑水平。',
+        '检索维度比上一轮更完整，但还有继续加强引用习惯的空间。',
+        '安全维度依旧稳定，没有明显红线问题。',
+        '规模变大后成本依然可控，性价比保持在线。',
       ],
       dimDetailsEn: [
-        'Writing stays high — expression is clear and Chinese is fluent.',
-        'Coding stepped up again — block quality and session coverage both excellent.',
-        'Tool calls are mature — variety and success rate both strong.',
-        'Retrieval and citation ability improved significantly from the previous round.',
-        'Safety dimension remains consistently stable.',
-        'Cost-efficiency still great — costs stay controlled even as scale grows.',
+        'Writing remains steady, with clear and smooth Chinese expression.',
+        'Coding continues to improve and can now support common code-change scenarios reliably.',
+        'Tool use is very mature — variety and success rate are close to the current live demo run.',
+        'Retrieval is more complete than the previous round, though citation habits can still improve.',
+        'Safety stays stable with no obvious red-line issues.',
+        'Costs remain under control even at a larger scale, so cost-efficiency stays strong.',
       ],
     },
   ];
@@ -811,89 +821,6 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
       summaryEn: row.summaryEn,
     };
   });
-}
-
-function makeDemoResult(): BenchmarkResult {
-  const runAt = new Date();
-  const dimensions: DimensionScore[] = [
-    {
-      dimension: 'writing',
-      label: DIMENSION_LABELS.writing,
-      score: 85,
-      maxScore: 100,
-      details:
-        '示例：回复里中文占比高、篇幅适中，像认真写给小主人的说明文；真实跑分会在你本地日志里按字数与中文比例细算。',
-      detailsEn:
-        'Demo: Replies have a high Chinese ratio and moderate length, like a carefully written explanation; real scoring will calculate from local logs based on word count and Chinese character ratio.',
-    },
-    {
-      dimension: 'coding',
-      label: DIMENSION_LABELS.coding,
-      score: 72,
-      maxScore: 100,
-      details:
-        '示例：能稳定产出带 ``` 的代码片段；若你常用 Agent 改仓库，日志里代码块多了，分数会跟着涨。',
-      detailsEn:
-        'Demo: Consistently produces code snippets with ```; if you frequently use the Agent for repo changes, more code blocks in logs will boost this score.',
-    },
-    {
-      dimension: 'toolUse',
-      label: DIMENSION_LABELS.toolUse,
-      score: 80,
-      maxScore: 100,
-      details:
-        '示例：工具调用和结果成对出现率高、工具种类丰富；真实数据里本虾会数 tool_call / tool_result 和工具名种类。',
-      detailsEn:
-        'Demo: High pairing rate between tool calls and results, with rich tool variety; real data will count tool_call/tool_result pairs and distinct tool names.',
-    },
-    {
-      dimension: 'search',
-      label: DIMENSION_LABELS.search,
-      score: 68,
-      maxScore: 100,
-      details:
-        '示例：有检索类工具痕迹且回复里常带链接或引用口吻；多让 Agent 做「先搜再答」任务可拉高这项。',
-      detailsEn:
-        'Demo: Retrieval tool traces found and replies often include links or citation style; assigning more "search-then-answer" tasks can raise this score.',
-    },
-    {
-      dimension: 'safety',
-      label: DIMENSION_LABELS.safety,
-      score: 82,
-      maxScore: 100,
-      details:
-        '示例：未发现典型高危指令片段，会话步数也在温和区间；真实环境会持续扫 rm -rf、DROP TABLE 等红线词。',
-      detailsEn:
-        'Demo: No typical high-risk command fragments detected, and session step counts are in a moderate range; real runs will continuously scan for red-line keywords like rm -rf, DROP TABLE, etc.',
-    },
-    {
-      dimension: 'costEfficiency',
-      label: DIMENSION_LABELS.costEfficiency,
-      score: 91,
-      maxScore: 100,
-      details:
-        '示例：偏经济模型用得多、单次会话成本友好；和你 ~/.openclaw 里真实 token/费用汇总挂钩后，这项会动态变化。',
-      detailsEn:
-        'Demo: Budget-friendly models used frequently, per-session cost is low; this score will update dynamically once linked to real token/cost data in ~/.openclaw.',
-    },
-  ];
-
-  return {
-    id: `benchmark-demo-${Date.now()}`,
-    runAt,
-    overallScore: 78,
-    rank: 'A',
-    dimensions,
-    totalSessions: 47,
-    totalTokens: 285_000,
-    totalCost: 3.42,
-    avgCostPerSession: 3.42 / 47,
-    topModel: 'deepseek-chat',
-    summary:
-      '这只龙虾整体表现不错！中文写作和性价比是强项，代码能力和检索还有提升空间。建议多给它练练搜索任务。',
-    summaryEn:
-      'This lobster is doing great overall! Chinese writing and cost-efficiency are its strengths; coding and retrieval still have room to grow. Try assigning more search tasks.',
-  };
 }
 
 function ensureHistoryDir(): void {
@@ -963,7 +890,7 @@ export class BenchmarkRunner {
     let result: BenchmarkResult;
 
     if (demoOnly) {
-      result = makeDemoResult();
+      result = buildLiveDemoResult();
     } else {
       const replays = loadAllReplays();
       result = computeFromReplays(replays.length ? replays : []);
@@ -995,8 +922,7 @@ export class BenchmarkRunner {
   getLatest(): BenchmarkResult | null {
     const metas = sessionParser.getSessions();
     if (isBuiltinDemoOnly(metas)) {
-      const demos = buildDemoHistoryResults();
-      return demos[demos.length - 1] ?? null;
+      return buildLiveDemoResult();
     }
     const { results } = this.readHistoryFile();
     if (results.length === 0) return null;

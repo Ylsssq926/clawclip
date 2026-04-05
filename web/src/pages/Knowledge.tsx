@@ -1,8 +1,9 @@
-import { useState, useCallback, type DragEvent, type ChangeEvent } from 'react'
+import { useState, useCallback, useEffect, type DragEvent, type ChangeEvent } from 'react'
 import { Search, Download, Upload, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useI18n } from '../lib/i18n'
 import { apiGet } from '../lib/api'
+import type { SessionMeta } from '../types/session'
 
 interface SearchMatch {
   stepIndex: number
@@ -38,8 +39,11 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+const RECOMMENDED_SEARCHES = ['React', '小红书', 'Notion', 'Python', 'Kubernetes']
+
 export default function Knowledge() {
   const { t, locale } = useI18n()
+  const [sessionCount, setSessionCount] = useState<number | null>(null)
   const [qInput, setQInput] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
   const [searchLoading, setSearchLoading] = useState(false)
@@ -53,8 +57,23 @@ export default function Knowledge() {
   const [importLoading, setImportLoading] = useState(false)
   const [importMessage, setImportMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
-  const runSearch = useCallback(() => {
-    const q = qInput.trim()
+  const loadSessionCount = useCallback(() => {
+    apiGet<SessionMeta[]>('/api/replay/sessions')
+      .then(data => {
+        setSessionCount(Array.isArray(data) ? data.length : 0)
+      })
+      .catch(() => setSessionCount(0))
+  }, [])
+
+  useEffect(() => {
+    void loadSessionCount()
+  }, [loadSessionCount])
+
+  const runSearch = useCallback((nextQuery?: string) => {
+    const q = (nextQuery ?? qInput).trim()
+    if (typeof nextQuery === 'string') {
+      setQInput(q)
+    }
     setActiveQuery(q)
     if (!q) {
       setSearchResults([])
@@ -109,8 +128,13 @@ export default function Knowledge() {
         throw new Error(errText || `HTTP ${res.status}`)
       }
       let msg = t('knowledge.import.success')
+      let refreshedCount = false
       try {
         const j = await res.json()
+        if (j && typeof j.total === 'number') {
+          setSessionCount(j.total)
+          refreshedCount = true
+        }
         if (j && typeof j.imported === 'number') {
           msg = locale === 'en'
             ? `Imported ${j.imported} session(s), ${j.total ?? '?'} total in library.`
@@ -118,6 +142,9 @@ export default function Knowledge() {
         }
       } catch {
         /* ignore */
+      }
+      if (!refreshedCount) {
+        void loadSessionCount()
       }
       setImportMessage({ ok: true, text: msg })
     } catch {
@@ -154,13 +181,26 @@ export default function Knowledge() {
   }
 
   const showSearchEmpty =
-    activeQuery && !searchLoading && !searchError && searchResults && searchResults.length === 0
+    Boolean(activeQuery) && !searchLoading && !searchError && searchResults !== null && searchResults.length === 0
+  const sessionCountText = sessionCount === null
+    ? locale === 'en'
+      ? 'Counting knowledge base sessions...'
+      : '正在统计知识库会话...'
+    : locale === 'en'
+      ? `Knowledge base currently contains ${sessionCount} session(s)`
+      : `当前知识库共 ${sessionCount} 条会话`
+  const recommendedSearchTitle = locale === 'en' ? 'Recommended searches' : '推荐搜索'
+  const emptySearchTitle = locale === 'en' ? 'No matching sessions found' : '没找到相关会话'
+  const emptySearchDescription = locale === 'en'
+    ? `No sessions matched “${activeQuery}”. Try one of the recommended searches above.`
+    : `没有找到和“${activeQuery}”相关的会话，试试上方推荐搜索词。`
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
         <h2 className="text-2xl font-bold text-slate-900 mb-1">{t('knowledge.title')}</h2>
         <p className="text-slate-500 text-sm">{t('knowledge.subtitle')}</p>
+        <p className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{sessionCountText}</p>
       </div>
 
       <motion.section
@@ -188,7 +228,7 @@ export default function Knowledge() {
           </div>
           <button
             type="button"
-            onClick={runSearch}
+            onClick={() => runSearch()}
             disabled={searchLoading}
             className="shrink-0 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-cyan-500 hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
           >
@@ -197,9 +237,24 @@ export default function Knowledge() {
           </button>
         </div>
 
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-slate-500">{recommendedSearchTitle}</span>
+          {RECOMMENDED_SEARCHES.map(keyword => (
+            <button
+              key={keyword}
+              type="button"
+              onClick={() => runSearch(keyword)}
+              className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+            >
+              {keyword}
+            </button>
+          ))}
+        </div>
+
         {searchError && (
           <div className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{searchError}</div>
         )}
+
 
         {searchLoading && (
           <div className="flex items-center gap-2 text-sm text-slate-500 py-6 justify-center">
@@ -212,7 +267,10 @@ export default function Knowledge() {
         )}
 
         {showSearchEmpty && (
-          <p className="text-sm text-slate-500 text-center py-6">{t('knowledge.search.empty')}</p>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center">
+            <p className="text-sm font-medium text-slate-700">{emptySearchTitle}</p>
+            <p className="mt-1 text-sm text-slate-500">{emptySearchDescription}</p>
+          </div>
         )}
 
         {!searchLoading && searchResults && searchResults.length > 0 && (

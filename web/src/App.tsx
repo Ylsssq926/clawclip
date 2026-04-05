@@ -59,9 +59,10 @@ function TabFallback() {
   )
 }
 
-function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
+function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLanding: () => void; initialTab?: Tab }) {
   const { t } = useI18n()
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab)
+  const [knowledgeInitialQuery, setKnowledgeInitialQuery] = useState('')
   const [isDemo, setIsDemo] = useState(true)
 
   useEffect(() => {
@@ -86,7 +87,15 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
   const navigateTab = useCallback((tab: Tab) => {
     setActiveTab(tab)
     setSidebarOpen(false)
+    if (tab !== 'knowledge') {
+      setKnowledgeInitialQuery('')
+    }
   }, [])
+
+  const openKnowledgeSearch = useCallback((query: string) => {
+    setKnowledgeInitialQuery(query)
+    navigateTab('knowledge')
+  }, [navigateTab])
 
   const finishTour = useCallback(() => {
     try {
@@ -290,7 +299,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                 >
-                  {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
+                  {activeTab === 'dashboard' && <Dashboard onNavigate={navigateTab} onKnowledgeSearch={openKnowledgeSearch} />}
                   {activeTab === 'replay' && <Replay />}
                   {activeTab === 'benchmark' && <Benchmark />}
                   {activeTab === 'leaderboard' && <Leaderboard />}
@@ -299,7 +308,7 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
                   {activeTab === 'compare' && <Compare />}
                   {activeTab === 'skills' && <SkillManager />}
                   {activeTab === 'templates' && <TemplateMarket />}
-                  {activeTab === 'knowledge' && <Knowledge />}
+                  {activeTab === 'knowledge' && <Knowledge initialQuery={knowledgeInitialQuery} />}
                 </motion.div>
               </AnimatePresence>
             </Suspense>
@@ -312,12 +321,13 @@ function AppShell({ onBackToLanding }: { onBackToLanding: () => void }) {
 
 function App() {
   const [showLanding, setShowLanding] = useState(true)
+  const [landingTab, setLandingTab] = useState<Tab>('dashboard')
 
   if (showLanding) {
-    return <ErrorBoundary><Landing onEnterDemo={() => setShowLanding(false)} /></ErrorBoundary>
+    return <ErrorBoundary><Landing onEnterDemo={(tab) => { setLandingTab(tab ?? 'dashboard'); setShowLanding(false) }} /></ErrorBoundary>
   }
 
-  return <AppShell onBackToLanding={() => setShowLanding(true)} />
+  return <AppShell initialTab={landingTab} onBackToLanding={() => setShowLanding(true)} />
 }
 
 export default App

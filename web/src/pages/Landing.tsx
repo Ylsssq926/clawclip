@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion'
 import { Play, Trophy, BarChart3, Cloud, Github, MessageCircle, ArrowRight, Terminal, Zap, Eye, Shield, Coins, BookOpen, LayoutGrid, Medal, TrendingUp } from 'lucide-react'
+import type { Tab } from '../App'
 import { useI18n, LanguageSwitcher } from '../lib/i18n'
 
 interface Props {
-  onEnterDemo: () => void
+  onEnterDemo: (tab?: Tab) => void
 }
 
 const CURVE_Y_AXIS_LABEL: Record<string, string> = {
@@ -19,6 +20,7 @@ const CURVE_Y_AXIS_LABEL: Record<string, string> = {
 const FEATURES = [
   {
     icon: Play,
+    tab: 'replay' as const,
     titleKey: 'feat.replay',
     descKey: 'feat.replay.desc',
     iconBg: 'bg-blue-50',
@@ -26,6 +28,7 @@ const FEATURES = [
   },
   {
     icon: Trophy,
+    tab: 'benchmark' as const,
     titleKey: 'feat.benchmark',
     descKey: 'feat.benchmark.desc',
     iconBg: 'bg-cyan-50',
@@ -33,6 +36,7 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
+    tab: 'cost' as const,
     titleKey: 'feat.cost',
     descKey: 'feat.cost.desc',
     iconBg: 'bg-emerald-50',
@@ -40,6 +44,7 @@ const FEATURES = [
   },
   {
     icon: Cloud,
+    tab: 'dashboard' as const,
     titleKey: 'feat.wordcloud',
     descKey: 'feat.wordcloud.desc',
     iconBg: 'bg-violet-50',
@@ -47,6 +52,7 @@ const FEATURES = [
   },
   {
     icon: BookOpen,
+    tab: 'knowledge' as const,
     titleKey: 'feat.knowledge',
     descKey: 'feat.knowledge.desc',
     iconBg: 'bg-amber-50',
@@ -54,6 +60,7 @@ const FEATURES = [
   },
   {
     icon: Trophy,
+    tab: 'leaderboard' as const,
     titleKey: 'feat.leaderboard',
     descKey: 'feat.leaderboard.desc',
     iconBg: 'bg-rose-50',
@@ -61,6 +68,7 @@ const FEATURES = [
   },
   {
     icon: LayoutGrid,
+    tab: 'templates' as const,
     titleKey: 'feat.templates',
     descKey: 'feat.templates.desc',
     iconBg: 'bg-indigo-50',
@@ -68,6 +76,7 @@ const FEATURES = [
   },
   {
     icon: Coins,
+    tab: 'cost' as const,
     titleKey: 'feat.savings',
     descKey: 'feat.savings.desc',
     iconBg: 'bg-teal-50',
@@ -116,7 +125,7 @@ export default function Landing({ onEnterDemo }: Props) {
             <LanguageSwitcher variant="landing" />
             <button
               type="button"
-              onClick={onEnterDemo}
+              onClick={() => onEnterDemo()}
               className="text-sm font-medium px-5 py-2.5 rounded-xl bg-gradient-to-r from-accent to-cyan-500 text-white shadow-md shadow-[#3b82c4]/35 hover:shadow-lg hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               {t('landing.cta.demo')}
@@ -151,7 +160,7 @@ export default function Landing({ onEnterDemo }: Props) {
           <div className="flex flex-wrap gap-4">
             <button
               type="button"
-              onClick={onEnterDemo}
+              onClick={() => onEnterDemo()}
               className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-accent to-cyan-500 text-white font-semibold text-base shadow-lg shadow-[#3b82c4]/35 hover:shadow-xl hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
             >
               <Play className="w-5 h-5" />
@@ -261,14 +270,16 @@ export default function Landing({ onEnterDemo }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {FEATURES.map((f, i) => (
-            <motion.div
+            <motion.button
               key={f.titleKey}
+              type="button"
+              onClick={() => onEnterDemo(f.tab)}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               whileHover={{ y: -4, boxShadow: '0 12px 32px -8px rgba(59,130,196,0.15)' }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.45, delay: i * 0.08, ease: [0.25, 0.4, 0.25, 1] }}
-              className="bg-white border border-blue-100 rounded-2xl shadow-sm p-6 hover:border-blue-300 cursor-default"
+              className="bg-white border border-blue-100 rounded-2xl shadow-sm p-6 hover:border-blue-300 cursor-pointer text-left"
             >
               <div className="flex items-start gap-4">
                 <div className={`w-11 h-11 rounded-xl ${f.iconBg} flex items-center justify-center shrink-0`}>
@@ -279,7 +290,7 @@ export default function Landing({ onEnterDemo }: Props) {
                   <p className="text-sm text-slate-600 leading-relaxed">{t(f.descKey)}</p>
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </div>
       </section>
@@ -317,7 +328,7 @@ export default function Landing({ onEnterDemo }: Props) {
             </div>
             <button
               type="button"
-              onClick={onEnterDemo}
+              onClick={() => onEnterDemo()}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm shadow-md shadow-amber-400/30 hover:shadow-lg hover:shadow-amber-400/40 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.01] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50/90"
             >
               {t('landing.leaderboard.cta')}
@@ -383,7 +394,7 @@ export default function Landing({ onEnterDemo }: Props) {
               </p>
               <button
                 type="button"
-                onClick={onEnterDemo}
+                onClick={() => onEnterDemo()}
                 className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-accent to-cyan-500 text-white font-semibold shadow-lg shadow-[#3b82c4]/35 hover:shadow-xl hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
               >
                 <Play className="w-5 h-5" />

@@ -73,9 +73,10 @@ function sessionListTitle(s: SessionMeta, locale: Locale): string {
 
 interface Props {
   onNavigate: (tab: Tab) => void
+  onKnowledgeSearch: (query: string) => void
 }
 
-export default function Dashboard({ onNavigate }: Props) {
+export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
   const { t, locale } = useI18n()
   const [status, setStatus] = useState<StatusData | null>(null)
   const [cost, setCost] = useState<CostSummary | null>(null)
@@ -482,7 +483,7 @@ export default function Dashboard({ onNavigate }: Props) {
               <div className="skeleton h-7 w-2/3" />
             </div>
           ) : keywords.length > 0 ? (
-            <WordCloud keywords={keywords} onWordClick={() => onNavigate('replay')} height={200} />
+            <WordCloud keywords={keywords} onWordClick={onKnowledgeSearch} height={200} />
           ) : (
             <p className="text-xs text-slate-600 py-8 text-center">{t('dashboard.keywords.empty')}</p>
           )}

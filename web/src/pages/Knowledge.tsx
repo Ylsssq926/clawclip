@@ -41,7 +41,11 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 
 const RECOMMENDED_SEARCHES = ['React', '小红书', 'Notion', 'Python', 'Kubernetes']
 
-export default function Knowledge() {
+interface Props {
+  initialQuery?: string
+}
+
+export default function Knowledge({ initialQuery }: Props) {
   const { t, locale } = useI18n()
   const [sessionCount, setSessionCount] = useState<number | null>(null)
   const [qInput, setQInput] = useState('')
@@ -90,6 +94,11 @@ export default function Knowledge() {
       .catch(() => setSearchError(t('knowledge.search.error')))
       .finally(() => setSearchLoading(false))
   }, [qInput, t])
+
+  useEffect(() => {
+    if (!initialQuery?.trim()) return
+    runSearch(initialQuery)
+  }, [initialQuery])
 
   const exportAll = async (format: 'json' | 'markdown') => {
     setExporting(format)

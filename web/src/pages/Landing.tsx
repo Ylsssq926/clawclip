@@ -1,5 +1,6 @@
+import { useEffect, useId, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Play, Trophy, BarChart3, Cloud, Github, MessageCircle, ArrowRight, Terminal, Zap, Eye, Shield, Coins, BookOpen, LayoutGrid, Medal, TrendingUp } from 'lucide-react'
+import { Play, Trophy, BarChart3, Github, MessageCircle, ArrowRight, Terminal, Zap, Eye, Shield, Coins, Medal, TrendingUp, GitCompareArrows, Database } from 'lucide-react'
 import type { Tab } from '../App'
 import { useI18n, LanguageSwitcher } from '../lib/i18n'
 
@@ -17,12 +18,81 @@ const CURVE_Y_AXIS_LABEL: Record<string, string> = {
   de: 'Score',
 }
 
+const LANDING_LOCAL_COPY = {
+  zh: {
+    'landing.hero.title': '你的 AI Agent，今天表现怎么样？',
+    'landing.hero.kicker': '——让数据回答。',
+    'landing.hero.meta': '能力成绩单 · 成本账单 · 运行洞察 — 100% 本地运行',
+    'landing.feature.replay.desc': '审查每一步思考、工具调用、错误与结果',
+    'landing.feature.benchmark.desc': '六维启发式评分，量化运行质量',
+    'landing.feature.cost.desc': '模型拆分、趋势追踪、预算告警',
+    'landing.feature.prompt.desc': '投入产出比分析',
+    'landing.feature.compare.desc': '不同配置的效果对比',
+    'landing.feature.resources': '模板库 + 知识库',
+    'landing.feature.resources.desc': '模板复用、知识沉淀与导入导出',
+    'landing.radar.title': '六维表现雷达',
+    'landing.radar.subtitle': '分数从 0 平滑展开到目标值',
+    'landing.radar.badge': '100% 本地',
+  },
+  en: {
+    'landing.hero.title': 'How is your AI agent performing today?',
+    'landing.hero.kicker': 'Let the data answer.',
+    'landing.hero.meta': 'Scorecards · Cost ledger · Run insights — 100% local',
+    'landing.feature.replay.desc': 'Inspect every thought, tool call, error, and outcome',
+    'landing.feature.benchmark.desc': 'Six-dimension heuristics to quantify run quality',
+    'landing.feature.cost.desc': 'Model breakdowns, trend tracking, and budget alerts',
+    'landing.feature.prompt.desc': 'Analyze output-versus-input efficiency',
+    'landing.feature.compare.desc': 'Compare outcomes across different configurations',
+    'landing.feature.resources': 'Template Library + Knowledge',
+    'landing.feature.resources.desc': 'Reuse templates and keep run knowledge searchable',
+    'landing.radar.title': 'Six-dimension radar',
+    'landing.radar.subtitle': 'Scores animate from 0 to target values',
+    'landing.radar.badge': '100% local',
+  },
+} as const
+
+const RADAR_METRICS = [
+  { key: 'writing', labelZh: '写作', labelEn: 'Writing', score: 68 },
+  { key: 'coding', labelZh: '编程', labelEn: 'Coding', score: 49 },
+  { key: 'tools', labelZh: '工具', labelEn: 'Tools', score: 91 },
+  { key: 'search', labelZh: '检索', labelEn: 'Search', score: 56 },
+  { key: 'safety', labelZh: '安全', labelEn: 'Safety', score: 85 },
+  { key: 'value', labelZh: '性价比', labelEn: 'Value', score: 82 },
+] as const
+
+const RADAR_LEVELS = [0.25, 0.5, 0.75, 1] as const
+const RADAR_CENTER = 120
+const RADAR_RADIUS = 78
+
+function getRadarPoint(index: number, scale: number) {
+  const angle = (Math.PI * 2 * index) / RADAR_METRICS.length - Math.PI / 2
+  return {
+    x: RADAR_CENTER + Math.cos(angle) * RADAR_RADIUS * scale,
+    y: RADAR_CENTER + Math.sin(angle) * RADAR_RADIUS * scale,
+  }
+}
+
+function toSvgPoint(point: { x: number; y: number }) {
+  return `${point.x.toFixed(2)},${point.y.toFixed(2)}`
+}
+
+function getRadarLabelAnchor(index: number) {
+  if (index === 0 || index === 3) return 'middle'
+  return index < 3 ? 'start' : 'end'
+}
+
+function getRadarLabelBaseline(index: number) {
+  if (index === 0) return 'alphabetic'
+  if (index === 3) return 'hanging'
+  return 'middle'
+}
+
 const FEATURES = [
   {
-    icon: Play,
+    icon: Eye,
     tab: 'replay' as const,
-    titleKey: 'feat.replay',
-    descKey: 'feat.replay.desc',
+    titleKey: 'nav.replay',
+    descKey: 'landing.feature.replay.desc',
     iconBg: 'bg-blue-50',
     iconColor: 'text-blue-600',
   },
@@ -30,57 +100,41 @@ const FEATURES = [
     icon: Trophy,
     tab: 'benchmark' as const,
     titleKey: 'feat.benchmark',
-    descKey: 'feat.benchmark.desc',
+    descKey: 'landing.feature.benchmark.desc',
     iconBg: 'bg-cyan-50',
     iconColor: 'text-cyan-600',
   },
   {
-    icon: BarChart3,
+    icon: Coins,
     tab: 'cost' as const,
-    titleKey: 'feat.cost',
-    descKey: 'feat.cost.desc',
+    titleKey: 'nav.cost',
+    descKey: 'landing.feature.cost.desc',
     iconBg: 'bg-emerald-50',
     iconColor: 'text-emerald-600',
   },
   {
-    icon: Cloud,
-    tab: 'dashboard' as const,
-    titleKey: 'feat.wordcloud',
-    descKey: 'feat.wordcloud.desc',
+    icon: Zap,
+    tab: 'prompt' as const,
+    titleKey: 'nav.prompt',
+    descKey: 'landing.feature.prompt.desc',
     iconBg: 'bg-violet-50',
     iconColor: 'text-violet-600',
   },
   {
-    icon: BookOpen,
-    tab: 'knowledge' as const,
-    titleKey: 'feat.knowledge',
-    descKey: 'feat.knowledge.desc',
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-600',
-  },
-  {
-    icon: Trophy,
-    tab: 'leaderboard' as const,
-    titleKey: 'feat.leaderboard',
-    descKey: 'feat.leaderboard.desc',
+    icon: GitCompareArrows,
+    tab: 'compare' as const,
+    titleKey: 'nav.compare',
+    descKey: 'landing.feature.compare.desc',
     iconBg: 'bg-rose-50',
     iconColor: 'text-rose-600',
   },
   {
-    icon: LayoutGrid,
-    tab: 'templates' as const,
-    titleKey: 'feat.templates',
-    descKey: 'feat.templates.desc',
+    icon: Database,
+    tab: 'knowledge' as const,
+    titleKey: 'landing.feature.resources',
+    descKey: 'landing.feature.resources.desc',
     iconBg: 'bg-indigo-50',
     iconColor: 'text-indigo-600',
-  },
-  {
-    icon: Coins,
-    tab: 'cost' as const,
-    titleKey: 'feat.savings',
-    descKey: 'feat.savings.desc',
-    iconBg: 'bg-teal-50',
-    iconColor: 'text-teal-600',
   },
 ] as const
 
@@ -93,6 +147,26 @@ const HIGHLIGHTS = [
 
 export default function Landing({ onEnterDemo }: Props) {
   const { t, locale } = useI18n()
+  const [radarReady, setRadarReady] = useState(false)
+  const copyLocale = locale === 'zh' ? 'zh' : 'en'
+  const copy = (key: string) => (LANDING_LOCAL_COPY[copyLocale] as Record<string, string>)[key] ?? t(key as never)
+  const radarId = useId().replace(/:/g, '')
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setRadarReady(true))
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  const radarGridPolygons = RADAR_LEVELS.map(level =>
+    RADAR_METRICS.map((_, index) => toSvgPoint(getRadarPoint(index, level))).join(' '),
+  )
+  const radarDataPoints = RADAR_METRICS.map((metric, index) => ({
+    ...metric,
+    label: copyLocale === 'zh' ? metric.labelZh : metric.labelEn,
+    point: getRadarPoint(index, metric.score / 100),
+    labelPoint: getRadarPoint(index, 1.2),
+  }))
+  const radarShapePoints = radarDataPoints.map(({ point }) => toSvgPoint(point)).join(' ')
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-white via-blue-50/30 to-slate-50 text-slate-800 overflow-hidden">
@@ -136,63 +210,156 @@ export default function Landing({ onEnterDemo }: Props) {
 
       {/* Hero */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 lg:px-16 pt-20 pb-24 lg:pt-28 lg:pb-32">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
-          className="max-w-3xl"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/20 bg-blue-50 text-xs text-accent mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-            {t('landing.tagline')}
-          </div>
+        <div className="grid items-center gap-12 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.25, 0.4, 0.25, 1] }}
+            className="max-w-2xl"
+          >
+            <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-tight text-slate-900 mb-5">
+              {copy('landing.hero.title')}
+            </h1>
+            <p className="text-lg lg:text-xl text-slate-700 leading-relaxed mb-3">
+              {copy('landing.hero.kicker')}
+            </p>
+            <p className="text-sm lg:text-base text-slate-500 leading-relaxed max-w-xl mb-10">
+              {copy('landing.hero.meta')}
+            </p>
 
-          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
-            <span className="text-slate-900">{t('landing.hero.line1')}</span>
-            <br />
-            <span className="bg-gradient-to-r from-accent to-cyan-500 bg-clip-text text-transparent">{t('landing.hero.line2')}</span>
-          </h1>
+            <div className="flex flex-wrap gap-4">
+              <button
+                type="button"
+                onClick={() => onEnterDemo()}
+                className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-accent to-cyan-500 text-white font-semibold text-base shadow-lg shadow-[#3b82c4]/35 hover:shadow-xl hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
+              >
+                <Play className="w-5 h-5" />
+                {t('landing.cta.demo')}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <a
+                href="https://github.com/Ylsssq926/clawclip"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 px-8 py-4 rounded-2xl border border-accent/15 text-slate-700 font-medium text-base bg-white/60 hover:bg-accent/5 hover:border-accent/25 transition-[transform,background-color,border-color] duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
+              >
+                <Github className="w-5 h-5" />
+                {t('landing.cta.source')}
+              </a>
+            </div>
+          </motion.div>
 
-          <p className="text-lg lg:text-xl text-slate-600 leading-relaxed max-w-2xl mb-10">
-            {t('landing.hero.desc')}
-          </p>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.75, delay: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
+            className="w-full max-w-[460px] md:ml-auto"
+          >
+            <div className="relative overflow-hidden rounded-[28px] border border-blue-100 bg-white/80 p-5 shadow-[0_24px_80px_-48px_rgba(59,130,196,0.55)] backdrop-blur-xl sm:p-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-cyan-400/5 to-transparent" />
+              <div className="relative">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{copy('landing.radar.title')}</p>
+                    <p className="text-xs text-slate-500">{copy('landing.radar.subtitle')}</p>
+                  </div>
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-600">
+                    {copy('landing.radar.badge')}
+                  </span>
+                </div>
 
-          <div className="flex flex-wrap gap-4">
-            <button
-              type="button"
-              onClick={() => onEnterDemo()}
-              className="group flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-accent to-cyan-500 text-white font-semibold text-base shadow-lg shadow-[#3b82c4]/35 hover:shadow-xl hover:shadow-[#3b82c4]/45 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
-            >
-              <Play className="w-5 h-5" />
-              {t('landing.cta.demo')}
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <a
-              href="https://github.com/Ylsssq926/clawclip"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 px-8 py-4 rounded-2xl border border-accent/15 text-slate-700 font-medium text-base bg-white/60 hover:bg-accent/5 hover:border-accent/25 transition-[transform,background-color,border-color] duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white/90"
-            >
-              <Github className="w-5 h-5" />
-              {t('landing.cta.source')}
-            </a>
-          </div>
-        </motion.div>
+                <svg viewBox="0 0 240 240" className="w-full">
+                  <defs>
+                    <linearGradient id={`${radarId}-fill`} x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="rgba(59,130,196,0.35)" />
+                      <stop offset="100%" stopColor="rgba(6,182,212,0.12)" />
+                    </linearGradient>
+                  </defs>
+
+                  {radarGridPolygons.map((points, index) => (
+                    <polygon
+                      key={points}
+                      points={points}
+                      fill="none"
+                      stroke={index === radarGridPolygons.length - 1 ? 'rgba(148,163,184,0.28)' : 'rgba(148,163,184,0.18)'}
+                      strokeWidth={index === radarGridPolygons.length - 1 ? '1.2' : '1'}
+                    />
+                  ))}
+
+                  {RADAR_METRICS.map((_, index) => {
+                    const outerPoint = getRadarPoint(index, 1)
+                    return (
+                      <line
+                        key={`axis-${index}`}
+                        x1={RADAR_CENTER}
+                        y1={RADAR_CENTER}
+                        x2={outerPoint.x}
+                        y2={outerPoint.y}
+                        stroke="rgba(148,163,184,0.22)"
+                        strokeWidth="1"
+                      />
+                    )
+                  })}
+
+                  <g
+                    className="transition-[transform,opacity] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                    style={{
+                      transformOrigin: `${RADAR_CENTER}px ${RADAR_CENTER}px`,
+                      transformBox: 'fill-box',
+                      transform: radarReady ? 'scale(1)' : 'scale(0)',
+                      opacity: radarReady ? 1 : 0.12,
+                    }}
+                  >
+                    <polygon
+                      points={radarShapePoints}
+                      fill={`url(#${radarId}-fill)`}
+                      stroke="rgb(59 130 246)"
+                      strokeWidth="2.5"
+                    />
+
+                    {radarDataPoints.map(({ key, point }) => (
+                      <g key={key}>
+                        <circle cx={point.x} cy={point.y} r="4.5" fill="white" stroke="rgb(59 130 246)" strokeWidth="2" />
+                        <circle cx={point.x} cy={point.y} r="1.5" fill="rgb(59 130 246)" />
+                      </g>
+                    ))}
+                  </g>
+
+                  <circle cx={RADAR_CENTER} cy={RADAR_CENTER} r="3.5" fill="rgb(59 130 246)" />
+
+                  {radarDataPoints.map(({ key, label, score, labelPoint }, index) => (
+                    <text
+                      key={`label-${key}`}
+                      x={labelPoint.x}
+                      y={labelPoint.y}
+                      textAnchor={getRadarLabelAnchor(index)}
+                      dominantBaseline={getRadarLabelBaseline(index)}
+                    >
+                      <tspan className="fill-slate-500" fontSize="10">{label}</tspan>
+                      <tspan x={labelPoint.x} dy="14" className="fill-slate-800" fontSize="11" fontWeight="700">{score}</tspan>
+                    </text>
+                  ))}
+                </svg>
+              </div>
+            </div>
+          </motion.div>
+        </div>
 
         {/* Highlights */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.3, ease: [0.25, 0.4, 0.25, 1] }}
-          className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4"
+          className="mt-16 grid grid-cols-2 gap-4 md:grid-cols-4"
         >
           {HIGHLIGHTS.map((h, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-blue-100 bg-white">
-              <h.icon className="w-4 h-4 text-slate-500 shrink-0" />
+            <div key={i} className="flex items-center gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3">
+              <h.icon className="h-4 w-4 shrink-0 text-slate-500" />
               <span className="text-xs text-slate-400">{t(h.textKey)}</span>
             </div>
           ))}
         </motion.div>
+
         {/* Stats bar */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -201,16 +368,16 @@ export default function Landing({ onEnterDemo }: Props) {
           className="mt-12 flex flex-wrap justify-center gap-8 lg:gap-16"
         >
           {[
-            { num: '8', labelKey: 'landing.stats.features' as const },
+            { num: String(FEATURES.length), labelKey: 'landing.stats.features' as const },
             { num: '6', labelKey: 'landing.stats.dimensions' as const },
             { num: '7', labelKey: 'landing.stats.languages' as const },
             { num: '0', labelKey: 'landing.stats.apicost' as const },
           ].map((s, i) => (
             <div key={i} className="text-center">
-              <div className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-accent to-cyan-500 bg-clip-text text-transparent">
+              <div className="bg-gradient-to-r from-accent to-cyan-500 bg-clip-text text-3xl font-black text-transparent lg:text-4xl">
                 {s.num === '0' ? '$0' : s.num}
               </div>
-              <div className="text-xs text-slate-500 mt-1">{t(s.labelKey)}</div>
+              <div className="mt-1 text-xs text-slate-500">{t(s.labelKey)}</div>
             </div>
           ))}
         </motion.div>
@@ -268,7 +435,7 @@ export default function Landing({ onEnterDemo }: Props) {
           <p className="text-slate-500 mb-12">{t('landing.features.sub')}</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f, i) => (
             <motion.button
               key={f.titleKey}
@@ -279,15 +446,15 @@ export default function Landing({ onEnterDemo }: Props) {
               whileHover={{ y: -4, boxShadow: '0 12px 32px -8px rgba(59,130,196,0.15)' }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.45, delay: i * 0.08, ease: [0.25, 0.4, 0.25, 1] }}
-              className="bg-white border border-blue-100 rounded-2xl shadow-sm p-6 hover:border-blue-300 cursor-pointer text-left"
+              className="cursor-pointer rounded-2xl border border-blue-100 bg-white p-6 text-left shadow-sm hover:border-blue-300"
             >
               <div className="flex items-start gap-4">
-                <div className={`w-11 h-11 rounded-xl ${f.iconBg} flex items-center justify-center shrink-0`}>
-                  <f.icon className={`w-5 h-5 ${f.iconColor}`} />
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${f.iconBg}`}>
+                  <f.icon className={`h-5 w-5 ${f.iconColor}`} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{t(f.titleKey)}</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">{t(f.descKey)}</p>
+                  <h3 className="mb-2 text-lg font-semibold text-slate-900">{copy(f.titleKey)}</h3>
+                  <p className="text-sm leading-relaxed text-slate-600">{copy(f.descKey)}</p>
                 </div>
               </div>
             </motion.button>

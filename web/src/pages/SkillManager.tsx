@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Search, Trash2, Download } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
 import { ApiError, apiGet, apiPost } from '../lib/api'
+import EmptyState from '../components/ui/EmptyState'
 
 /** 展示服务端返回的 error + hint，避免只显示泛化文案 */
 function formatUserApiError(err: unknown, fallback: string): string {
@@ -24,13 +25,16 @@ interface Skill {
 }
 
 export default function SkillManager() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [skills, setSkills] = useState<Skill[]>([])
   const [search, setSearch] = useState('')
   const [installing, setInstalling] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const emptySkillsHint = locale === 'en'
+    ? 'Type a skill name above and click Install to add your first skill.'
+    : '在上方输入技能名称并点击安装，就能添加第一个技能。'
 
   useEffect(() => {
     apiGet<Skill[]>('/api/skills')
@@ -121,10 +125,13 @@ export default function SkillManager() {
             {[1,2,3].map(i => <div key={i} className="skeleton h-12 w-full rounded-lg" />)}
           </div>
         ) : skills.length === 0 ? (
-          <div className="px-6 py-12 text-center text-slate-500">
-            <p className="text-lg mb-2">{t('skills.empty.title')}</p>
-            <p className="text-sm">{t('skills.empty.desc')}</p>
-          </div>
+          <EmptyState
+            icon="🧩"
+            title={t('skills.empty.title')}
+            description={t('skills.empty.desc')}
+            hint={emptySkillsHint}
+            className="m-6"
+          />
         ) : (
           <div className="divide-y divide-slate-200">
             {skills.map(skill => (

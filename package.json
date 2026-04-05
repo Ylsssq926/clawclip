@@ -1,6 +1,6 @@
 {
   "name": "clawclip",
-  "version": "2026.04.05",
+  "version": "1.0.0",
   "description": "🍤 虾片 (ClawClip) — AI Agent 诊断分析 + 优化建议 + 改善验证",
   "workspaces": [
     "server",

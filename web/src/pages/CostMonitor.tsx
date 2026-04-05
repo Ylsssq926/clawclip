@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
+import EmptyState from '../components/ui/EmptyState'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
@@ -187,6 +188,10 @@ export default function CostMonitor() {
       timeStyle: 'short',
     }).format(timestamp)
   })()
+  const showGlobalEmptyState = !loading && !error && !!summary && summary.totalCost === 0
+  const emptyStartHint = isZh
+    ? '接入本地 JSONL 日志后跑几次真实任务，再回来查看趋势、模型占比和预算提醒。'
+    : 'Connect local JSONL logs, run a few real tasks, then come back to review trends, model breakdown, and budget alerts.'
 
   const openBudgetModal = () => {
     setBudgetError(null)
@@ -249,7 +254,7 @@ export default function CostMonitor() {
           <button
             type="button"
             onClick={openBudgetModal}
-            className="px-3 py-1.5 rounded-lg text-sm bg-slate-900 text-white hover:opacity-90 transition-opacity"
+            className="px-3 py-1.5 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
           >
             {isZh ? '预算设置' : 'Budget Settings'}
           </button>
@@ -267,6 +272,17 @@ export default function CostMonitor() {
       {error && (
         <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-600 text-sm">
           {error}
+        </div>
+      )}
+
+      {showGlobalEmptyState && (
+        <div className="mb-6">
+          <EmptyState
+            icon="📉"
+            title={t('cost.empty.title')}
+            description={t('cost.empty.desc')}
+            hint={emptyStartHint}
+          />
         </div>
       )}
 

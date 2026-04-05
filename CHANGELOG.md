@@ -7,6 +7,36 @@ Version scheme: `YYYY.MM.DD` (CalVer, daily). Patch suffix `.N` for same-day rel
 
 ---
 
+## [1.0.0] — 2026-04-05
+
+### First Stable Release
+
+ClawClip v1.0 — a mature local Agent diagnostic tool.
+
+#### Product Identity
+- Repositioned as Local Agent Diagnostic Console: Run Insights + Agent Scorecard + Cost Report
+- Terminology unified across 7 languages
+- 7 README files rewritten with Heuristic Scorecard methodology disclosure
+- Created docs/ROADMAP.md with 3-phase plan
+
+#### Landing & Brand
+- Dual-column hero with animated SVG radar chart
+- Features reordered: Run Insights > Scorecard > Cost Report
+
+#### Core Capabilities
+- Benchmark: evidence-based scoring with per-dimension explanations
+- Cost Report: model breakdown chart, budget config UI, daily average line
+- Replay: error highlighting, high-cost markers, tool failure detection
+- Prompt Efficiency: length histogram, efficient/wasteful comparison, auto-suggestions
+- Version Compare: cost bar chart, auto-generated conclusions
+
+#### Data Trust
+- Dashboard data ingestion panel with setup guide
+- Site-wide Demo/Real data indicator
+- Unified pricing source with transparency
+
+[1.0.0]: https://github.com/Ylsssq926/clawclip/compare/2026.04.05...1.0.0
+
 ## [2026.04.05] — 2026-04-05
 
 ### Added

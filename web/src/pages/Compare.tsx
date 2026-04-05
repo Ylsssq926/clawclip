@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import FadeIn from '../components/ui/FadeIn'
+import EmptyState from '../components/ui/EmptyState'
 import { cn } from '../lib/cn'
 import { apiGet, apiPost, parseApiErrorMessage } from '../lib/api'
 import { useI18n } from '../lib/i18n'
@@ -122,6 +123,17 @@ export default function Compare() {
   const costChartEmpty = isZh ? '暂无可展示的成本数据' : 'No cost data to display'
   const conclusionTitle = isZh ? '自动结论' : 'Auto conclusion'
   const conclusionEmpty = isZh ? '完成对比后会自动生成结论。' : 'Conclusions will appear after comparison.'
+  const noSelectionTitle = isZh ? '先选 2–5 个会话开始对比' : 'Pick 2–5 sessions to start comparing'
+  const noSelectionHint = isZh
+    ? '如何开始：从上方下拉中选择两个以上会话，然后点击「对比」。'
+    : 'How to start: choose at least two sessions from the dropdowns above, then click Compare.'
+  const noAvailableSessionsTitle = isZh ? '还没有可对比的会话' : 'No sessions to compare yet'
+  const noAvailableSessionsDesc = isZh
+    ? '当前还没有可选会话，版本对比需要先有运行记录。'
+    : 'There are no selectable sessions yet. Version comparison needs a few recorded runs first.'
+  const noAvailableSessionsHint = isZh
+    ? '如何开始：先去「运行洞察」接入或生成几条会话，再回来做版本对比。'
+    : 'How to start: add or generate a few sessions in Replay first, then come back for version comparison.'
 
   useEffect(() => {
     let cancelled = false
@@ -476,6 +488,15 @@ export default function Compare() {
             <div className="skeleton h-36 w-full rounded-xl" />
             <div className="skeleton h-36 w-full rounded-xl" />
           </div>
+        )}
+
+        {!loading && !sessions && !error && !availableSessionsLoading && (
+          <EmptyState
+            icon={availableSessions.length === 0 ? '🧪' : '🆚'}
+            title={availableSessions.length === 0 ? noAvailableSessionsTitle : noSelectionTitle}
+            description={availableSessions.length === 0 ? noAvailableSessionsDesc : compareHint}
+            hint={availableSessions.length === 0 ? noAvailableSessionsHint : noSelectionHint}
+          />
         )}
 
         {!loading && partialWarning && sessions && sessions.length > 0 && (

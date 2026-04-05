@@ -18,6 +18,7 @@ import {
   YAxis,
 } from 'recharts'
 import FadeIn from '../components/ui/FadeIn'
+import EmptyState from '../components/ui/EmptyState'
 import { cn } from '../lib/cn'
 import { useI18n, type Locale } from '../lib/i18n'
 import { apiGet } from '../lib/api'
@@ -163,6 +164,14 @@ export default function PromptInsight() {
   const patterns = data?.patterns ?? []
   const summary = data?.summary ?? null
   const tips = data?.tips ?? []
+  const isZh = locale === 'zh'
+  const emptyPromptTitle = isZh ? '还没有可分析的 Prompt 样本' : 'No prompt analysis samples yet'
+  const emptyPromptDesc = isZh
+    ? '接入更多真实会话后，这里会统计 Prompt 长度分布、输出/输入比和工具触发率。'
+    : 'Once more real sessions arrive, this page will chart prompt length distribution, output/input ratio, and tool usage rate.'
+  const emptyPromptHint = isZh
+    ? '如何开始：先在 OpenClaw / ZeroClaw 跑几轮任务，再回来查看哪些 Prompt 更省、更稳。'
+    : 'How to start: run a few tasks in OpenClaw / ZeroClaw, then come back to see which prompt patterns are leaner and more reliable.'
 
   const tipMessage = (tip: PromptInsightsPayload['tips'][0]) =>
     locale === 'zh' ? tip.messageZh : tip.messageEn
@@ -200,6 +209,8 @@ export default function PromptInsight() {
     () => patternCards.filter(pattern => pattern.outputInputRatio > 3),
     [patternCards],
   )
+
+  const isEmptyPromptAnalysis = summary?.totalSessions === 0 && patternCards.length === 0
 
   const wastefulSessions = useMemo(
     () => patternCards.filter(pattern => pattern.outputInputRatio < 0.5),
@@ -302,10 +313,33 @@ export default function PromptInsight() {
     return <PromptSkeleton />
   }
 
-  if (error || !data || !summary) {
+  if (error) {
     return (
       <FadeIn>
-        <div className="card p-6 text-center text-slate-500">{error ?? t('cost.error')}</div>
+        <div className="card p-6 text-center text-slate-500">{error}</div>
+      </FadeIn>
+    )
+  }
+
+  if (!data || !summary || isEmptyPromptAnalysis) {
+    return (
+      <FadeIn className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+            <Lightbulb className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">{t('nav.prompt')}</h2>
+            <p className="text-xs text-slate-500">30d</p>
+          </div>
+        </div>
+
+        <EmptyState
+          icon="💡"
+          title={emptyPromptTitle}
+          description={emptyPromptDesc}
+          hint={emptyPromptHint}
+        />
       </FadeIn>
     )
   }

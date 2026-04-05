@@ -3,6 +3,7 @@ import { Search, Download, Upload, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useI18n } from '../lib/i18n'
 import { apiGet } from '../lib/api'
+import EmptyState from '../components/ui/EmptyState'
 import type { SessionMeta } from '../types/session'
 
 interface SearchMatch {
@@ -201,8 +202,11 @@ export default function Knowledge({ initialQuery }: Props) {
   const recommendedSearchTitle = locale === 'en' ? 'Recommended searches' : '推荐搜索'
   const emptySearchTitle = locale === 'en' ? 'No matching sessions found' : '没找到相关会话'
   const emptySearchDescription = locale === 'en'
-    ? `No sessions matched “${activeQuery}”. Try one of the recommended searches above.`
-    : `没有找到和“${activeQuery}”相关的会话，试试上方推荐搜索词。`
+    ? `No sessions matched “${activeQuery}”. Try adjusting the keyword or switching to a broader topic.`
+    : `没有找到和“${activeQuery}”相关的会话，可以换个关键词，或试试更宽泛的话题。`
+  const emptySearchHint = locale === 'en'
+    ? 'You can click the recommended searches above, or import more sessions to enrich the knowledge base first.'
+    : '你可以点上方推荐搜索词，或先导入更多会话，让知识库更容易搜到内容。'
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -276,10 +280,13 @@ export default function Knowledge({ initialQuery }: Props) {
         )}
 
         {showSearchEmpty && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center">
-            <p className="text-sm font-medium text-slate-700">{emptySearchTitle}</p>
-            <p className="mt-1 text-sm text-slate-500">{emptySearchDescription}</p>
-          </div>
+          <EmptyState
+            icon="🔎"
+            title={emptySearchTitle}
+            description={emptySearchDescription}
+            hint={emptySearchHint}
+            className="px-4 py-8"
+          />
         )}
 
         {!searchLoading && searchResults && searchResults.length > 0 && (

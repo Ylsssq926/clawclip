@@ -16,6 +16,8 @@ export interface DailyUsage {
   cost: number;
 }
 
+export type PricingSource = 'pricetoken' | 'static-default';
+
 export interface CostStats {
   totalCost: number;
   totalTokens: number;
@@ -25,6 +27,8 @@ export interface CostStats {
   topTasks: TaskCost[];
   trend: 'up' | 'down' | 'stable';
   comparedToLastMonth: number;
+  pricingSource: PricingSource;
+  pricingUpdatedAt: string;
 }
 
 export interface TaskCost {

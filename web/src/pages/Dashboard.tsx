@@ -63,6 +63,14 @@ interface ReplayDiagnosticsData {
   sessions: ReplayDiagnosticsSession[]
 }
 
+type DataRootHealth = 'healthy' | 'warning' | 'empty'
+
+function getDataRootHealth(root: LobsterDataRootStatus): DataRootHealth {
+  if (root.sessionJsonlFiles > 0 && root.hasConfig) return 'healthy'
+  if (root.sessionJsonlFiles === 0 && !root.hasConfig) return 'empty'
+  return 'warning'
+}
+
 function sessionListTitle(s: SessionMeta, locale: Locale): string {
   const fromStore = s.sessionLabel?.trim()
   const fromTranscript = s.summary?.trim()
@@ -89,6 +97,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
   const [diagnostics, setDiagnostics] = useState<ReplayDiagnosticsData | null>(null)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [diagnosticsDismissed, setDiagnosticsDismissed] = useState(false)
+  const [dataGuideOpen, setDataGuideOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([apiGetSafe('/api/status'), apiGetSafe('/api/cost/summary?days=30')])
@@ -129,6 +138,13 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
     Boolean(status) && jsonlTotal > 0 && parsableCount === 0 && !status?.hasRealSessionData
   const diagnosticSessions = diagnostics?.sessions ?? []
   const showDiagnosticsBanner = !diagnosticsDismissed && diagnosticSessions.length > 0
+  const dataRoots = status?.dataRoots ?? []
+  const isEnglish = locale === 'en'
+  const connectionSummary = status?.hasRealSessionData
+    ? (isEnglish ? '✅ Connected to real session data' : '✅ 已接入真实会话数据')
+    : hasJsonlButUnparsed
+      ? (isEnglish ? '⚠️ JSONL files found, but none are parsable yet' : '⚠️ 已发现 JSONL，但暂时无法解析为可展示会话')
+      : (isEnglish ? '📋 Currently showing demo data' : '📋 当前展示的是演示数据')
 
   const hour = new Date().getHours()
   const greetingKey =
@@ -222,81 +238,162 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
         </p>
       </div>
 
-      {!loading && status && !status.hasRealSessionData && jsonlTotal === 0 && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-800 animate-fade-in">
-          {t('demo.hint.dashboard')}
-        </div>
-      )}
-
       {!loading && status && (
-        <div
-          className={cn(
-            'rounded-xl border px-4 py-3 text-sm animate-fade-in',
-            status.hasRealSessionData
-              ? 'border-emerald-500/25 bg-emerald-500/[0.06]'
-              : 'border-amber-500/25 bg-amber-500/[0.06]',
-          )}
-        >
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-between">
-            <span className={status.hasRealSessionData ? 'text-emerald-700' : 'text-amber-700'}>
-              {status.hasRealSessionData
-                ? t('compat.data.real')
-                : hasJsonlButUnparsed
-                  ? locale === 'en'
-                    ? 'JSONL files found — none parse into session steps yet'
-                    : '发现 .jsonl 文件，尚无法解析为可展示会话'
-                  : t('compat.data.demo')}
-            </span>
-            <span className="text-xs text-slate-500">
-              {t('compat.sessions')}:{' '}
-              <span className="text-slate-500 font-mono">
-                {jsonlTotal > 0 ? `${parsableCount} / ${jsonlTotal}` : jsonlTotal}
-              </span>
-            </span>
-          </div>
-          {(status.sessionDataHintZh || status.sessionDataHintEn) && (
-            <p className="mt-2 text-xs text-amber-700/80 leading-relaxed">
-              {locale === 'zh'
-                ? status.sessionDataHintZh ?? status.sessionDataHintEn
-                : status.sessionDataHintEn ?? status.sessionDataHintZh}
-            </p>
-          )}
-          {(status.dataRoots?.length ?? 0) > 0 && (
-            <div className="mt-2 pt-2 border-t border-slate-200">
-              <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{t('compat.roots')}</p>
-              <div className="flex flex-wrap gap-2">
-                {status.dataRoots!.map(r => (
-                  <span
-                    key={r.id}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white text-slate-500 border border-slate-200"
-                    title={r.homeDir}
-                  >
-                    <span className="text-slate-700">{r.label}</span>
-                    <span className="text-slate-600 mx-1">·</span>
-                    {r.sessionJsonlFiles} jsonl
-                    {r.hasConfig ? <span className="text-emerald-500/80 ml-1">●</span> : <span className="text-slate-600 ml-1">○</span>}
+        <div className="rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm animate-fade-in">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                {isEnglish ? 'Data connection status' : '数据接入状态'}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-medium',
+                    status.hasRealSessionData
+                      ? 'bg-emerald-500/10 text-emerald-700'
+                      : hasJsonlButUnparsed
+                        ? 'bg-amber-500/10 text-amber-700'
+                        : 'bg-blue-500/10 text-[#3b82c4]',
+                  )}
+                >
+                  {connectionSummary}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {isEnglish ? 'Parsable sessions / JSONL files:' : '可解析会话 / JSONL 文件：'}
+                  <span className="ml-1 font-mono text-slate-700">
+                    {jsonlTotal > 0 ? `${parsableCount} / ${jsonlTotal}` : jsonlTotal}
                   </span>
-                ))}
+                </span>
               </div>
             </div>
-          )}
-          {(status.ecosystemNotes?.length ?? 0) > 0 && (
-            <div className="mt-2 pt-2 border-t border-slate-200">
-              <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">
-                {t('compat.ecosystem')}
-              </p>
-              <ul className="space-y-1.5 text-[11px] text-slate-500 leading-snug">
-                {status.ecosystemNotes!.map((n, i) => (
-                  <li
-                    key={`${n.rootId ?? 'note'}-${i}`}
-                    className={n.severity === 'warn' ? 'text-amber-700/85' : undefined}
-                  >
-                    {locale === 'zh' ? n.messageZh : n.messageEn}
-                  </li>
-                ))}
-              </ul>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <div>{isEnglish ? 'Scanned data roots' : '已扫描数据根'}</div>
+              <div className="mt-1 text-lg font-semibold text-slate-900">{dataRoots.length}</div>
+            </div>
+          </div>
+
+          {(status.sessionDataHintZh || status.sessionDataHintEn) && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+              {isEnglish
+                ? status.sessionDataHintEn ?? status.sessionDataHintZh
+                : status.sessionDataHintZh ?? status.sessionDataHintEn}
             </div>
           )}
+
+          <div className="mt-4 space-y-3">
+            {dataRoots.length > 0 ? (
+              dataRoots.map(root => {
+                const health = getDataRootHealth(root)
+                const healthMeta =
+                  health === 'healthy'
+                    ? {
+                        icon: '✅',
+                        label: isEnglish ? 'Healthy' : '正常',
+                        tone: 'border-emerald-200 bg-emerald-50',
+                        text: 'text-emerald-700',
+                      }
+                    : health === 'warning'
+                      ? {
+                          icon: '⚠️',
+                          label: isEnglish ? 'Needs attention' : '有问题',
+                          tone: 'border-amber-200 bg-amber-50',
+                          text: 'text-amber-700',
+                        }
+                      : {
+                          icon: '❌',
+                          label: isEnglish ? 'No data' : '无数据',
+                          tone: 'border-slate-200 bg-slate-50',
+                          text: 'text-slate-600',
+                        }
+
+                return (
+                  <div key={root.id} className={cn('rounded-xl border p-4', healthMeta.tone)}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-base">{healthMeta.icon}</span>
+                          <span className="text-sm font-semibold text-slate-900">{root.label}</span>
+                          <span className={cn('text-xs font-medium', healthMeta.text)}>{healthMeta.label}</span>
+                        </div>
+                        <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-slate-600">
+                          <li>
+                            {isEnglish ? 'Path:' : '路径：'}
+                            <span className="ml-1 break-all font-mono text-[11px] text-slate-700">{root.homeDir}</span>
+                          </li>
+                          <li>
+                            {isEnglish ? 'JSONL files:' : 'JSONL 文件数：'}
+                            <span className="ml-1 font-medium text-slate-900">{root.sessionJsonlFiles}</span>
+                          </li>
+                          <li>
+                            {isEnglish ? 'Config file:' : '配置文件：'}
+                            <span className="ml-1 font-medium text-slate-900">
+                              {root.hasConfig ? (isEnglish ? 'Detected' : '已发现') : (isEnglish ? 'Missing' : '未发现')}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 text-right text-xs text-slate-500 sm:min-w-[110px]">
+                        <div>{isEnglish ? 'Config status' : '配置状态'}</div>
+                        <div className="mt-1 font-medium text-slate-900">
+                          {root.hasConfig ? (isEnglish ? 'Ready' : '就绪') : (isEnglish ? 'Missing' : '缺失')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                {isEnglish ? 'No data roots were detected yet.' : '暂未扫描到可用的数据根。'}
+              </div>
+            )}
+          </div>
+
+          {(status.ecosystemNotes?.length ?? 0) > 0 && (
+            <div className="mt-4 space-y-2 border-t border-slate-200 pt-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                {isEnglish ? 'Ecosystem notes' : '生态提示'}
+              </p>
+              {status.ecosystemNotes!.map((note, index) => (
+                <div
+                  key={`${note.rootId ?? 'note'}-${index}`}
+                  className={cn(
+                    'rounded-xl border px-3 py-2 text-xs leading-relaxed',
+                    note.severity === 'warn'
+                      ? 'border-amber-200 bg-amber-50 text-amber-800'
+                      : 'border-blue-200 bg-blue-50 text-[#3b82c4]',
+                  )}
+                >
+                  <span className="mr-2">{note.severity === 'warn' ? '⚠️' : 'ℹ️'}</span>
+                  {isEnglish ? note.messageEn : note.messageZh}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <button
+              type="button"
+              onClick={() => setDataGuideOpen(open => !open)}
+              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              <span>{isEnglish ? 'How to connect real data' : '如何接入真实数据'}</span>
+              {dataGuideOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            {dataGuideOpen && (
+              <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
+                <ol className="space-y-2 list-decimal pl-5 leading-relaxed">
+                  <li>{isEnglish ? 'Install OpenClaw / ZeroClaw and run a few tasks.' : '安装 OpenClaw / ZeroClaw 并运行几个任务。'}</li>
+                  <li>{isEnglish ? 'Session logs are usually saved under ~/.openclaw/ or ~/.zeroclaw/.' : '会话日志通常会自动保存到 ~/.openclaw/ 或 ~/.zeroclaw/。'}</li>
+                  <li>{isEnglish ? 'Restart ClawClip and the real data will appear automatically.' : '重启虾片后即可自动看到真实数据。'}</li>
+                </ol>
+                <p className="mt-3 text-xs text-slate-500">
+                  {isEnglish ? 'Custom data directory:' : '自定义数据目录：'}
+                  <span className="ml-1 font-mono text-slate-700">CLAWCLIP_LOBSTER_DIRS</span>
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

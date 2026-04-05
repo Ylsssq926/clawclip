@@ -3,12 +3,21 @@ import {
   DEFAULT_DETAILED_PRICING,
   type ModelPricing,
   type DetailedModelPricing,
+  type PricingSource,
 } from '../types/index.js';
 import { log } from './logger.js';
 
 const PRICETOKEN_URL = 'https://pricetoken.ai/api/v1/text';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const FETCH_TIMEOUT_MS = 8000;
+const STATIC_DEFAULT_PRICING_UPDATED_AT = '2026-03-25T00:00:00.000Z';
+
+export interface PricingSnapshot {
+  pricing: ModelPricing;
+  detailed: DetailedModelPricing;
+  source: PricingSource;
+  updatedAt: string;
+}
 
 interface PriceTokenModel {
   modelId: string;
@@ -91,16 +100,34 @@ async function doFetch(): Promise<ModelPricing> {
   }
 }
 
-export function getModelPricing(): ModelPricing {
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.pricing;
+export function getPricingSnapshot(): PricingSnapshot {
+  if (cached) {
+    if (Date.now() - cached.fetchedAt >= CACHE_TTL_MS && !fetching) {
+      fetching = doFetch();
+    }
+
+    return {
+      pricing: cached.pricing,
+      detailed: cached.detailed,
+      source: 'pricetoken',
+      updatedAt: new Date(cached.fetchedAt).toISOString(),
+    };
   }
 
   if (!fetching) {
     fetching = doFetch();
   }
 
-  return cached?.pricing ?? DEFAULT_MODEL_PRICING;
+  return {
+    pricing: DEFAULT_MODEL_PRICING,
+    detailed: DEFAULT_DETAILED_PRICING,
+    source: 'static-default',
+    updatedAt: STATIC_DEFAULT_PRICING_UPDATED_AT,
+  };
+}
+
+export function getModelPricing(): ModelPricing {
+  return getPricingSnapshot().pricing;
 }
 
 export async function getModelPricingAsync(): Promise<ModelPricing> {
@@ -120,7 +147,7 @@ export function initPricingFetcher(): void {
 }
 
 export function getDetailedModelPricing(): DetailedModelPricing {
-  return cached?.detailed ?? DEFAULT_DETAILED_PRICING;
+  return getPricingSnapshot().detailed;
 }
 
 export async function getDetailedModelPricingAsync(): Promise<DetailedModelPricing> {

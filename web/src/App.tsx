@@ -5,6 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb, GitCompareArrows } from 'lucide-react'
 import { cn } from './lib/cn'
 import { useI18n, LanguageSwitcher } from './lib/i18n'
+import { apiGetSafe } from './lib/api'
 
 declare const __APP_VERSION__: string
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.1.0'
@@ -47,6 +48,8 @@ const tabs = [
 
 const TOUR_KEYS = ['app.tour.s1', 'app.tour.s2', 'app.tour.s3', 'app.tour.s4'] as const
 
+type DataBannerMode = 'loading' | 'demo' | 'real'
+
 function TabFallback() {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -60,18 +63,35 @@ function TabFallback() {
 }
 
 function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLanding: () => void; initialTab?: Tab }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>(initialTab)
   const [knowledgeInitialQuery, setKnowledgeInitialQuery] = useState('')
-  const [isDemo, setIsDemo] = useState(true)
+  const [dataBannerMode, setDataBannerMode] = useState<DataBannerMode>('loading')
+  const [showRealDataBanner, setShowRealDataBanner] = useState(false)
 
   useEffect(() => {
-    fetch('/api/status')
-      .then(r => r.ok ? r.json() : null)
-      .then((s: { hasRealSessionData?: boolean } | null) => {
-        if (s?.hasRealSessionData) setIsDemo(false)
+    let hideTimer: number | null = null
+
+    apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
+      .then(status => {
+        if (status?.hasRealSessionData) {
+          setDataBannerMode('real')
+          setShowRealDataBanner(true)
+          hideTimer = window.setTimeout(() => setShowRealDataBanner(false), 3000)
+          return
+        }
+
+        setDataBannerMode('demo')
       })
-      .catch(() => {})
+      .catch(() => {
+        setDataBannerMode('demo')
+      })
+
+    return () => {
+      if (hideTimer != null) {
+        window.clearTimeout(hideTimer)
+      }
+    }
   }, [])
 
   const [showTour, setShowTour] = useState(() => {
@@ -83,6 +103,16 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
   })
   const [tourStep, setTourStep] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const isEnglish = locale === 'en'
+  const isDemo = dataBannerMode === 'demo'
+  const showStatusBanner = isDemo || (dataBannerMode === 'real' && showRealDataBanner)
+  const statusBannerText = isDemo
+    ? (isEnglish
+        ? '📋 Demo data only · connect real Agent logs to switch automatically'
+        : '📋 当前为演示数据 · 接入真实 Agent 日志后自动切换')
+    : dataBannerMode === 'real'
+      ? (isEnglish ? '✅ Connected to real data' : '✅ 已连接真实数据')
+      : ''
 
   const navigateTab = useCallback((tab: Tab) => {
     setActiveTab(tab)
@@ -202,22 +232,25 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
       )}
       </AnimatePresence>
 
-      <div className="bg-gradient-to-r from-blue-500/10 via-cyan-500/5 to-transparent border-b border-blue-500/10 px-6 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {isDemo && (
-            <>
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-[#3b82c4]">{t('app.demo')}</span>
-              <span className="text-xs text-slate-500">{t('app.demo.desc')}</span>
-            </>
-          )}
-          {!isDemo && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">{t('app.realData')}</span>
-          )}
+      <div
+        className={cn(
+          'border-b px-6 py-2 flex items-center justify-between gap-3 transition-colors',
+          isDemo && 'bg-blue-50 border-blue-200',
+          !isDemo && showStatusBanner && 'bg-emerald-50 border-emerald-200',
+          !showStatusBanner && 'bg-white/80 border-slate-200',
+        )}
+      >
+        <div className="min-h-[20px] flex items-center">
+          {showStatusBanner ? (
+            <span className={cn('text-xs font-medium', isDemo ? 'text-[#3b82c4]' : 'text-emerald-700')}>
+              {statusBannerText}
+            </span>
+          ) : null}
         </div>
         <button
           type="button"
           onClick={onBackToLanding}
-          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#3b82c4] transition-colors"
+          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#3b82c4] transition-colors shrink-0"
         >
           <ArrowLeft className="w-3 h-3" /> {t('app.back')}
         </button>

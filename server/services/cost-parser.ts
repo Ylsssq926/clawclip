@@ -15,9 +15,10 @@ import {
 import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
 import { sessionParser } from './session-parser.js';
 import { DEMO_SESSIONS } from './demo-sessions.js';
-import { getModelPricing, getDetailedModelPricing } from './pricing-fetcher.js';
+import { getPricingSnapshot } from './pricing-fetcher.js';
 import { resolveModelDetail, computeDetailedCost } from './pricing-utils.js';
 import type { ModelPriceDetail } from '../types/index.js';
+import type { PricingSnapshot } from './pricing-fetcher.js';
 import type { SessionReplay } from '../types/replay.js';
 
 const ALT_TIERS: { threshold: number; models: string[] }[] = [
@@ -45,6 +46,12 @@ function suggestAlternative(
   return null;
 }
 
+interface UsageCacheEntry {
+  at: number;
+  data: TokenUsage[];
+  pricing: PricingSnapshot;
+}
+
 export class CostParser {
   private static readonly CHEAP_MODELS = [
     'deepseek-chat', 'deepseek-coder', 'qwen-turbo', 'qwen3.5-flash',
@@ -56,16 +63,11 @@ export class CostParser {
   ];
 
   private config: BudgetConfig;
-  private usageCache: { at: number; data: TokenUsage[] } | null = null;
+  private usageCache: UsageCacheEntry | null = null;
   private logDedupeKeys = new Set<string>();
   private static readonly CACHE_MS = 30_000;
 
-  private get modelPricing(): Record<string, number> {
-    return getModelPricing();
-  }
-
-  private priceForModel(model: string): number {
-    const table = this.modelPricing;
+  private priceForModel(model: string, table: PricingSnapshot['pricing']): number {
     if (table[model] != null) return table[model];
     const stripped = model.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/:.*$/, '');
     if (stripped !== model && table[stripped] != null) return table[stripped];
@@ -76,8 +78,8 @@ export class CostParser {
   }
 
   /** 返回模型的 input/output 分离价格，用于精确计价 */
-  private priceDetailForModel(model: string): ModelPriceDetail {
-    return resolveModelDetail(getDetailedModelPricing(), model);
+  private priceDetailForModel(model: string, detailedPricing: PricingSnapshot['detailed']): ModelPriceDetail {
+    return resolveModelDetail(detailedPricing, model);
   }
 
   constructor() {
@@ -155,9 +157,10 @@ export class CostParser {
     return { ...this.config };
   }
 
-  parseLogFiles(): TokenUsage[] {
+  private parseLogFiles(): Pick<UsageCacheEntry, 'data' | 'pricing'> {
     const usages: TokenUsage[] = [];
     const seen = new Set<string>();
+    const pricing = getPricingSnapshot();
     const { replays, isDemo } = this.getReplayData();
     for (const replay of replays) {
       const demoModelOverride = isDemo ? DEMO_MODEL_OVERRIDES[replay.meta.id] : undefined;
@@ -165,7 +168,7 @@ export class CostParser {
         if (step.inputTokens === 0 && step.outputTokens === 0) continue;
         const model = demoModelOverride && step.model ? demoModelOverride : step.model || 'unknown';
         const cost = demoModelOverride && step.model
-          ? computeDetailedCost(this.priceDetailForModel(model), step.inputTokens, step.outputTokens)
+          ? computeDetailedCost(this.priceDetailForModel(model, pricing.detailed), step.inputTokens, step.outputTokens)
           : step.cost;
         const key = `${replay.meta.id}|${model}|${step.timestamp.getTime()}`;
         seen.add(key);
@@ -183,38 +186,51 @@ export class CostParser {
 
     this.logDedupeKeys = seen;
     if (isDemo) {
-      return usages;
+      return { data: usages, pricing };
     }
 
     const roots = getLobsterDataRoots();
     if (roots.length === 0) {
       const fallbackLogs = path.join(os.homedir(), '.openclaw', 'logs');
       if (fs.existsSync(fallbackLogs)) {
-        this.parseDirectory(fallbackLogs, '.log', usages);
+        this.parseDirectory(fallbackLogs, '.log', usages, pricing);
       }
     } else {
       for (const root of roots) {
         const logsDir = path.join(root.homeDir, 'logs');
         if (fs.existsSync(logsDir)) {
-          this.parseDirectory(logsDir, '.log', usages);
+          this.parseDirectory(logsDir, '.log', usages, pricing);
         }
       }
     }
 
-    return usages;
+    return { data: usages, pricing };
+  }
+
+  private getCachedUsageBatch(): UsageCacheEntry {
+    const now = Date.now();
+    if (this.usageCache && now - this.usageCache.at < CostParser.CACHE_MS) {
+      return this.usageCache;
+    }
+    const parsed = this.parseLogFiles();
+    this.usageCache = { at: now, ...parsed };
+    return this.usageCache;
   }
 
   private getCachedUsages(): TokenUsage[] {
-    const now = Date.now();
-    if (this.usageCache && now - this.usageCache.at < CostParser.CACHE_MS) {
-      return this.usageCache.data;
-    }
-    const data = this.parseLogFiles();
-    this.usageCache = { at: now, data };
-    return data;
+    return this.getCachedUsageBatch().data;
   }
 
-  private parseDirectory(dir: string, ext: string, usages: TokenUsage[]): void {
+  private getCachedPricingSnapshot(): PricingSnapshot {
+    return this.getCachedUsageBatch().pricing;
+  }
+
+  private parseDirectory(
+    dir: string,
+    ext: string,
+    usages: TokenUsage[],
+    pricing: PricingSnapshot,
+  ): void {
     let files: string[];
     try {
       files = fs.readdirSync(dir).filter(f => f.endsWith(ext));
@@ -245,7 +261,7 @@ export class CostParser {
             usage.output_tokens ?? usage.completion_tokens ?? usage.outputTokens ?? usage.completionTokens ?? 0,
           );
           if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) continue;
-          const detail = this.priceDetailForModel(model);
+          const detail = this.priceDetailForModel(model, pricing.detailed);
           const cost = computeDetailedCost(detail, inputTokens, outputTokens);
 
           const rawTs = parsed.timestamp ?? parsed.created_at ?? parsed.createdAt;
@@ -278,7 +294,8 @@ export class CostParser {
   }
 
   getUsageStats(days: number = 30): CostStats {
-    const usages = this.getCachedUsages();
+    const batch = this.getCachedUsageBatch();
+    const usages = batch.data;
     const now = this.getReferenceNow(usages);
     const cutoff = now - days * 24 * 60 * 60 * 1000;
     const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
@@ -326,6 +343,8 @@ export class CostParser {
       topTasks,
       trend,
       comparedToLastMonth: prevCost > 0 ? ((totalCost - prevCost) / prevCost) * 100 : 0,
+      pricingSource: batch.pricing.source,
+      pricingUpdatedAt: batch.pricing.updatedAt,
     };
   }
 
@@ -409,6 +428,7 @@ export class CostParser {
 
   getInsights(days: number = 30): CostInsight[] {
     const insights: CostInsight[] = [];
+    const pricing = this.getCachedPricingSnapshot();
     const stats = this.getUsageStats(days);
     const {
       totalCost,
@@ -528,7 +548,9 @@ export class CostParser {
       });
     }
 
-    const unknownModels = modelKeys.filter(m => this.priceForModel(m) >= 2.0 && this.modelPricing[m] == null);
+    const unknownModels = modelKeys.filter(
+      m => this.priceForModel(m, pricing.pricing) >= 2.0 && pricing.pricing[m] == null,
+    );
     if (unknownModels.length > 0) {
       insights.push({
         type: 'warning',
@@ -542,13 +564,14 @@ export class CostParser {
   }
 
   getSavingSuggestions(days: number = 30): SavingsReport {
+    const pricing = this.getCachedPricingSnapshot();
     const models = this.getModelBreakdown(days);
     const suggestions: SavingSuggestion[] = [];
     let totalPotentialSaving = 0;
 
     for (const [model, data] of Object.entries(models)) {
-      const pricePerMillion = this.priceForModel(model);
-      const alt = suggestAlternative(pricePerMillion, this.modelPricing);
+      const pricePerMillion = this.priceForModel(model, pricing.pricing);
+      const alt = suggestAlternative(pricePerMillion, pricing.pricing);
       if (!alt) continue;
 
       const altCost = data.tokens * alt.price / 1_000_000;

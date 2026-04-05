@@ -23,6 +23,8 @@ interface CostSummary {
   comparedToLastMonth: number
   budget: { isAlert: boolean; percentage: number; message: string }
   topTasks: { taskId: string; taskName: string; cost: number; tokens: number }[]
+  pricingSource?: 'pricetoken' | 'static-default'
+  pricingUpdatedAt?: string
 }
 
 interface CostInsight {
@@ -171,6 +173,20 @@ export default function CostMonitor() {
       }))
     : []
   const averageDailyCost = daily.length > 0 ? daily.reduce((sum, item) => sum + item.cost, 0) / daily.length : 0
+  const pricingSourceLabel = summary?.pricingSource
+    ? summary.pricingSource === 'pricetoken'
+      ? (isZh ? 'PriceToken 动态价格' : 'Dynamic PriceToken pricing')
+      : (isZh ? '内置静态默认表' : 'Built-in static defaults')
+    : null
+  const pricingUpdatedAtLabel = (() => {
+    if (!summary?.pricingUpdatedAt) return null
+    const timestamp = new Date(summary.pricingUpdatedAt)
+    if (Number.isNaN(timestamp.getTime())) return null
+    return new Intl.DateTimeFormat(isZh ? 'zh-CN' : 'en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(timestamp)
+  })()
 
   const openBudgetModal = () => {
     setBudgetError(null)
@@ -531,6 +547,13 @@ export default function CostMonitor() {
 
       {/* Pricing disclaimer */}
       <div className="text-[11px] text-slate-600 leading-relaxed mt-4 px-1 space-y-1">
+        {pricingSourceLabel && (
+          <p>
+            {isZh ? '定价来源：' : 'Pricing source: '}
+            <span className="font-medium text-slate-700">{pricingSourceLabel}</span>
+            {pricingUpdatedAtLabel ? ` · ${isZh ? '更新时间' : 'Updated'} ${pricingUpdatedAtLabel}` : ''}
+          </p>
+        )}
         <p>{t('cost.disclaimer.estimate')}</p>
         <p>{t('cost.disclaimer.source')}</p>
       </div>

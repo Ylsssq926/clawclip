@@ -32,6 +32,7 @@ export interface BenchmarkResult {
   topModel: string;
   summary: string;
   summaryEn?: string;
+  dataSource?: 'demo' | 'real';
 }
 
 export interface BenchmarkHistory {

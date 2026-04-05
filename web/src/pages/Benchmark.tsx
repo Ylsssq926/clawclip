@@ -332,14 +332,19 @@ export default function Benchmark() {
         </div>
         <div className="flex items-center gap-2">
           {result && (
-            <a
-              href={`/share/benchmark/${encodeURIComponent(result.id)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-accent hover:opacity-90 rounded-lg text-sm font-medium transition-opacity text-white flex items-center gap-2"
-            >
-              <Share2 className="w-4 h-4" /> {t('benchmark.share')}
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={`/share/benchmark/${encodeURIComponent(result.id)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-accent hover:opacity-90 rounded-lg text-sm font-medium transition-opacity text-white flex items-center gap-2"
+              >
+                <Share2 className="w-4 h-4" /> {t('benchmark.share')}
+              </a>
+              {dataSource === 'demo' && (
+                <span className="text-xs text-slate-500">{isZh ? '(演示数据)' : '(Demo data)'}</span>
+              )}
+            </div>
           )}
           <ShimmerButton
             variant="secondary"
@@ -363,7 +368,7 @@ export default function Benchmark() {
       {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-600 text-sm">{error}</div>}
 
       {dataSource === 'demo' && (
-        <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.06] px-4 py-3 text-xs text-cyan-200/90">
+        <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.06] px-4 py-3 text-xs text-cyan-700">
           {t('demo.hint.benchmark')}
         </div>
       )}

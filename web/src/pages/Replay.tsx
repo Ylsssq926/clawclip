@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Play, Pause, Bot, Clock, ChevronDown, ChevronUp, Zap, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
@@ -238,7 +238,12 @@ function DetailSkeleton() {
   )
 }
 
-export default function Replay() {
+interface ReplayProps {
+  initialSessionId?: string
+  onInitialSessionHandled?: () => void
+}
+
+export default function Replay({ initialSessionId, onInitialSessionHandled }: ReplayProps) {
   const { t, locale } = useI18n()
   const [view, setView] = useState<'list' | 'detail'>('list')
   const [sessions, setSessions] = useState<SessionMeta[]>([])
@@ -360,7 +365,7 @@ export default function Replay() {
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [view, replay?.meta.id, visibleSteps, autoPlay, showAllSteps])
 
-  const openSession = (id: string) => {
+  const openSession = useCallback((id: string) => {
     setView('detail')
     setLoading(true)
     setError(null)
@@ -374,7 +379,14 @@ export default function Replay() {
       .finally(() => setLoading(false))
     apiGetSafe<{ insights: typeof insights }>(`/api/replay/sessions/${encoded}/insights`)
       .then(d => { if (d?.insights) setInsights(d.insights) })
-  }
+  }, [t])
+
+  useEffect(() => {
+    const nextSessionId = initialSessionId?.trim()
+    if (!nextSessionId) return
+    openSession(nextSessionId)
+    onInitialSessionHandled?.()
+  }, [initialSessionId, onInitialSessionHandled, openSession])
 
   if (view === 'detail') {
     const totalSteps = replay?.steps.length ?? 0

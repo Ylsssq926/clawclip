@@ -379,6 +379,13 @@ router.post('/submit', (req, res) => {
       res.status(400).json({ error: '暂无评测结果 / No benchmark results yet' });
       return;
     }
+    if (latest.dataSource === 'demo' || latest.id.startsWith('benchmark-demo')) {
+      res.status(400).json({
+        error: 'Demo 评测结果不能提交到排行榜 / Demo results cannot be submitted to leaderboard',
+        code: 'DEMO_NOT_SUBMITTABLE',
+      });
+      return;
+    }
     const invalidReason = validateLatestForSubmit(latest);
     if (invalidReason) {
       res.status(400).json({ error: invalidReason });

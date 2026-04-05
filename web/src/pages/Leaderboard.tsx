@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Medal, Loader2, AlertCircle, X } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
-import { apiGet, apiPost, parseApiErrorMessage } from '../lib/api'
+import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
 
 interface LeaderboardEntry {
   id: string
@@ -52,6 +52,11 @@ export default function Leaderboard() {
   const [submitting, setSubmitting] = useState(false)
   const [submitMsg, setSubmitMsg] = useState<string | null>(null)
   const [submitOk, setSubmitOk] = useState(false)
+  const [hasRealSessionData, setHasRealSessionData] = useState<boolean | null>(null)
+
+  const submitDisabledHint = locale === 'zh' ? '需要真实数据才能提交' : 'Real data required to submit'
+  const canSubmit = hasRealSessionData === true
+  const submitBlocked = hasRealSessionData === false
 
   const fmtRelative = useCallback((iso: string) => {
     const diff = Date.now() - new Date(iso).getTime()
@@ -78,9 +83,13 @@ export default function Leaderboard() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiGet<{ entries?: LeaderboardEntry[]; isDemo?: boolean }>('/api/leaderboard?limit=50')
+      const [data, status] = await Promise.all([
+        apiGet<{ entries?: LeaderboardEntry[]; isDemo?: boolean }>('/api/leaderboard?limit=50'),
+        apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status'),
+      ])
       setEntries(Array.isArray(data.entries) ? data.entries : [])
       setIsDemo(Boolean(data.isDemo))
+      setHasRealSessionData(status?.hasRealSessionData === true)
     } catch (err) {
       setError(parseApiErrorMessage(err, t('leaderboard.error')))
       setEntries([])
@@ -94,6 +103,7 @@ export default function Leaderboard() {
   }, [loadList])
 
   const openModal = () => {
+    if (!canSubmit) return
     setModalOpen(true)
     setNickname('')
     setSubmitMsg(null)
@@ -116,6 +126,12 @@ export default function Leaderboard() {
   }
 
   const submit = async () => {
+    if (!canSubmit) {
+      setSubmitOk(false)
+      setSubmitMsg(submitDisabledHint)
+      return
+    }
+
     const n = nickname.trim()
     if (n.length < 1 || n.length > 20) {
       setSubmitOk(false)
@@ -156,13 +172,21 @@ export default function Leaderboard() {
         </div>
       )}
         </div>
-        <button
-          type="button"
-          onClick={openModal}
-          className="shrink-0 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#3b82c4] via-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/20 hover:opacity-95 transition-opacity"
-        >
-          {t('leaderboard.submit')}
-        </button>
+        <div className="shrink-0" title={submitBlocked ? submitDisabledHint : undefined}>
+          <button
+            type="button"
+            onClick={openModal}
+            disabled={!canSubmit}
+            className={cn(
+              'px-5 py-2.5 rounded-xl text-sm font-medium transition-opacity disabled:pointer-events-none',
+              canSubmit
+                ? 'text-white bg-gradient-to-r from-[#3b82c4] via-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/20 hover:opacity-95'
+                : 'text-slate-400 bg-slate-200 cursor-not-allowed',
+            )}
+          >
+            {t('leaderboard.submit')}
+          </button>
+        </div>
       </div>
 
       {loading && (
@@ -337,8 +361,9 @@ export default function Leaderboard() {
                 </button>
                 <button
                   type="button"
-                  disabled={submitting || previewLoading}
+                  disabled={submitting || previewLoading || !canSubmit}
                   onClick={submit}
+                  title={submitBlocked ? submitDisabledHint : undefined}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#3b82c4] to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {submitting ? t('leaderboard.modal.submitting') : t('leaderboard.modal.confirm')}

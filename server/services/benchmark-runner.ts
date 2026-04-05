@@ -590,6 +590,7 @@ function computeFromReplays(replays: SessionReplay[]): BenchmarkResult {
     topModel: pickTopModel(replays),
     summary: buildSummary(overall, dimensions),
     summaryEn: buildSummaryEn(overall, dimensions),
+    dataSource: 'real',
   };
 }
 
@@ -598,8 +599,9 @@ function buildLiveDemoResult(reference: Date = new Date()): BenchmarkResult {
   const result = computeFromReplays(replays.length ? replays : []);
   return {
     ...result,
-    id: `benchmark-demo-live-${reference.getTime()}`,
+    id: 'benchmark-demo-live',
     runAt: reference,
+    dataSource: 'demo',
   };
 }
 
@@ -880,6 +882,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
       topModel: row.topModel,
       summary: row.summary,
       summaryEn: row.summaryEn,
+      dataSource: 'demo',
     };
   });
 }
@@ -925,6 +928,7 @@ function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
     topModel: String(o.topModel),
     summary: String(o.summary),
     summaryEn: typeof o.summaryEn === 'string' ? o.summaryEn : undefined,
+    dataSource: o.dataSource === 'demo' || o.dataSource === 'real' ? o.dataSource : undefined,
   };
 }
 
@@ -980,7 +984,9 @@ export class BenchmarkRunner {
   getHistory(): BenchmarkHistory {
     const metas = sessionParser.getSessions();
     if (isBuiltinDemoOnly(metas)) {
-      return { results: buildDemoHistoryResults() };
+      const reference = new Date();
+      const liveResult = buildLiveDemoResult(reference);
+      return { results: [...buildDemoHistoryResults(reference), liveResult] };
     }
     return this.readHistoryFile();
   }

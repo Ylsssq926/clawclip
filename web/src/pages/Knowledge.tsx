@@ -44,9 +44,11 @@ const RECOMMENDED_SEARCHES = ['React', '小红书', 'Notion', 'Python', 'Kuberne
 
 interface Props {
   initialQuery?: string
+  navigateTab: (tab: 'replay') => void
+  onSelectReplaySession: (sessionId: string) => void
 }
 
-export default function Knowledge({ initialQuery }: Props) {
+export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySession }: Props) {
   const { t, locale } = useI18n()
   const [sessionCount, setSessionCount] = useState<number | null>(null)
   const [qInput, setQInput] = useState('')
@@ -207,6 +209,11 @@ export default function Knowledge({ initialQuery }: Props) {
   const emptySearchHint = locale === 'en'
     ? 'You can click the recommended searches above, or import more sessions to enrich the knowledge base first.'
     : '你可以点上方推荐搜索词，或先导入更多会话，让知识库更容易搜到内容。'
+  const replayActionLabel = locale.startsWith('zh') ? '查看回放' : 'Open replay'
+  const openReplayFromSearch = (sessionId: string) => {
+    onSelectReplaySession(sessionId)
+    navigateTab('replay')
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -293,8 +300,19 @@ export default function Knowledge({ initialQuery }: Props) {
           <ul className="space-y-4 mt-2">
             {searchResults.map(item => (
               <li key={item.sessionId} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-medium text-slate-800 mb-2">{highlightText(item.summary || t('knowledge.noSummary'), activeQuery)}</p>
-                <p className="text-[11px] text-slate-600 font-mono mb-2">{item.sessionId}</p>
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 mb-2">{highlightText(item.summary || t('knowledge.noSummary'), activeQuery)}</p>
+                    <p className="text-[11px] text-slate-600 font-mono break-all">{item.sessionId}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openReplayFromSearch(item.sessionId)}
+                    className="inline-flex items-center justify-center rounded-lg border border-cyan-200 bg-white px-3 py-1.5 text-xs font-medium text-cyan-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50"
+                  >
+                    {replayActionLabel}
+                  </button>
+                </div>
                 <ul className="space-y-2">
                   {(item.matches ?? []).map((m, idx) => (
                     <li key={`${m.stepIndex}-${idx}`} className="text-xs text-slate-500 border-l-2 border-cyan-500/40 pl-3">

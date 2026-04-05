@@ -27,10 +27,6 @@ const ALT_TIERS: { threshold: number; models: string[] }[] = [
   { threshold: 1, models: ['deepseek-chat', 'qwen-turbo', 'yi-lightning'] },
 ];
 
-const DEMO_MODEL_OVERRIDES: Record<string, string> = {
-  [encodeURIComponent('demo/email-helper')]: 'qwen-max',
-};
-
 function suggestAlternative(
   pricePerMillion: number,
   pricing: Record<string, number>,
@@ -163,13 +159,10 @@ export class CostParser {
     const pricing = getPricingSnapshot();
     const { replays, isDemo } = this.getReplayData();
     for (const replay of replays) {
-      const demoModelOverride = isDemo ? DEMO_MODEL_OVERRIDES[replay.meta.id] : undefined;
       for (const step of replay.steps) {
         if (step.inputTokens === 0 && step.outputTokens === 0) continue;
-        const model = demoModelOverride && step.model ? demoModelOverride : step.model || 'unknown';
-        const cost = demoModelOverride && step.model
-          ? computeDetailedCost(this.priceDetailForModel(model, pricing.detailed), step.inputTokens, step.outputTokens)
-          : step.cost;
+        const model = step.model || 'unknown';
+        const cost = step.cost;
         const key = `${replay.meta.id}|${model}|${step.timestamp.getTime()}`;
         seen.add(key);
         usages.push({
@@ -386,10 +379,6 @@ export class CostParser {
           if (step.model && !models[step.model]) {
             models[step.model] = { tokens: 0, cost: 0 };
           }
-        }
-        const override = DEMO_MODEL_OVERRIDES[replay.meta.id];
-        if (override && !models[override]) {
-          models[override] = { tokens: 0, cost: 0 };
         }
       }
     }

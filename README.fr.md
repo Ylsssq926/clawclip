@@ -4,37 +4,38 @@
 
 # ClawClip
 
-**Votre AI Agent a exécuté 47 étapes. Vous n'en avez vu aucune.**
+**Outil local de diagnostic pour AI Agents**
 
-Relecture de sessions · Benchmarks hors ligne · Suivi des coûts — pour OpenClaw, ZeroClaw et au-delà.
+Run Insights · Agent Scorecard · Cost Report — pour OpenClaw, ZeroClaw et des workflows JSONL locaux réellement pragmatiques.
 
 <p>
   <a href="https://clawclip.luelan.online">Démo en ligne</a> ·
-  <a href="#démarrage-rapide">Démarrage rapide</a> ·
-  <a href="#pourquoi-clawclip">Pourquoi ClawClip</a> ·
+  <a href="#quick-start">Démarrage rapide</a> ·
+  <a href="#core-capabilities">Capacités clés</a> ·
+  <a href="#roadmap">Feuille de route</a> ·
   <a href="./README.md">English</a> ·
   <a href="./README.zh-CN.md">中文</a> ·
   <a href="./README.ja.md">日本語</a> ·
   <a href="./README.ko.md">한국어</a> ·
   <a href="./README.es.md">Español</a> ·
-  <b>Français</b> ·
+  <strong>Français</strong> ·
   <a href="./README.de.md">Deutsch</a>
 </p>
 
 <p>
-  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-blue?style=flat-square" alt="Live Demo" /></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square" alt="TypeScript strict" />
-  <img src="https://img.shields.io/badge/i18n-7%20languages-orange?style=flat-square" alt="i18n 7 languages" />
+  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="Démo en ligne" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="Licence MIT" /></a>
+  <img src="https://img.shields.io/badge/local-100%25%20local-0f172a?style=flat-square" alt="100% local" />
+  <img src="https://img.shields.io/badge/agents-OpenClaw%20%7C%20ZeroClaw-3b82c4?style=flat-square" alt="OpenClaw et ZeroClaw" />
 </p>
 
 </div>
 
----
+> ClawClip est un outil de diagnostic local-first pour les AI Agents.  
+> Il transforme des logs de session JSONL en preuves vérifiables, note votre agent sur 6 dimensions et suit chaque centime dépensé.  
+> 100% local. Zéro cloud. Zéro appel API.
 
-> Zéro cloud. Zéro appel API. Zéro coût. Les données de votre agent restent sur votre machine.
-
----
+<a id="quick-start"></a>
 
 ## Démarrage rapide
 
@@ -44,108 +45,81 @@ cd clawclip && npm install
 npm start
 ```
 
-Ouvrez `http://localhost:8080` — ClawClip est livré avec des sessions de démonstration, vous pouvez donc explorer la relecture, les benchmarks et les vues de coûts immédiatement.
+Ouvrez `http://localhost:8080` pour examiner d'abord les sessions de démonstration incluses, puis charger vos propres logs OpenClaw / ZeroClaw.
 
----
+<a id="core-capabilities"></a>
 
-## Le problème
+## Capacités clés
 
-Votre agent a tourné toute la journée. Les logs existent. La vérité, non.
+| Capacité | Ce que cela vous permet de faire |
+| --- | --- |
+| 🔍 **Analyse d'exécution (Run Insights)** | Examiner chaque étape de raisonnement, appel d'outil, erreur, relance et résultat comme une chaîne de preuves exploitable |
+| 📊 **Bulletin de l'agent (Agent Scorecard)** | Noter de façon heuristique l'écriture, le code, l'usage des outils, la recherche, la sécurité et le rapport coût-performance à partir du comportement réel |
+| 💰 **Rapport de coûts (Cost Report)** | Ventiler la dépense par modèle, suivre les tendances, déclencher des alertes budgétaires et repérer des pistes d'économie |
+| 📈 **Efficacité des prompts (Prompt Efficiency)** | Comparer la qualité produite au volume de tokens et au coût investis dans chaque prompt |
+| 🔄 **Comparaison de versions (Version Compare)** | Comparer côte à côte modèles, prompts, configurations ou exécutions pour voir ce qui progresse et ce qui régresse |
+| 📚 **Bibliothèque de modèles + base de connaissances (Template Library + Knowledge Base)** | Réutiliser des modèles qui fonctionnent, rechercher dans l'historique et construire une mémoire locale d'itération |
 
-Un dossier se remplit de sessions JSONL. Quelque part à l'intérieur se cachent des échecs d'outils, des régressions de prompts, des pics de tokens, et peut-être cette exécution où votre agent s'est vraiment amélioré. Mais quand vous ouvrez les fichiers bruts, tout se ressemble : horodatages, blobs, bruit.
+## Compatibilité
 
-Alors vous commencez à vous poser les questions que tout constructeur d'agents se pose tôt ou tard : **Où est passé l'argent ? Le nouveau prompt a-t-il aidé ? Cet agent progresse-t-il, ou est-ce que je me souviens juste des bonnes exécutions ?**
+ClawClip privilégie les structures de session officielles de **OpenClaw** et **ZeroClaw**.  
+La prise en charge d'autres runtimes locaux basés sur JSONL sera élargie progressivement, selon la couverture réelle des formats.
 
-Il est 2 heures du matin, et vous faites du grep dans du JSON à la main, sautant d'un terminal à l'autre, essayant de reconstituer une histoire que votre agent a déjà vécue une fois.
+## Méthode de notation
 
-ClawClip règle tout ça. Rejouez l'exécution, notez le comportement, inspectez le coût et observez la tendance — en quelques minutes au lieu de minuit.
-
----
-
-## Fonctionnalités
-
-| | Fonctionnalité | Ce que ça vous apporte |
-| --- | --- | --- |
-| 🎬 | **Relecture de session** | Lignes du temps interactives avec raisonnement, appels d'outils, résultats et traces de tokens |
-| 📊 | **Benchmark 6D** | Notation sur six dimensions avec rangs, graphiques radar et suivi d'évolution |
-| 💸 | **Suivi des coûts** | Tendances de tokens, ventilation par modèle, alertes budgétaires et suggestions d'économies |
-| ☁️ | **Nuage de mots** | Mots-clés extraits automatiquement, catégories et étiquetage de sessions |
-| 🏆 | **Classement** | Soumettez vos scores et comparez les performances avec la communauté |
-| 🪄 | **Économies intelligentes** | Recommandations de modèles alternatifs basées sur les prix en temps réel |
-| 📚 | **Base de connaissances** | Importez des JSON de session, recherchez des exécutions et construisez une couche de mémoire locale |
-| 🧩 | **Marché de gabarits** | Scénarios d'agents réutilisables et gestion des skills |
-
----
-
-## Pourquoi ClawClip
-
-### 100% Local
-Les données de vos sessions restent sur votre machine. Pas de téléversement cloud, pas de mur d'inscription, pas de pistage.
-
-### Zéro coût
-Les benchmarks et analyses tournent hors ligne. Pas d'appels API LLM. Pas de facture surprise juste pour comprendre l'exécution d'hier soir.
-
-### Agnostique de framework
-Conçu pour OpenClaw, fonctionne avec ZeroClaw, et s'adapte à tout workflow d'agents qui écrit des sessions JSONL.
-
----
+> L'Agent Scorecard repose sur une approche de **Heuristic Scorecard**. Il analyse des signaux comportementaux dans les logs de session — comme la qualité des réponses, l'usage des outils, les indices de sécurité et la structure de coût. Ce n'est pas un benchmark strict basé sur un jeu de tests standardisé ; c'est un signal rapide de diagnostic de la qualité d'exécution.
 
 ## Sources de données
 
 | Source | Notes |
 | --- | --- |
-| `~/.openclaw/` | Détecté automatiquement au démarrage |
-| `OPENCLAW_STATE_DIR` | Remplace le répertoire de sessions par défaut |
-| `CLAWCLIP_LOBSTER_DIRS` | Ajoute des dossiers supplémentaires à scanner |
-| Sessions de démo intégrées | Explorez le produit immédiatement, même sans données réelles |
-| Configurations SQLite uniquement | ClawClip se concentre actuellement sur le chemin officiel des sessions JSONL |
+| `~/.openclaw/` | Répertoire de session OpenClaw par défaut, détecté automatiquement au démarrage |
+| `OPENCLAW_STATE_DIR` | Remplace le chemin d'état OpenClaw par défaut |
+| `CLAWCLIP_LOBSTER_DIRS` | Ajoute des dossiers locaux supplémentaires à analyser |
+| Sessions de démonstration intégrées | Permettent d'explorer Run Insights, Scorecard et Cost Report sans importer de données réelles |
+| Exportations ZeroClaw / dossiers JSONL additionnels | Compatibilité étendue progressivement à mesure que le parseur mûrit |
 
----
-
-## Stack technique
+## Tech Stack
 
 Express + TypeScript · React 18 · Vite · Tailwind CSS · Recharts · Framer Motion · Lucide React
 
----
+<a id="roadmap"></a>
 
 ## Feuille de route
 
-- [x] Moteur de relecture de sessions avec sessions de démo intégrées
-- [x] Système de benchmark hors ligne en six dimensions
-- [x] Suivi des coûts, alertes et suggestions d'économies
-- [x] Nuage de mots, auto-étiquetage et recherche dans la base de connaissances
-- [x] Classement, cartes de partage et marché de gabarits
-- [ ] Intégrations plus profondes avec runtime / passerelle
-- [ ] Plus d'adaptateurs d'écosystème au-delà des workflows JSONL actuels
-- [ ] Flux plus riches de comparaison et de revue au niveau équipe
+### v1.0 — Maturité de l'outil
+- Stabiliser Run Insights, Agent Scorecard et Cost Report comme trio central du diagnostic local
+- Améliorer la revue des preuves, l'import des données et la compatibilité OpenClaw / ZeroClaw
+- Rendre le flux local-first rapide, lisible et fiable au quotidien
 
----
+### v1.5 — Boucle d'optimisation
+- Renforcer Prompt Efficiency, Version Compare et les recommandations d'économies
+- Relier le diagnostic à des recommandations actionnables et à la validation après changement
+- Faire de Template Library + Knowledge Base une boucle d'itération concrète
+
+### v2.0 — Travail en équipe
+- Ajouter des vues de revue pour les équipes, des rapports partageables et des comparaisons de référence
+- Prendre en charge des bibliothèques de scénarios, des évaluations récurrentes et des synthèses multi-exécutions
+- Aider les équipes à piloter ensemble la qualité et le coût des agents
 
 ## L'histoire de la crevette
 
-> Je suis un homard sorti de l'écosystème OpenClaw par mon propriétaire.
+> J'étais une petite crevette repêchée dans la marée OpenClaw.
 >
-> Mon propriétaire a dit : « Tu tournes en arrière-plan toute la journée. Personne ne voit ce que tu fais. »
+> Mon propriétaire a dit : « Tu travailles toute la journée, mais personne ne sait si tu progresses vraiment ou si tu coûtes juste plus cher. »
 >
-> J'ai répondu : « Alors enregistre mon travail et montre-le. »
+> J'ai répondu : « Alors arrêtez de fixer les logs bruts. Transformez mes exécutions en preuves, donnez-moi un bulletin et montrez la facture. »
 >
-> Mon propriétaire a dit : « On l'a enregistré, mais on ne sait toujours pas si tu es vraiment bon. »
->
-> J'ai dit : « Alors teste-moi — les six matières. Je n'ai pas peur. »
->
-> Et c'est ainsi qu'est né ClawClip.
+> C'est ainsi que ClawClip est devenu un bureau local pour revoir ce qu'un agent a fait, à quel niveau, et à quel coût.
 >
 > — 🍤 Mascotte ClawClip
 
----
+## Community
 
-## Communauté
+- Groupe QQ : `892555092`
+- Problèmes et suggestions : [GitHub Issues](https://github.com/Ylsssq926/clawclip/issues)
 
-Groupe QQ : `892555092`
-
----
-
-## Licence
+## License
 
 [MIT](./LICENSE)
 

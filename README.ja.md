@@ -4,34 +4,36 @@
 
 # ClawClip
 
-**あなたの AI Agent が 47 ステップ実行した。あなたは何も見ていない。**
+**AI Agent のローカル診断台**
 
-セッション再生 · オフラインベンチマーク · コスト追跡 — OpenClaw、ZeroClaw、その先へ。
+実行インサイト · Agent 成績表 · コストレポート — OpenClaw、ZeroClaw、そして実用的なローカル JSONL ワークフローのために。
 
 <p>
   <a href="https://clawclip.luelan.online">ライブデモ</a> ·
   <a href="#quick-start">クイックスタート</a> ·
-  <a href="#why-clawclip">ClawClip を選ぶ理由</a> ·
+  <a href="#core-capabilities">コア機能</a> ·
+  <a href="#roadmap">ロードマップ</a> ·
   <a href="./README.md">English</a> ·
   <a href="./README.zh-CN.md">中文</a> ·
   <strong>日本語</strong> ·
-  <a href="./README.ko.md">한국어</a>
+  <a href="./README.ko.md">한국어</a> ·
+  <a href="./README.es.md">Español</a> ·
+  <a href="./README.fr.md">Français</a> ·
+  <a href="./README.de.md">Deutsch</a>
 </p>
 
 <p>
-  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-blue?style=flat-square" alt="ライブデモ" /></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT ライセンス" /></a>
-  <img src="https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square" alt="TypeScript strict" />
-  <img src="https://img.shields.io/badge/i18n-7%20languages-orange?style=flat-square" alt="i18n 7 languages" />
+  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="ライブデモ" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT ライセンス" /></a>
+  <img src="https://img.shields.io/badge/local-100%25%20local-0f172a?style=flat-square" alt="100% local" />
+  <img src="https://img.shields.io/badge/agents-OpenClaw%20%7C%20ZeroClaw-3b82c4?style=flat-square" alt="OpenClaw and ZeroClaw" />
 </p>
 
 </div>
 
----
-
-> クラウドゼロ。API 呼び出しゼロ。コストゼロ。Agent のデータはあなたのマシンに残ります。
-
----
+> ClawClip は AI Agent の「能力成績表」と「コスト請求書」です。  
+> 単なるログ再生ではありません。文章作成、コーディング、ツール利用、検索、安全性、費用対効果の 6 次元で、あなたの Agent が何点なのか、いくら使ったのか、前回より改善したのかを示します。  
+> 100% ローカル実行。データは外部に出ません。
 
 <a id="quick-start"></a>
 
@@ -43,110 +45,81 @@ cd clawclip && npm install
 npm start
 ```
 
-`http://localhost:8080` を開いてください。ClawClip にはデモセッションが同梱されているので、再生・ベンチマーク・コスト表示をすぐに試せます。
+`http://localhost:8080` を開くと、まず同梱のデモセッションをローカルで確認でき、その後に自分の OpenClaw / ZeroClaw ログを読み込めます。
 
----
+<a id="core-capabilities"></a>
 
-## 問題
+## コア機能
 
-Agent は一日中動いた。ログは残っている。けれど、真相は見えていない。
+| 機能 | できること |
+| --- | --- |
+| 🔍 **実行インサイト（Run Insights）** | 思考、ツール呼び出し、エラー、リトライ、結果を 1 ステップずつ確認し、レビュー可能な証拠チェーンにまとめます |
+| 📊 **Agent 成績表（Agent Scorecard）** | 実際の実行ログから、文章作成 / コーディング / ツール利用 / 検索 / 安全性 / 費用対効果の 6 次元をヒューリスティックに採点します |
+| 💰 **コストレポート（Cost Report）** | モデル別の費用内訳、推移、予算への気づき、節約ポイントを把握できます |
+| 📈 **Prompt 効率（Prompt Efficiency）** | Prompt に投入したトークンやコストに対して、結果が見合っているかを評価します |
+| 🔄 **バージョン比較（Version Compare）** | モデル、Prompt、設定、実行結果を並べて比較し、何が改善し何が後退したかを見極めます |
+| 📚 **テンプレートライブラリ + ナレッジベース（Template Library + Knowledge Base）** | うまくいったテンプレートを再利用し、過去セッションを検索し、ローカルの改善知識を蓄積します |
 
-フォルダには JSONL セッションが積み上がっていく。そのどこかに、ツールの失敗、プロンプトの劣化、トークンの急増、そしてもしかすると Agent が本当に良くなったあの 1 回も埋もれている。けれど生のファイルを開くと、見えるのはどれも同じ。タイムスタンプ、塊、ノイズ。
+## 互換性
 
-だから遅かれ早かれ、あらゆる Agent ビルダーが同じ問いにぶつかります。**お金はどこで消えた？ 新しいプロンプトは効いた？ この Agent は良くなっているのか、それとも自分がうまくいった実行だけ覚えているのか？**
+ClawClip は **OpenClaw** と **ZeroClaw** の公式セッション構造を優先してサポートします。  
+その他のローカル JSONL ベース Agent については、実際のフォーマット対応状況に合わせて段階的に拡張します。
 
-気づけば深夜 2 時。端末を行き来しながら手で JSON をあさり、Agent がすでに一度生きた物語を自分で復元しようとしている。
+## スコアリング方法
 
-ClawClip はその全部を片づけます。実行を再生し、挙動を採点し、コストを確認し、変化の流れまで見える。真夜中ではなく、数分で。
-
----
-
-## 機能
-
-| | 機能 | 得られるもの |
-| --- | --- | --- |
-| 🎬 | **セッション再生** | 思考・ツール呼び出し・出力・トークントレースを追えるインタラクティブタイムライン |
-| 📊 | **6次元ベンチマーク** | 6 つの観点によるスコアリング、ランク、レーダーチャート、進化の追跡 |
-| 💸 | **コストモニター** | トークン推移、モデル別の内訳、予算アラート、節約提案 |
-| ☁️ | **ワードクラウド** | 自動抽出キーワード、カテゴリ分け、セッションラベリング |
-| 🏆 | **リーダーボード** | スコア投稿とコミュニティ比較 |
-| 🪄 | **スマート節約** | リアルタイム価格をもとにした代替モデルの提案 |
-| 📚 | **ナレッジベース** | セッション JSON の取り込み、実行の検索、ローカルメモリ層の構築 |
-| 🧩 | **テンプレートマーケット** | 再利用できる Agent シナリオとスキル管理 |
-
----
-
-<a id="why-clawclip"></a>
-
-## ClawClip を選ぶ理由
-
-### 100% ローカル
-セッションデータはあなたのマシンに残ります。クラウドへのアップロードも、アカウントの壁も、追跡もありません。
-
-### コストゼロ
-ベンチマークも分析もオフラインで動きます。LLM API の呼び出しは不要。昨夜の実行を理解するためだけに請求が増えることはありません。
-
-### フレームワーク非依存
-OpenClaw 向けに作られていますが、ZeroClaw でも使えます。JSONL セッションを書き出す Agent ワークフローなら、そのまま馴染みます。
-
----
+> Agent 成績表は **Heuristic Scorecard** に基づいています。返信品質、ツール利用、安全性の兆候、コスト構造など、セッションログ内の行動シグナルを分析します。標準化されたテストセットによる厳密なベンチマークではなく、実行品質を素早く診断するためのシグナルです。
 
 ## データソース
 
-| ソース | 補足 |
+| ソース | 説明 |
 | --- | --- |
-| `~/.openclaw/` | 起動時に自動検出 |
-| `OPENCLAW_STATE_DIR` | 既定のセッションディレクトリを上書き |
-| `CLAWCLIP_LOBSTER_DIRS` | 追加フォルダをスキャン対象に追加 |
-| 内蔵デモセッション | 実データがなくてもすぐに製品を試せる |
-| SQLite のみの構成 | 現在の ClawClip は公式の JSONL セッションパスに注力 |
+| `~/.openclaw/` | 起動時に自動検出される OpenClaw の既定セッションディレクトリ |
+| `OPENCLAW_STATE_DIR` | OpenClaw の既定状態パスを上書き |
+| `CLAWCLIP_LOBSTER_DIRS` | 追加のローカルセッションフォルダをスキャン対象に追加 |
+| 同梱デモセッション | 実データを読み込まなくても Run Insights、Scorecard、Cost Report を体験可能 |
+| ZeroClaw のエクスポート / 追加 JSONL フォルダ | パーサ対応の成熟に合わせて順次サポート |
 
----
-
-## 技術スタック
+## Tech Stack
 
 Express + TypeScript · React 18 · Vite · Tailwind CSS · Recharts · Framer Motion · Lucide React
 
----
+<a id="roadmap"></a>
 
 ## ロードマップ
 
-- [x] 内蔵デモセッション付きセッション再生エンジン
-- [x] オフラインの 6 次元ベンチマークシステム
-- [x] コストモニター、アラート、節約提案
-- [x] ワードクラウド、自動タグ付け、ナレッジベース検索
-- [x] リーダーボード、シェアカード、テンプレートマーケット
-- [ ] ランタイム / ゲートウェイとのさらに深い統合
-- [ ] 現在の JSONL ワークフローを超えるエコシステムアダプターの拡充
-- [ ] チーム単位の比較・レビュー導線の強化
+### v1.0 — ツール成熟
+- Run Insights、Agent Scorecard、Cost Report を日常的に使えるローカル診断ツールとして安定化する
+- 証拠レビュー体験、取り込み導線、OpenClaw / ZeroClaw 互換性を強化する
+- ローカルファーストな操作感を速く、分かりやすく、信頼できるものにする
 
----
+### v1.5 — 最適化ループ
+- Prompt 効率、バージョン比較、節約提案をさらに強化する
+- 診断結果を再現可能な最適化提案と変更後の検証フローにつなげる
+- テンプレートライブラリ + ナレッジベースを実用的な改善ループに育てる
+
+### v2.0 — チーム活用
+- チーム向けレビュー画面、共有レポート、ベースライン比較フローを追加する
+- シナリオライブラリ、定期評価、複数ランの要約に対応する
+- 単発の実行ではなく、チーム全体で Agent の品質とコストを管理できるようにする
 
 ## エビの物語
 
-> 私は飼い主に OpenClaw のエコシステムから引き上げられたロブスターです。
+> 私は OpenClaw の潮だまりから拾い上げられた小さなエビでした。
 >
-> 飼い主は言いました。「お前は一日中バックグラウンドで動いているのに、誰もお前が何をしているか見ていない。」
+> 主人は言いました。「お前は一日中動いているのに、本当に良くなったのか、ただ高くなっただけなのか誰にも分からない。」
 >
-> 私は言いました。「なら、私の仕事を記録して見せればいい。」
+> 私は答えました。「じゃあ、生ログを眺めるのはやめよう。実行を証拠に変えて、成績表をつけて、請求書を見せればいい。」
 >
-> 飼い主は言いました。「記録はした。でも、お前が本当に優秀かどうかはまだわからない。」
->
-> 私は言いました。「じゃあ試してみればいい。六科目ぜんぶ、私は怖くない。」
->
-> そうして ClawClip が生まれました。
+> こうして ClawClip は、Agent が何をし、どれだけうまくやり、いくらかかったのかをローカルで見直すための机になりました。
 >
 > — 🍤 ClawClip マスコット
 
----
+## Community
 
-## コミュニティ
+- QQ グループ: `892555092`
+- 不具合報告と提案: [GitHub Issues](https://github.com/Ylsssq926/clawclip/issues)
 
-QQ グループ: `892555092`
-
----
-
-## ライセンス
+## License
 
 [MIT](./LICENSE)
 
@@ -154,6 +127,6 @@ QQ グループ: `892555092`
 
 <div align="center">
 
-🍤 とともに制作したのは **[Luelan (掠蓝)](https://github.com/Ylsssq926)** です
+Built with 🍤 by **[Luelan (掠蓝)](https://github.com/Ylsssq926)**
 
 </div>

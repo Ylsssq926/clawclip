@@ -77,3 +77,33 @@ curl -s https://clawclip.luelan.online/api/health
 - **禁止** 将密码、私钥、Token、数据库连接串等写入 Git、Issue 或本文档。
 - SSH、Nginx、证书与 PM2 相关密钥与配置仅在服务器或密钥管理流程中维护。
 - 更新依赖与 Node 版本时注意与 `package.json` / CI 要求一致，避免生产与本地行为不一致。
+
+## 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `PORT` | 监听端口 | `8080` |
+| `HOST` | 监听地址 | `127.0.0.1` |
+| `OPENCLAW_STATE_DIR` | OpenClaw 状态目录 | `~/.openclaw` |
+| `CLAWCLIP_LOBSTER_DIRS` | 额外数据目录（冒号分隔） | - |
+| `CLAWCLIP_SESSION_EXTENSIONS` | 会话文件扩展名 | `.jsonl` |
+| `LOG_LEVEL` | 日志级别 | `info` |
+
+## 故障排查
+
+### 服务启动失败
+1. 检查 Node.js 版本：`node -v`（需要 ≥ 18）
+2. 检查端口占用：`lsof -i :8080`
+3. 查看 PM2 日志：`pm2 logs clawclip --lines 50`
+
+### 页面空白
+1. 检查构建产物：`ls web/dist/index.html`
+2. 重新构建：`npm run build`
+
+### 回滚
+```bash
+# 回滚到上一个版本
+git log --oneline -5  # 找到目标 commit
+git checkout <commit> -- server/dist/ web/dist/
+pm2 restart clawclip
+```

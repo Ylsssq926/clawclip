@@ -54,3 +54,42 @@ Be friendly and constructive. Issues are welcome for product direction and compa
 ## 行为准则
 
 保持友善与建设性；欢迎 issue 讨论产品方向与兼容性。
+
+## 本地开发环境
+
+### 环境要求
+- Node.js ≥ 18
+- npm ≥ 9
+
+### 目录结构
+```text
+clawclip/
+├── server/          # Express + TypeScript 后端
+│   ├── routes/      # API 路由
+│   ├── services/    # 核心服务（解析、评测、成本、分析）
+│   ├── types/       # TypeScript 类型定义
+│   └── dist/        # 编译产物
+├── web/             # React 18 + Vite + Tailwind 前端
+│   ├── src/pages/   # 页面组件
+│   ├── src/components/ # 通用组件
+│   ├── src/lib/     # 工具库（i18n、API、样式）
+│   └── dist/        # 构建产物
+├── templates/       # 内置模板
+├── docs/            # 文档
+└── bin/             # CLI 入口
+```
+
+### 开发命令
+```bash
+npm run dev:server   # 后端热重载（tsx watch）
+npm run dev:web      # 前端开发服务器（Vite，端口 3000）
+npm run check        # 双端类型检查
+npm run build        # 生产构建
+```
+
+### 提交规范
+- feat: 新功能
+- fix: 修复
+- docs: 文档
+- chore: 构建/版本/配置
+- refactor: 重构

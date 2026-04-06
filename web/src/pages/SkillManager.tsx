@@ -33,6 +33,7 @@ export default function SkillManager() {
   const [search, setSearch] = useState('')
   const [installing, setInstalling] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const normalizedSearch = search.trim()
@@ -55,6 +56,12 @@ export default function SkillManager() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    if (!successMessage) return
+    const timer = window.setTimeout(() => setSuccessMessage(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [successMessage])
+
   const handleInstall = async () => {
     if (!normalizedSearch) return
     if (!VALID_SKILL_NAME.test(normalizedSearch)) {
@@ -63,13 +70,16 @@ export default function SkillManager() {
     }
 
     setError(null)
+    setSuccessMessage(null)
     setInstalling(normalizedSearch)
     try {
-      const result = await apiPost<{ success: boolean; message?: string }>('/api/skills/install', { name: normalizedSearch })
+      const skillName = normalizedSearch
+      const result = await apiPost<{ success: boolean; message?: string }>('/api/skills/install', { name: skillName })
       if (result.success) {
         setSearch('')
         const list = await apiGet<Skill[]>('/api/skills')
         setSkills(Array.isArray(list) ? list : [])
+        setSuccessMessage(locale === 'en' ? `✅ Skill ${skillName} installed` : `✅ 技能 ${skillName} 已安装`)
       } else {
         setError(result.message || t('skills.error.install'))
       }
@@ -82,10 +92,12 @@ export default function SkillManager() {
 
   const doUninstall = async (name: string) => {
     setError(null)
+    setSuccessMessage(null)
     try {
       const result = await apiPost<{ success: boolean; message?: string }>('/api/skills/uninstall', { name })
       if (result.success) {
         setSkills(prev => prev.filter(s => s.name !== name))
+        setSuccessMessage(locale === 'en' ? `✅ Skill ${name} uninstalled` : `✅ 技能 ${name} 已卸载`)
       } else {
         setError(result.message ?? t('skills.error.network'))
       }
@@ -151,6 +163,12 @@ export default function SkillManager() {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+          {successMessage}
         </div>
       )}
 

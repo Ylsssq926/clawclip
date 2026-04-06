@@ -104,6 +104,7 @@ export default function CostMonitor() {
   const [budgetForm, setBudgetForm] = useState({ monthly: '', alertThreshold: '80' })
   const [budgetSaving, setBudgetSaving] = useState(false)
   const [budgetError, setBudgetError] = useState<string | null>(null)
+  const [budgetSuccessMessage, setBudgetSuccessMessage] = useState<string | null>(null)
   const [days, setDays] = useState(7)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -157,6 +158,12 @@ export default function CostMonitor() {
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (!budgetSuccessMessage) return
+    const timer = window.setTimeout(() => setBudgetSuccessMessage(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [budgetSuccessMessage])
 
   const rawModelRows = Object.entries(modelBreakdown)
     .map(([model, data]) => ({
@@ -219,11 +226,13 @@ export default function CostMonitor() {
 
     setBudgetSaving(true)
     setBudgetError(null)
+    setBudgetSuccessMessage(null)
 
     try {
       await apiPost('/api/cost/budget', { monthly, alertThreshold })
       setBudgetModalOpen(false)
       await loadData()
+      setBudgetSuccessMessage(isZh ? '✅ 预算已保存' : '✅ Budget saved')
     } catch (err) {
       setBudgetError(parseApiErrorMessage(err, isZh ? '保存预算设置失败' : 'Failed to save budget settings'))
     } finally {
@@ -265,6 +274,12 @@ export default function CostMonitor() {
       {demoCostHint && (
         <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-700/90">
           {t('demo.hint.cost')}
+        </div>
+      )}
+
+      {budgetSuccessMessage && (
+        <div className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+          {budgetSuccessMessage}
         </div>
       )}
 

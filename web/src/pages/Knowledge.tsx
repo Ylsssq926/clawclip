@@ -50,6 +50,7 @@ interface Props {
 export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySession }: Props) {
   const { t, locale } = useI18n()
   const [sessionCount, setSessionCount] = useState<number | null>(null)
+  const [sessionCountError, setSessionCountError] = useState<string | null>(null)
   const [qInput, setQInput] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
   const [searchLoading, setSearchLoading] = useState(false)
@@ -64,12 +65,17 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
   const [importMessage, setImportMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   const loadSessionCount = useCallback(() => {
+    setSessionCountError(null)
     apiGet<{ total?: number }>('/api/knowledge/stats')
       .then(data => {
         setSessionCount(typeof data.total === 'number' ? data.total : 0)
+        setSessionCountError(null)
       })
-      .catch(() => setSessionCount(0))
-  }, [])
+      .catch(() => {
+        setSessionCount(null)
+        setSessionCountError(locale === 'en' ? '⚠️ Failed to load stats' : '⚠️ 统计失败')
+      })
+  }, [locale])
 
   useEffect(() => {
     void loadSessionCount()
@@ -144,6 +150,7 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
         const j = await res.json()
         if (j && typeof j.total === 'number') {
           setSessionCount(j.total)
+          setSessionCountError(null)
           refreshedCount = true
         }
         if (j && typeof j.imported === 'number') {
@@ -200,6 +207,7 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
     : locale === 'en'
       ? `Knowledge base currently contains ${sessionCount} session(s)`
       : `当前知识库共 ${sessionCount} 条会话`
+  const retrySessionCountLabel = locale === 'en' ? 'Retry' : '重试'
   const recommendedSearchTitle = locale === 'en' ? 'Recommended searches' : '推荐搜索'
   const emptySearchTitle = locale === 'en' ? 'No matching sessions found' : '没找到相关会话'
   const emptySearchDescription = locale === 'en'
@@ -219,7 +227,20 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
       <div>
         <h2 className="text-2xl font-bold text-slate-900 mb-1">{t('knowledge.title')}</h2>
         <p className="text-slate-500 text-sm">{t('knowledge.subtitle')}</p>
-        <p className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{sessionCountText}</p>
+        {sessionCountError ? (
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+            <span>{sessionCountError}</span>
+            <button
+              type="button"
+              onClick={loadSessionCount}
+              className="rounded-full border border-amber-300 px-2 py-0.5 text-[11px] text-amber-700 transition-colors hover:bg-amber-100"
+            >
+              {retrySessionCountLabel}
+            </button>
+          </div>
+        ) : (
+          <p className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{sessionCountText}</p>
+        )}
       </div>
 
       <motion.section

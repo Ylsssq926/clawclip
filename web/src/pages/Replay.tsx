@@ -63,6 +63,7 @@ interface SessionStep {
   toolOutput?: string
   error?: string
   isError?: boolean
+  reasoning?: string
   inputTokens: number
   outputTokens: number
   cost: number
@@ -125,6 +126,28 @@ function CollapsibleText({
   )
 }
 
+function ReasoningBlock({ reasoning }: { reasoning: string }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="flex items-center gap-2 text-sm font-medium text-purple-700 hover:text-purple-800 transition-colors"
+      >
+        {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <span>🧠 思考过程</span>
+      </button>
+      {expanded && (
+        <div className="mt-2 bg-purple-50 border-l-4 border-purple-300 p-3 rounded text-sm text-slate-700">
+          <pre className="whitespace-pre-wrap break-words font-sans">{reasoning}</pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; startTime: string; totalCost?: number }) {
   const { t, locale } = useI18n()
   const isZh = locale.startsWith('zh')
@@ -141,6 +164,7 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
   const isFailureStep = hasError || isToolFailure
   const baseConfig = STEP_STYLES[step.type] || STEP_STYLES.system
   const config = isFailureStep ? STEP_STYLES.error : baseConfig
+  const primaryContent = step.reasoning && step.content.trim() === step.reasoning.trim() ? '' : step.content
 
   return (
     <motion.div
@@ -186,14 +210,15 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
               </span>
             )}
           </div>
-          {step.content && (
+          {primaryContent && (
             <div className="flex items-start gap-2">
               {hasError && <span className="shrink-0 mt-0.5 text-red-500">⚠️</span>}
               <div className="min-w-0 flex-1">
-                <CollapsibleText text={step.content} expandLabel={t('replay.expand')} collapseLabel={t('replay.collapse')} />
+                <CollapsibleText text={primaryContent} expandLabel={t('replay.expand')} collapseLabel={t('replay.collapse')} />
               </div>
             </div>
           )}
+          {step.reasoning && <ReasoningBlock reasoning={step.reasoning} />}
           {step.toolInput && (
             <div className="mt-2 p-2 glass-raised rounded text-xs border border-surface-border">
               <span className="text-slate-500">{t('replay.io.in')}: </span>
@@ -456,6 +481,15 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
       showAllSteps || totalSteps === 0 ? (replay?.steps ?? []) : replay!.steps.slice(0, Math.max(visibleSteps, 1))
     const playbackComplete =
       totalSteps > 0 && (showAllSteps || (!autoPlay && visibleSteps >= totalSteps))
+    const parseDiagnostics = replay?.meta.parseDiagnostics
+    const parseDiagnosticsNotices = [
+      (parseDiagnostics?.skippedLines ?? 0) > 0
+        ? `⚠️ 解析时跳过了 ${parseDiagnostics?.skippedLines ?? 0} 行`
+        : null,
+      (parseDiagnostics?.multilineRecovered ?? 0) > 0
+        ? `🔧 恢复了 ${parseDiagnostics?.multilineRecovered ?? 0} 处多行 JSON`
+        : null,
+    ].filter((notice): notice is string => Boolean(notice))
 
     const togglePlay = () => {
       if (!replay || totalSteps === 0) return
@@ -547,6 +581,14 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                 <p className="text-[10px] text-slate-600 font-mono truncate mb-3" title={replay.meta.sessionKey}>
                   {replay.meta.sessionKey}
                 </p>
+              )}
+              {parseDiagnosticsNotices.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <span className="text-slate-400">解析完整性</span>
+                  {parseDiagnosticsNotices.map(notice => (
+                    <span key={notice}>{notice}</span>
+                  ))}
+                </div>
               )}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>

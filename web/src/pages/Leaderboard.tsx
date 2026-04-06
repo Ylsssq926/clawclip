@@ -90,6 +90,7 @@ export default function Leaderboard() {
   const submitDisabledHint = locale === 'zh' ? '需要真实数据才能提交' : 'Real data required to submit'
   const canSubmit = hasRealSessionData === true
   const submitBlocked = hasRealSessionData === false
+  const hasValidPreview = !!preview && Number.isFinite(preview.overallScore) && preview.rank.trim().length > 0 && preview.topModel.trim().length > 0
   const showDemoBanner = (isDemo || !canSubmit) && entries.length > 0
   const columnLabels = locale === 'zh'
     ? { position: '排名', nickname: '玩家', rank: '等级', model: '模型', sessions: '会话数', score: '得分', submitted: '提交时间' }
@@ -173,6 +174,12 @@ export default function Leaderboard() {
       return
     }
 
+    if (!hasValidPreview) {
+      setSubmitOk(false)
+      setSubmitMsg(previewErr || t('leaderboard.modal.noData'))
+      return
+    }
+
     const n = nickname.trim()
     if (n.length < 1 || n.length > 20) {
       setSubmitOk(false)
@@ -206,14 +213,14 @@ export default function Leaderboard() {
         <div>
           <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">{t('leaderboard.title')}</h2>
           <p className="text-sm text-slate-500 mt-1">{t('leaderboard.subtitle')}</p>
-      {showDemoBanner && (
-        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.07] px-4 py-3 flex items-start gap-2.5">
-          <span className="text-base leading-none mt-px" aria-hidden>💡</span>
-          <p className="text-sm text-cyan-700 leading-relaxed">{t('leaderboard.demoBanner')}</p>
+          {showDemoBanner && (
+            <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-cyan-500/20 bg-cyan-500/[0.07] px-4 py-3">
+              <span className="text-base leading-none mt-px" aria-hidden>💡</span>
+              <p className="text-sm text-cyan-700 leading-relaxed">{t('leaderboard.demoBanner')}</p>
+            </div>
+          )}
         </div>
-      )}
-        </div>
-        <div className="shrink-0" title={submitBlocked ? submitDisabledHint : undefined}>
+        <div className="shrink-0 flex flex-col items-start sm:items-end gap-1.5">
           <button
             type="button"
             onClick={openModal}
@@ -227,6 +234,9 @@ export default function Leaderboard() {
           >
             {t('leaderboard.submit')}
           </button>
+          {submitBlocked && (
+            <p className="text-xs text-slate-500">{submitDisabledHint}</p>
+          )}
         </div>
       </div>
 
@@ -459,9 +469,9 @@ export default function Leaderboard() {
                 </button>
                 <button
                   type="button"
-                  disabled={submitting || previewLoading || !canSubmit}
+                  disabled={submitting || previewLoading || !canSubmit || !hasValidPreview}
                   onClick={submit}
-                  title={submitBlocked ? submitDisabledHint : undefined}
+                  title={submitBlocked ? submitDisabledHint : previewErr || undefined}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#3b82c4] to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {submitting ? t('leaderboard.modal.submitting') : t('leaderboard.modal.confirm')}

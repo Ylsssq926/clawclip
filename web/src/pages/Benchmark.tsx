@@ -171,6 +171,7 @@ export default function Benchmark() {
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showDimTrend, setShowDimTrend] = useState(false)
   const [dataSource, setDataSource] = useState<'demo' | 'real' | null>(null)
   const [showRadarHelp, setShowRadarHelp] = useState(false)
@@ -200,6 +201,12 @@ export default function Benchmark() {
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (!successMessage) return
+    const timer = window.setTimeout(() => setSuccessMessage(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [successMessage])
 
   const compareResult = useMemo(
     () => (compareId ? history.find(h => h.id === compareId) ?? null : null),
@@ -250,6 +257,7 @@ export default function Benchmark() {
   const runBenchmark = async () => {
     setRunning(true)
     setError(null)
+    setSuccessMessage(null)
     try {
       const data = await apiPost<BenchmarkResult>('/api/benchmark/run')
       setResult(data)
@@ -260,6 +268,7 @@ export default function Benchmark() {
       ])
       if (meta) setDataSource(meta.dataSource === 'real' ? 'real' : 'demo')
       if (histBody) setHistory(Array.isArray(histBody.results) ? histBody.results : [])
+      setSuccessMessage(isZh ? `✅ 评测完成，综合分 ${data.overallScore} 分` : `✅ Benchmark complete, overall score ${data.overallScore}`)
     } catch {
       setError(t('benchmark.error.run'))
     } finally {
@@ -382,6 +391,11 @@ export default function Benchmark() {
 
       {result && (
         <>
+          {successMessage && (
+            <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+              {successMessage}
+            </div>
+          )}
           <GlowCard className={`rounded-2xl mb-6 ${rankStyle.bg} ${rankStyle.glow} border-surface-border`}>
             <div className="p-6">
             <div className="flex items-center gap-6">

@@ -433,9 +433,9 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
           ? obj.model
           : undefined;
 
-  const base = (): Pick<SessionStep, 'inputTokens' | 'outputTokens'> => ({
-    inputTokens: input,
-    outputTokens: output,
+  const base = (includeUsage = true): Pick<SessionStep, 'inputTokens' | 'outputTokens'> => ({
+    inputTokens: includeUsage ? input : 0,
+    outputTokens: includeUsage ? output : 0,
   });
 
   const { text, reasoning: contentReasoning } = extractLineTextAndReasoning(body);
@@ -495,14 +495,15 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
     const toolCalls = pickToolCalls(body, obj);
     if (toolCalls && toolCalls.length > 0) {
       const steps: SessionStep[] = [];
-      if (text.length > 0) {
+      const hasLeadResponse = text.length > 0;
+      if (hasLeadResponse) {
         steps.push({
           index,
           timestamp,
           type: 'response',
           ...stepContent,
           model,
-          ...base(),
+          ...base(true),
           cost: 0,
           durationMs: 0,
         });
@@ -513,7 +514,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
         const n = toolCallName(tcr);
         const tin = toolCallInput(tcr);
         const toolStepContent =
-          i === 0 && text.length === 0 ? buildStepContent('', reasoningExtra) : { content: '' };
+          i === 0 && !hasLeadResponse ? buildStepContent('', reasoningExtra) : { content: '' };
         steps.push({
           index: index + toolCallOffset + i,
           timestamp,
@@ -523,7 +524,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
           toolName: n,
           toolInput: tin,
           toolCallId: extractToolCallId(tcr),
-          ...base(),
+          ...base(!hasLeadResponse && i === 0),
           cost: 0,
           durationMs: 0,
         });

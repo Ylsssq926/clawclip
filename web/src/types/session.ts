@@ -19,4 +19,11 @@ export interface SessionMeta {
   modelUsed: string[]
   stepCount: number
   summary: string
+  parseDiagnostics?: {
+    totalLines: number
+    parsedLines: number
+    skippedLines: number
+    errorSamples?: string[]
+    multilineRecovered?: number
+  }
 }

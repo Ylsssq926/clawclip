@@ -102,7 +102,7 @@ function MetricBar({
 
 export default function Compare() {
   const { t, locale } = useI18n()
-  const isZh = locale === 'zh'
+  const isZh = locale.startsWith('zh')
   const [slots, setSlots] = useState<string[]>(['', ''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -141,10 +141,13 @@ export default function Compare() {
     setAvailableSessionsLoading(true)
     setAvailableSessionsError(null)
 
-    apiGet<SessionMeta[]>('/api/replay/sessions?limit=50')
+    apiGet<SessionMeta[]>('/api/replay/sessions?limit=50&fallback=demo&minCount=50')
       .then(data => {
         if (cancelled) return
-        setAvailableSessions(Array.isArray(data) ? data : [])
+        const comparableSessions = (Array.isArray(data) ? data : []).filter(
+          session => (session.totalTokens ?? 0) > 0 || (session.totalCost ?? 0) > 0,
+        )
+        setAvailableSessions(comparableSessions)
       })
       .catch(e => {
         if (cancelled) return
@@ -278,6 +281,27 @@ export default function Compare() {
       )
     }
 
+    const bestCostPerStep = sessionEntries.reduce((best, current) =>
+      current.costPerStep < best.costPerStep ? current : best,
+    )
+    const fastest = sessionEntries.reduce((best, current) =>
+      current.durationMs < best.durationMs ? current : best,
+    )
+
+    if (bestCostPerStep.id === fastest.id) {
+      messages.push(
+        isZh
+          ? `${bestCostPerStep.alias} 的每步成本最低（$${bestCostPerStep.costPerStep.toFixed(6)}），同时完成速度也最快，更适合作为当前基线。`
+          : `${bestCostPerStep.alias} has the lowest cost per step ($${bestCostPerStep.costPerStep.toFixed(6)}) and is also the fastest to finish, making it the best current baseline.`,
+      )
+    } else {
+      messages.push(
+        isZh
+          ? `${bestCostPerStep.alias} 的每步成本最低（$${bestCostPerStep.costPerStep.toFixed(6)}），而 ${fastest.alias} 总耗时最短（${formatDuration(fastest.durationMs, locale)}），可按“省钱”或“速度”选择侧重点。`
+          : `${bestCostPerStep.alias} has the lowest cost per step ($${bestCostPerStep.costPerStep.toFixed(6)}), while ${fastest.alias} finishes fastest (${formatDuration(fastest.durationMs, locale)}). Choose based on whether cost or speed matters more.`,
+      )
+    }
+
     if (toolCallStatus === 'ready') {
       const toolSessions = sessionEntries.map(session => ({
         ...session,
@@ -306,7 +330,7 @@ export default function Compare() {
     }
 
     return messages
-  }, [sessions, toolCallCounts, toolCallStatus, isZh])
+  }, [sessions, toolCallCounts, toolCallStatus, isZh, locale])
 
   const addSlot = () => {
     setSlots(s => (s.length < 5 ? [...s, ''] : s))

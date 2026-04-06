@@ -11,8 +11,35 @@ import { apiGet, apiGetSafe } from '../lib/api'
 
 const TAG_ALL = '__all__'
 
+function normalizeReplayText(text?: string): string {
+  const raw = (text ?? '').replace(/\r/g, '').trim()
+  if (!raw) return ''
+
+  const withoutEnvelope = raw
+    .replace(/^Sender \(untrusted metadata\):\s*```[\s\S]*?```\s*/i, '')
+    .replace(/^\[[^\]]+\]\s*/, '')
+
+  const flattened = withoutEnvelope
+    .replace(/```[^\n]*\n?/g, ' ')
+    .replace(/```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return flattened || raw.replace(/\s+/g, ' ').trim()
+}
+
 function replaySessionTitle(m: SessionMeta, untitled: string): string {
-  return (m.sessionLabel?.trim() || m.summary?.trim() || '').slice(0, 120) || untitled
+  const label = normalizeReplayText(m.sessionLabel)
+  const summary = normalizeReplayText(m.summary)
+  return (label || summary).slice(0, 120) || untitled
+}
+
+function replaySessionSummary(m: SessionMeta): string {
+  const label = normalizeReplayText(m.sessionLabel)
+  const summary = normalizeReplayText(m.summary)
+  if (!summary || summary === label) return ''
+  return summary.slice(0, 180)
 }
 
 function dataSourceBadge(src?: string): string {
@@ -101,16 +128,19 @@ function CollapsibleText({
 function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; startTime: string; totalCost?: number }) {
   const { t, locale } = useI18n()
   const isZh = locale.startsWith('zh')
-  const baseConfig = STEP_STYLES[step.type] || STEP_STYLES.system
-  const config = step.isError || step.error ? STEP_STYLES.error : baseConfig
   const tokens = step.inputTokens + step.outputTokens
   const typeKey = `replay.step.${step.type}`
   const defaultLabel = step.type === 'error' ? (isZh ? '错误' : 'Error') : t('replay.step.system')
   const stepLabel = t(typeKey) !== typeKey ? t(typeKey) : defaultLabel
   const isHighCost = totalCost > 0 && step.cost / totalCost > 0.3
   const toolFailurePattern = /error|failed|failure|失败|异常/i
-  const isToolFailure = step.type === 'tool_result' && toolFailurePattern.test(`${step.content} ${step.toolOutput ?? ''} ${step.error ?? ''}`)
   const hasError = Boolean(step.isError || step.error)
+  const isToolFailure =
+    (step.type === 'tool_result' || step.type === 'tool_call')
+    && (toolFailurePattern.test(`${step.content} ${step.toolOutput ?? ''} ${step.error ?? ''}`) || hasError)
+  const isFailureStep = hasError || isToolFailure
+  const baseConfig = STEP_STYLES[step.type] || STEP_STYLES.system
+  const config = isFailureStep ? STEP_STYLES.error : baseConfig
 
   return (
     <motion.div
@@ -124,7 +154,13 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
           <div className={`w-3 h-3 rounded-full mt-2 ${config.bg} border-2 ${config.border.replace('border-l-', 'border-')}`} />
           <div className="flex-1 w-px bg-surface-border" />
         </div>
-        <div className={cn('flex-1 glass-raised rounded-xl p-4 border border-surface-border border-l-4 mb-3', config.border)}>
+        <div
+          className={cn(
+            'flex-1 glass-raised rounded-xl p-4 border border-l-4 mb-3',
+            isFailureStep ? 'border-red-200/80 bg-red-50/60 shadow-sm shadow-red-100/60' : 'border-surface-border',
+            config.border,
+          )}
+        >
           <div className="flex items-center justify-between mb-2 gap-3">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
               <div className={cn('p-1.5 rounded-lg text-base leading-none', config.bg)}>
@@ -254,6 +290,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [insights, setInsights] = useState<Array<{ type: string; stepIndex?: number; titleZh: string; titleEn: string; descZh: string; descEn: string }>>([])
+  const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
 
   const [autoPlay, setAutoPlay] = useState(false)
@@ -371,14 +408,34 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
     setError(null)
     setReplay(null)
     setInsights([])
-    setInsightsOpen(false)
+    setInsightsLoading(true)
+    setInsightsOpen(true)
     const encoded = encodeURIComponent(id)
-    apiGet<SessionReplay>(`/api/replay/sessions/${encoded}`)
+
+    const loadReplay = async () => {
+      try {
+        return await apiGet<SessionReplay>(`/api/replay/sessions/${encoded}`)
+      } catch {
+        return await apiGet<SessionReplay>(`/api/knowledge/session/${encoded}`)
+      }
+    }
+
+    const loadInsights = async () => {
+      const replayInsights = await apiGetSafe<{ insights: typeof insights }>(`/api/replay/sessions/${encoded}/insights`)
+      if (replayInsights) return replayInsights
+      return apiGetSafe<{ insights: typeof insights }>(`/api/knowledge/session/${encoded}/insights`)
+    }
+
+    void loadReplay()
       .then(setReplay)
       .catch(() => setError(t('replay.error.detail')))
       .finally(() => setLoading(false))
-    apiGetSafe<{ insights: typeof insights }>(`/api/replay/sessions/${encoded}/insights`)
-      .then(d => { if (d?.insights) setInsights(d.insights) })
+
+    void loadInsights()
+      .then(d => {
+        setInsights(Array.isArray(d?.insights) ? d.insights : [])
+      })
+      .finally(() => setInsightsLoading(false))
   }, [t])
 
   useEffect(() => {
@@ -483,6 +540,9 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
               {sessionMetaSubtitle(replay.meta, locale) && (
                 <p className="text-xs text-slate-500 mb-2">{sessionMetaSubtitle(replay.meta, locale)}</p>
               )}
+              {replaySessionSummary(replay.meta) && (
+                <p className="text-sm text-slate-600 leading-relaxed mb-3">{replaySessionSummary(replay.meta)}</p>
+              )}
               {replay.meta.sessionKey && (
                 <p className="text-[10px] text-slate-600 font-mono truncate mb-3" title={replay.meta.sessionKey}>
                   {replay.meta.sessionKey}
@@ -506,48 +566,64 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                   <div className="text-blue-400 font-medium">{replay.meta.totalTokens.toLocaleString()}</div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {(replay.meta.modelUsed ?? []).map(m => (
-                  <span key={m} className="text-xs px-2 py-1 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{m}</span>
-                ))}
-              </div>
+              {Boolean(replay.meta.modelUsed?.length) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {(replay.meta.modelUsed ?? []).map(m => (
+                    <span key={m} className="text-xs px-2 py-1 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{m}</span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {insights.length > 0 && (
-              <div className="mb-6">
-                <button
-                  type="button"
-                  onClick={() => setInsightsOpen(v => !v)}
-                  className="flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-600 transition-colors mb-3"
-                >
-                  <Lightbulb className="w-4 h-4" />
-                  {locale === 'zh' ? `智能诊断（${insights.length}）` : `Smart Insights (${insights.length})`}
-                  {insightsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
-                {insightsOpen && (
-                  <div className="space-y-2">
-                    {insights.map((ins, i) => {
-                      const Icon = ins.type === 'good' ? ThumbsUp : ins.type === 'warning' ? AlertTriangle : Lightbulb
-                      const color = ins.type === 'good' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                        : ins.type === 'warning' ? 'text-amber-400 bg-amber-50 border-amber-500/20'
-                        : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
-                      return (
-                        <div key={i} className={`rounded-xl border p-4 ${color}`}>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Icon className="w-4 h-4 shrink-0" />
-                            <span className="text-sm font-medium">{locale === 'zh' ? ins.titleZh : ins.titleEn}</span>
-                            {ins.stepIndex != null && (
-                              <span className="text-[10px] opacity-60 ml-auto">Step {ins.stepIndex + 1}</span>
-                            )}
-                          </div>
-                          <p className="text-xs opacity-80 leading-relaxed ml-6">{locale === 'zh' ? ins.descZh : ins.descEn}</p>
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => setInsightsOpen(v => !v)}
+                className="flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-600 transition-colors mb-3"
+              >
+                <Lightbulb className="w-4 h-4" />
+                {locale === 'zh'
+                  ? `智能诊断${insights.length > 0 ? `（${insights.length}）` : ''}`
+                  : `Smart Insights${insights.length > 0 ? ` (${insights.length})` : ''}`}
+                {insightsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              {insightsOpen && (
+                <div className="space-y-2">
+                  {insightsLoading && (
+                    <div className="rounded-xl border border-blue-200/70 bg-blue-50/70 p-4 text-sm text-blue-700">
+                      {locale === 'zh' ? '正在整理本次会话的诊断结论…' : 'Summarizing replay diagnostics…'}
+                    </div>
+                  )}
+
+                  {!insightsLoading && insights.length === 0 && (
+                    <div className="rounded-xl border border-surface-border bg-slate-50/80 p-4 text-sm text-slate-600">
+                      {locale === 'zh'
+                        ? '暂未发现明显异常或亮点。接入更多真实步骤后，这里会给出更具体的诊断。'
+                        : 'No clear warnings or highlights yet. With richer real sessions, this panel will surface more specific insights.'}
+                    </div>
+                  )}
+
+                  {!insightsLoading && insights.map((ins, i) => {
+                    const Icon = ins.type === 'good' ? ThumbsUp : ins.type === 'warning' ? AlertTriangle : Lightbulb
+                    const color = ins.type === 'good' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                      : ins.type === 'warning' ? 'text-amber-400 bg-amber-50 border-amber-500/20'
+                      : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+                    return (
+                      <div key={i} className={`rounded-xl border p-4 ${color}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span className="text-sm font-medium">{locale === 'zh' ? ins.titleZh : ins.titleEn}</span>
+                          {ins.stepIndex != null && (
+                            <span className="text-[10px] opacity-60 ml-auto">Step {ins.stepIndex + 1}</span>
+                          )}
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                        <p className="text-xs opacity-80 leading-relaxed ml-6">{locale === 'zh' ? ins.descZh : ins.descEn}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
             {totalSteps === 0 && (
               <div className="text-center py-12 text-slate-500 text-sm">
@@ -706,6 +782,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
         <div className="space-y-3">
           {filteredSessions.map((session, index) => {
             const lineSub = sessionMetaSubtitle(session, locale)
+            const summaryPreview = replaySessionSummary(session)
             return (
             <FadeIn key={session.id} delay={Math.min(index * 0.05, 0.5)}>
               <GlowCard className="w-full hover:border-accent/30">
@@ -721,6 +798,11 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                       </h3>
                       {lineSub && (
                         <p className="text-[10px] text-slate-600 truncate mt-0.5">{lineSub}</p>
+                      )}
+                      {summaryPreview && (
+                        <p className="text-sm text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+                          {summaryPreview}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

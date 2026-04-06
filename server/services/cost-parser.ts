@@ -46,6 +46,8 @@ interface UsageCacheEntry {
   at: number;
   data: TokenUsage[];
   pricing: PricingSnapshot;
+  replays: SessionReplay[];
+  isDemo: boolean;
 }
 
 export class CostParser {
@@ -83,16 +85,32 @@ export class CostParser {
     this.config = this.loadConfig();
   }
 
-  private getReplayData(): { replays: SessionReplay[]; isDemo: boolean } {
-    const replays = sessionParser.getRealReplays();
-    if (replays.length > 0) {
-      return { replays, isDemo: false };
+  private appendReplayUsages(replays: SessionReplay[], usages: TokenUsage[], seen: Set<string>): void {
+    for (const replay of replays) {
+      for (const step of replay.steps) {
+        if (step.inputTokens === 0 && step.outputTokens === 0) continue;
+        const model = step.model || 'unknown';
+        const key = `${replay.meta.id}|${model}|${step.timestamp.getTime()}`;
+        seen.add(key);
+        usages.push({
+          timestamp: step.timestamp,
+          taskId: replay.meta.id,
+          model,
+          inputTokens: step.inputTokens,
+          outputTokens: step.outputTokens,
+          cost: step.cost,
+          sessionId: replay.meta.id,
+        });
+      }
     }
-    return { replays: DEMO_SESSIONS, isDemo: true };
   }
 
-  private getReferenceNow(usages: TokenUsage[]): number {
-    if (sessionParser.getRealReplays().length > 0) {
+  private hasMeaningfulUsage(usages: TokenUsage[]): boolean {
+    return usages.some(usage => usage.inputTokens > 0 || usage.outputTokens > 0 || usage.cost > 0);
+  }
+
+  private getReferenceNow(usages: TokenUsage[], isDemo: boolean): number {
+    if (!isDemo) {
       return Date.now();
     }
 
@@ -153,51 +171,41 @@ export class CostParser {
     return { ...this.config };
   }
 
-  private parseLogFiles(): Pick<UsageCacheEntry, 'data' | 'pricing'> {
-    const usages: TokenUsage[] = [];
-    const seen = new Set<string>();
+  private parseLogFiles(): Pick<UsageCacheEntry, 'data' | 'pricing' | 'replays' | 'isDemo'> {
     const pricing = getPricingSnapshot();
-    const { replays, isDemo } = this.getReplayData();
-    for (const replay of replays) {
-      for (const step of replay.steps) {
-        if (step.inputTokens === 0 && step.outputTokens === 0) continue;
-        const model = step.model || 'unknown';
-        const cost = step.cost;
-        const key = `${replay.meta.id}|${model}|${step.timestamp.getTime()}`;
-        seen.add(key);
-        usages.push({
-          timestamp: step.timestamp,
-          taskId: replay.meta.id,
-          model,
-          inputTokens: step.inputTokens,
-          outputTokens: step.outputTokens,
-          cost,
-          sessionId: replay.meta.id,
-        });
-      }
-    }
+    const realReplays = sessionParser.getRealReplays();
+    const realUsages: TokenUsage[] = [];
+    const realSeen = new Set<string>();
 
-    this.logDedupeKeys = seen;
-    if (isDemo) {
-      return { data: usages, pricing };
-    }
+    this.appendReplayUsages(realReplays, realUsages, realSeen);
+    this.logDedupeKeys = realSeen;
 
-    const roots = getLobsterDataRoots();
-    if (roots.length === 0) {
-      const fallbackLogs = path.join(os.homedir(), '.openclaw', 'logs');
-      if (fs.existsSync(fallbackLogs)) {
-        this.parseDirectory(fallbackLogs, '.log', usages, pricing);
-      }
-    } else {
-      for (const root of roots) {
-        const logsDir = path.join(root.homeDir, 'logs');
-        if (fs.existsSync(logsDir)) {
-          this.parseDirectory(logsDir, '.log', usages, pricing);
+    if (realReplays.length > 0) {
+      const roots = getLobsterDataRoots();
+      if (roots.length === 0) {
+        const fallbackLogs = path.join(os.homedir(), '.openclaw', 'logs');
+        if (fs.existsSync(fallbackLogs)) {
+          this.parseDirectory(fallbackLogs, '.log', realUsages, pricing);
+        }
+      } else {
+        for (const root of roots) {
+          const logsDir = path.join(root.homeDir, 'logs');
+          if (fs.existsSync(logsDir)) {
+            this.parseDirectory(logsDir, '.log', realUsages, pricing);
+          }
         }
       }
     }
 
-    return { data: usages, pricing };
+    if (realReplays.length > 0 && this.hasMeaningfulUsage(realUsages)) {
+      return { data: realUsages, pricing, replays: realReplays, isDemo: false };
+    }
+
+    const demoUsages: TokenUsage[] = [];
+    const demoSeen = new Set<string>();
+    this.appendReplayUsages(DEMO_SESSIONS, demoUsages, demoSeen);
+    this.logDedupeKeys = demoSeen;
+    return { data: demoUsages, pricing, replays: DEMO_SESSIONS, isDemo: true };
   }
 
   private getCachedUsageBatch(): UsageCacheEntry {
@@ -210,12 +218,29 @@ export class CostParser {
     return this.usageCache;
   }
 
-  private getCachedUsages(): TokenUsage[] {
-    return this.getCachedUsageBatch().data;
-  }
-
   private getCachedPricingSnapshot(): PricingSnapshot {
     return this.getCachedUsageBatch().pricing;
+  }
+
+  private decodeTaskLabel(taskId: string): string {
+    try {
+      return decodeURIComponent(taskId);
+    } catch {
+      return taskId;
+    }
+  }
+
+  private resolveTaskName(taskId: string, sessionId: string, replays: SessionReplay[]): string {
+    const replay = replays.find(item => item.meta.id === sessionId || item.meta.id === taskId);
+    if (replay) {
+      const meta = replay.meta;
+      const label = meta.sessionLabel?.trim() || meta.agentName?.trim();
+      if (label) return label;
+    }
+
+    const decoded = this.decodeTaskLabel(taskId);
+    const pathLikeParts = decoded.split('/').filter(Boolean);
+    return pathLikeParts[pathLikeParts.length - 1] || decoded;
   }
 
   private parseDirectory(
@@ -289,7 +314,7 @@ export class CostParser {
   getUsageStats(days: number = 30): CostStats {
     const batch = this.getCachedUsageBatch();
     const usages = batch.data;
-    const now = this.getReferenceNow(usages);
+    const now = this.getReferenceNow(usages, batch.isDemo);
     const cutoff = now - days * 24 * 60 * 60 * 1000;
     const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
 
@@ -307,7 +332,7 @@ export class CostParser {
       } else {
         taskMap.set(u.taskId, {
           taskId: u.taskId,
-          taskName: u.taskId,
+          taskName: this.resolveTaskName(u.taskId, u.sessionId, batch.replays),
           tokens: u.inputTokens + u.outputTokens,
           cost: u.cost,
           timestamp: u.timestamp,
@@ -338,13 +363,15 @@ export class CostParser {
       comparedToLastMonth: prevCost > 0 ? ((totalCost - prevCost) / prevCost) * 100 : 0,
       pricingSource: batch.pricing.source,
       pricingUpdatedAt: batch.pricing.updatedAt,
+      usingDemo: batch.isDemo,
     };
   }
 
   getDailyUsage(days: number = 7): DailyUsage[] {
-    const usages = this.getCachedUsages();
+    const batch = this.getCachedUsageBatch();
+    const usages = batch.data;
     const dailyMap = new Map<string, DailyUsage>();
-    const now = this.getReferenceNow(usages);
+    const now = this.getReferenceNow(usages, batch.isDemo);
 
     for (let i = 0; i < days; i++) {
       const date = new Date(now - i * 24 * 60 * 60 * 1000);
@@ -368,12 +395,13 @@ export class CostParser {
   }
 
   getModelBreakdown(days: number = 30): Record<string, { tokens: number; cost: number }> {
-    const usages = this.getCachedUsages();
-    const cutoff = this.getReferenceNow(usages) - days * 24 * 60 * 60 * 1000;
+    const batch = this.getCachedUsageBatch();
+    const usages = batch.data;
+    const cutoff = this.getReferenceNow(usages, batch.isDemo) - days * 24 * 60 * 60 * 1000;
     const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
 
     const models: Record<string, { tokens: number; cost: number }> = {};
-    if (sessionParser.getRealReplays().length === 0) {
+    if (batch.isDemo) {
       for (const replay of DEMO_SESSIONS) {
         for (const step of replay.steps) {
           if (step.model && !models[step.model]) {
@@ -392,8 +420,9 @@ export class CostParser {
   }
 
   getRequestCount(days: number = 30): number {
-    const usages = this.getCachedUsages();
-    const cutoff = this.getReferenceNow(usages) - days * 24 * 60 * 60 * 1000;
+    const batch = this.getCachedUsageBatch();
+    const usages = batch.data;
+    const cutoff = this.getReferenceNow(usages, batch.isDemo) - days * 24 * 60 * 60 * 1000;
     return usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff).length;
   }
 

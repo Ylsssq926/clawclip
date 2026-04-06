@@ -495,7 +495,7 @@ export default function Landing({ onEnterDemo }: Props) {
             </div>
             <button
               type="button"
-              onClick={() => onEnterDemo()}
+              onClick={() => onEnterDemo('leaderboard')}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm shadow-md shadow-amber-400/30 hover:shadow-lg hover:shadow-amber-400/40 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.01] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50/90"
             >
               {t('landing.leaderboard.cta')}

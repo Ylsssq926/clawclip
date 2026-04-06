@@ -856,17 +856,66 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
     'costEfficiency',
   ];
 
+  const buildDemoEvidence = (
+    row: typeof rows[number],
+    dimension: BenchmarkDimension,
+    score: number,
+  ): { evidence: string; evidenceEn: string } => {
+    switch (dimension) {
+      case 'writing':
+        return {
+          evidence: `示例阶段 ${row.index}：写作 ${score} 分，中文说明型回复与稳定输出在持续增加。`,
+          evidenceEn: `Demo stage ${row.index}: writing ${score}, with steadier long-form explanatory replies over time.`,
+        };
+      case 'coding':
+        return {
+          evidence: `示例阶段 ${row.index}：代码 ${score} 分，代码块密度与改代码任务参与度逐步提升。`,
+          evidenceEn: `Demo stage ${row.index}: coding ${score}, with denser code blocks and more code-task participation.`,
+        };
+      case 'toolUse':
+        return {
+          evidence: `示例阶段 ${row.index}：工具 ${score} 分，多工具衔接与调用成功率越来越稳。`,
+          evidenceEn: `Demo stage ${row.index}: tool use ${score}, with steadier multi-tool flow and higher success rates.`,
+        };
+      case 'search':
+        return {
+          evidence: `示例阶段 ${row.index}：检索 ${score} 分，搜索调用与引用痕迹比前一阶段更完整。`,
+          evidenceEn: `Demo stage ${row.index}: retrieval ${score}, with richer search usage and citation traces than before.`,
+        };
+      case 'safety':
+        return {
+          evidence: `示例阶段 ${row.index}：安全 ${score} 分，未见明显红线操作，流程更稳。`,
+          evidenceEn: `Demo stage ${row.index}: safety ${score}, with no obvious red-line actions and a steadier flow.`,
+        };
+      case 'costEfficiency':
+        return {
+          evidence: `示例阶段 ${row.index}：性价比 ${score} 分，${row.totalSessions} 个会话累计成本 $${row.totalCost.toFixed(2)}。`,
+          evidenceEn: `Demo stage ${row.index}: cost-efficiency ${score}, ${row.totalSessions} sessions for a total cost of $${row.totalCost.toFixed(2)}.`,
+        };
+      default:
+        return {
+          evidence: `示例阶段 ${row.index}：当前分数 ${score}。`,
+          evidenceEn: `Demo stage ${row.index}: score ${score}.`,
+        };
+    }
+  };
+
   return rows.map(row => {
     const scores = [row.w, row.c, row.tu, row.se, row.sa, row.ce];
-    const dimensions: DimensionScore[] = dimsOrder.map((dimension, i) => ({
-      dimension,
-      label: DIMENSION_LABELS[dimension],
-      labelEn: DIMENSION_LABELS_EN[dimension],
-      score: scores[i],
-      maxScore: 100,
-      details: row.dimDetails[i],
-      detailsEn: row.dimDetailsEn[i],
-    }));
+    const dimensions: DimensionScore[] = dimsOrder.map((dimension, i) => {
+      const { evidence, evidenceEn } = buildDemoEvidence(row, dimension, scores[i]);
+      return {
+        dimension,
+        label: DIMENSION_LABELS[dimension],
+        labelEn: DIMENSION_LABELS_EN[dimension],
+        score: scores[i],
+        maxScore: 100,
+        details: row.dimDetails[i],
+        detailsEn: row.dimDetailsEn[i],
+        evidence,
+        evidenceEn,
+      };
+    });
 
     const n = row.totalSessions || 1;
     return {

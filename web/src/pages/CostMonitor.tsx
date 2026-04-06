@@ -26,6 +26,7 @@ interface CostSummary {
   topTasks: { taskId: string; taskName: string; cost: number; tokens: number }[]
   pricingSource?: 'pricetoken' | 'static-default'
   pricingUpdatedAt?: string
+  usingDemo?: boolean
 }
 
 interface CostInsight {
@@ -141,7 +142,7 @@ export default function CostMonitor() {
 
       setDaily(Array.isArray(d) ? d : [])
       setSummary(s)
-      setDemoCostHint(Boolean(isDemo))
+      setDemoCostHint(Boolean(isDemo || s?.usingDemo))
       setInsights(Array.isArray(ins) ? ins : [])
       setSavings(sav)
       setModelBreakdown(normalizedModels)

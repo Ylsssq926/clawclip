@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import type { LobsterDataRootStatus, OpenClawStatus, SkillInfo } from '../types/index.js';
 import {
   countSessionJsonlFiles,
@@ -13,6 +14,10 @@ import { buildEcosystemNotes } from './ecosystem-hints.js';
 import { sessionParser } from './session-parser.js';
 
 const execFileAsync = promisify(execFile);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const APP_VERSION_FALLBACK = '1.0.0';
 
 type CliDisplayName = 'openclaw' | 'zeroclaw';
 
@@ -93,6 +98,25 @@ function collectRootStatuses(): LobsterDataRootStatus[] {
   });
 }
 
+function readAppVersion(): string {
+  const projectRoot =
+    path.basename(path.dirname(__dirname)) === 'dist'
+      ? path.resolve(__dirname, '..', '..', '..')
+      : path.resolve(__dirname, '..', '..');
+  const packagePath = path.join(projectRoot, 'package.json');
+
+  try {
+    const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf-8')) as { version?: unknown };
+    if (typeof pkg.version === 'string' && pkg.version.trim()) {
+      return pkg.version.trim();
+    }
+  } catch {
+    // ignore and use fallback below
+  }
+
+  return APP_VERSION_FALLBACK;
+}
+
 export class OpenClawBridge {
   /** 获取运行状态与多根兼容信息 */
   async getStatus(): Promise<OpenClawStatus> {
@@ -112,7 +136,7 @@ export class OpenClawBridge {
 
     let cliCommand: 'openclaw' | 'zeroclaw' | null = null;
     let running = false;
-    let version = 'unknown';
+    let version = readAppVersion();
 
     for (const cand of cliStatusProbeCandidates()) {
       try {

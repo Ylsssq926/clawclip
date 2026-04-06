@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { useI18n } from '../lib/i18n'
 import { apiGet } from '../lib/api'
 import EmptyState from '../components/ui/EmptyState'
-import type { SessionMeta } from '../types/session'
 
 interface SearchMatch {
   stepIndex: number
@@ -65,9 +64,9 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
   const [importMessage, setImportMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
   const loadSessionCount = useCallback(() => {
-    apiGet<SessionMeta[]>('/api/replay/sessions')
+    apiGet<{ total?: number }>('/api/knowledge/stats')
       .then(data => {
-        setSessionCount(Array.isArray(data) ? data.length : 0)
+        setSessionCount(typeof data.total === 'number' ? data.total : 0)
       })
       .catch(() => setSessionCount(0))
   }, [])

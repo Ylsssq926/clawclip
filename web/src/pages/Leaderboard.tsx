@@ -38,6 +38,39 @@ function PodiumMedal(position: number): string {
   return ''
 }
 
+const DEMO_LEADERBOARD_ENTRIES: LeaderboardEntry[] = [
+  {
+    id: 'demo-deep',
+    nickname: 'DeepLobster',
+    score: 92,
+    rank: 'S',
+    topModel: 'deepseek-chat',
+    totalSessions: 156,
+    dimensions: [],
+    submittedAt: '2026-03-18T02:30:00.000Z',
+  },
+  {
+    id: 'demo-code',
+    nickname: 'CodeWizard',
+    score: 88,
+    rank: 'A',
+    topModel: 'gpt-4o',
+    totalSessions: 98,
+    dimensions: [],
+    submittedAt: '2026-03-17T14:20:00.000Z',
+  },
+  {
+    id: 'demo-eff',
+    nickname: 'SpeedRunner',
+    score: 85,
+    rank: 'A',
+    topModel: 'claude-3.5-sonnet',
+    totalSessions: 210,
+    dimensions: [],
+    submittedAt: '2026-03-16T09:15:00.000Z',
+  },
+]
+
 export default function Leaderboard() {
   const { t, locale } = useI18n()
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
@@ -57,6 +90,10 @@ export default function Leaderboard() {
   const submitDisabledHint = locale === 'zh' ? '需要真实数据才能提交' : 'Real data required to submit'
   const canSubmit = hasRealSessionData === true
   const submitBlocked = hasRealSessionData === false
+  const showDemoBanner = (isDemo || !canSubmit) && entries.length > 0
+  const columnLabels = locale === 'zh'
+    ? { position: '排名', nickname: '玩家', rank: '等级', model: '模型', sessions: '会话数', score: '得分', submitted: '提交时间' }
+    : { position: 'Place', nickname: 'Player', rank: 'Rank', model: 'Model', sessions: 'Sessions', score: 'Score', submitted: 'Submitted' }
 
   const fmtRelative = useCallback((iso: string) => {
     const diff = Date.now() - new Date(iso).getTime()
@@ -87,9 +124,13 @@ export default function Leaderboard() {
         apiGet<{ entries?: LeaderboardEntry[]; isDemo?: boolean }>('/api/leaderboard?limit=50'),
         apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status'),
       ])
-      setEntries(Array.isArray(data.entries) ? data.entries : [])
-      setIsDemo(Boolean(data.isDemo))
-      setHasRealSessionData(status?.hasRealSessionData === true)
+      const hasRealData = status?.hasRealSessionData === true
+      const serverEntries = Array.isArray(data.entries) ? data.entries : []
+      const shouldUseDemoFallback = !hasRealData && serverEntries.length === 0
+
+      setEntries(shouldUseDemoFallback ? DEMO_LEADERBOARD_ENTRIES : serverEntries)
+      setIsDemo(Boolean(data.isDemo) || shouldUseDemoFallback || !hasRealData)
+      setHasRealSessionData(hasRealData)
     } catch (err) {
       setError(parseApiErrorMessage(err, t('leaderboard.error')))
       setEntries([])
@@ -165,7 +206,7 @@ export default function Leaderboard() {
         <div>
           <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">{t('leaderboard.title')}</h2>
           <p className="text-sm text-slate-500 mt-1">{t('leaderboard.subtitle')}</p>
-      {isDemo && entries.length > 0 && (
+      {showDemoBanner && (
         <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.07] px-4 py-3 flex items-start gap-2.5">
           <span className="text-base leading-none mt-px" aria-hidden>💡</span>
           <p className="text-sm text-cyan-700 leading-relaxed">{t('leaderboard.demoBanner')}</p>
@@ -203,65 +244,122 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {!loading && !error && (
-        <ul className="space-y-3">
-          {entries.map((e, i) => {
-            const pos = i + 1
-            const isTop3 = pos <= 3
-            const medal = PodiumMedal(pos)
-            return (
-              <li
-                key={e.id}
-                className={cn(
-                  'rounded-2xl border px-4 py-4 transition-shadow',
-                  pos === 1 &&
-                    'border-cyan-400/30 bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10 shadow-lg shadow-cyan-500/10',
-                  pos === 2 && 'border-slate-300/25 bg-gradient-to-br from-slate-400/10 to-slate-600/5',
-                  pos === 3 && 'border-amber-800/30 bg-gradient-to-br from-amber-900/20 to-amber-950/10',
-                  !isTop3 && 'border-slate-200 bg-white',
-                )}
-              >
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                  <div className="flex items-center gap-2 min-w-[4.5rem] shrink-0">
-                    {medal ? (
-                      <>
-                        <span className="text-2xl leading-none" aria-hidden>
-                          {medal}
+      {!loading && !error && entries.length > 0 && (
+        <>
+          <ul className="space-y-3 md:hidden">
+            {entries.map((e, i) => {
+              const pos = i + 1
+              const isTop3 = pos <= 3
+              const medal = PodiumMedal(pos)
+              return (
+                <li
+                  key={e.id}
+                  className={cn(
+                    'rounded-2xl border px-4 py-4 transition-shadow',
+                    pos === 1 &&
+                      'border-cyan-400/30 bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10 shadow-lg shadow-cyan-500/10',
+                    pos === 2 && 'border-slate-300/25 bg-gradient-to-br from-slate-400/10 to-slate-600/5',
+                    pos === 3 && 'border-amber-800/30 bg-gradient-to-br from-amber-900/20 to-amber-950/10',
+                    !isTop3 && 'border-slate-200 bg-white',
+                  )}
+                >
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2 min-w-[4.5rem] shrink-0">
+                      {medal ? (
+                        <>
+                          <span className="text-2xl leading-none" aria-hidden>
+                            {medal}
+                          </span>
+                          <span className="text-sm font-mono text-slate-500 tabular-nums">{pos}</span>
+                        </>
+                      ) : (
+                        <span className="text-base font-mono text-slate-500 tabular-nums w-10">#{pos}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-[120px]">
+                      <div className="font-medium text-slate-900">{e.nickname}</div>
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                        <span
+                          className={cn(
+                            'text-[10px] font-bold px-2 py-0.5 rounded-md',
+                            RANK_BADGE[e.rank] ?? RANK_BADGE.C,
+                          )}
+                        >
+                          {e.rank}
                         </span>
-                        <span className="text-sm font-mono text-slate-500 tabular-nums">{pos}</span>
-                      </>
-                    ) : (
-                      <span className="text-base font-mono text-slate-500 tabular-nums w-10">#{pos}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-[120px]">
-                    <div className="font-medium text-slate-900">{e.nickname}</div>
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                      <span
-                        className={cn(
-                          'text-[10px] font-bold px-2 py-0.5 rounded-md',
-                          RANK_BADGE[e.rank] ?? RANK_BADGE.C,
-                        )}
-                      >
-                        {e.rank}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 font-mono">
-                        {e.topModel}
-                      </span>
-                      <span className="text-[10px] text-slate-500">{e.totalSessions} {t('leaderboard.sessions')}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 font-mono">
+                          {e.topModel}
+                        </span>
+                        <span className="text-[10px] text-slate-500">{e.totalSessions} {t('leaderboard.sessions')}</span>
+                      </div>
+                    </div>
+                    <div className="text-right sm:ml-auto">
+                      <div className="text-2xl sm:text-3xl font-bold tabular-nums bg-gradient-to-r from-[#3b82c4] to-cyan-600 bg-clip-text text-transparent">
+                        {Math.round(e.score)}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{fmtRelative(e.submittedAt)}</div>
                     </div>
                   </div>
-                  <div className="text-right sm:ml-auto">
-                    <div className="text-2xl sm:text-3xl font-bold tabular-nums bg-gradient-to-r from-cyan-200 to-teal-300 bg-clip-text text-transparent">
-                      {Math.round(e.score)}
-                    </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{fmtRelative(e.submittedAt)}</div>
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                </li>
+              )
+            })}
+          </ul>
+
+          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">{columnLabels.position}</th>
+                  <th className="px-4 py-3 text-left font-medium">{columnLabels.nickname}</th>
+                  <th className="px-4 py-3 text-left font-medium">{columnLabels.rank}</th>
+                  <th className="px-4 py-3 text-left font-medium">{columnLabels.model}</th>
+                  <th className="px-4 py-3 text-left font-medium">{columnLabels.sessions}</th>
+                  <th className="px-4 py-3 text-right font-medium">{columnLabels.score}</th>
+                  <th className="px-4 py-3 text-right font-medium">{columnLabels.submitted}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {entries.map((e, i) => {
+                  const pos = i + 1
+                  const medal = PodiumMedal(pos)
+                  return (
+                    <tr
+                      key={`${e.id}-table`}
+                      className={cn(
+                        'transition-colors hover:bg-slate-50',
+                        pos === 1 && 'bg-cyan-50/80',
+                        pos === 2 && 'bg-slate-50/80',
+                        pos === 3 && 'bg-amber-50/70',
+                      )}
+                    >
+                      <td className="px-4 py-3 text-slate-600 font-mono tabular-nums">
+                        <div className="flex items-center gap-2">
+                          {medal ? <span aria-hidden>{medal}</span> : null}
+                          <span>#{pos}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{e.nickname}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            'inline-flex text-[10px] font-bold px-2 py-0.5 rounded-md',
+                            RANK_BADGE[e.rank] ?? RANK_BADGE.C,
+                          )}
+                        >
+                          {e.rank}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 font-mono">{e.topModel}</td>
+                      <td className="px-4 py-3 text-slate-600 tabular-nums">{e.totalSessions}</td>
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-[#3b82c4]">{Math.round(e.score)}</td>
+                      <td className="px-4 py-3 text-right text-slate-500">{fmtRelative(e.submittedAt)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {!loading && !error && entries.length === 0 && (

@@ -132,7 +132,12 @@ function dimLabel(d: { label: string; labelEn?: string }, zh: boolean): string {
 }
 
 function dimEvidence(d: { evidence?: string; evidenceEn?: string }, zh: boolean): string {
-  return zh ? (d.evidence || '') : (d.evidenceEn || d.evidence || '')
+  const raw = zh ? (d.evidence || '') : (d.evidenceEn || d.evidence || '')
+  return raw.trim()
+}
+
+function dimEvidenceFallback(d: { score: number; maxScore: number }, zh: boolean): string {
+  return zh ? `当前分数 ${d.score}/${d.maxScore}` : `Current score ${d.score}/${d.maxScore}`
 }
 
 function BenchmarkScoringMethod({ isZh }: { isZh: boolean }) {
@@ -159,7 +164,7 @@ function BenchmarkScoringMethod({ isZh }: { isZh: boolean }) {
 
 export default function Benchmark() {
   const { t, locale } = useI18n()
-  const isZh = locale === 'zh'
+  const isZh = locale.startsWith('zh')
   const [result, setResult] = useState<BenchmarkResult | null>(null)
   const [history, setHistory] = useState<BenchmarkResult[]>([])
   const [compareId, setCompareId] = useState<string | null>(null)
@@ -240,7 +245,7 @@ export default function Benchmark() {
         fullMark: 100,
       }
     })
-  }, [result, compareResult])
+  }, [result, compareResult, isZh])
 
   const runBenchmark = async () => {
     setRunning(true)
@@ -368,7 +373,7 @@ export default function Benchmark() {
       {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-600 text-sm">{error}</div>}
 
       {dataSource === 'demo' && (
-        <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-500/[0.06] px-4 py-3 text-xs text-cyan-700">
+        <div className="mb-4 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-3 text-sm text-cyan-900 shadow-sm">
           {t('demo.hint.benchmark')}
         </div>
       )}
@@ -509,7 +514,7 @@ export default function Benchmark() {
               {(result.dimensions ?? []).map(dim => {
                 const Icon = DIMENSION_ICONS[dim.dimension] || Zap
                 const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-500'
-                const evidenceText = dimEvidence(dim, isZh)
+                const evidenceText = dimEvidence(dim, isZh) || dimEvidenceFallback(dim, isZh)
                 return (
                   <div key={dim.dimension}>
                     <div className="flex items-center gap-2 mb-1.5">
@@ -517,8 +522,11 @@ export default function Benchmark() {
                       <span className="text-sm font-medium text-slate-500">{dimLabel(dim, isZh)}</span>
                     </div>
                     <ScoreBar score={dim.score} color={color} />
-                    {evidenceText && <p className="text-xs text-slate-400 mt-1">{evidenceText}</p>}
-                    <p className="text-xs text-slate-500 mt-1">{isZh ? dim.details : (dim.detailsEn || dim.details)}</p>
+                    <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2">
+                      <p className="text-[11px] font-medium text-blue-700 mb-1">{isZh ? '评分证据' : 'Evidence'}</p>
+                      <p className="text-xs text-blue-900/80 leading-relaxed">{evidenceText}</p>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1.5">{isZh ? dim.details : (dim.detailsEn || dim.details)}</p>
                   </div>
                 )
               })}
@@ -528,7 +536,14 @@ export default function Benchmark() {
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
               <div>
-                <h3 className="text-lg font-semibold">{t('benchmark.curve.title')}</h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-lg font-semibold">{t('benchmark.curve.title')}</h3>
+                  {overallTrendData.length > 0 && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                      {isZh ? `${overallTrendData.length} 个数据点` : `${overallTrendData.length} points`}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 mt-1">{t('benchmark.curve.oneLiner')}</p>
               </div>
               <button

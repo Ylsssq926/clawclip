@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getClawclipStateDir } from '../services/agent-data-root.js';
+import { analyzeReplay } from '../services/replay-analyzer.js';
 import { sessionParser, normalizeSessionId } from '../services/session-parser.js';
 import type { SessionMeta, SessionReplay, SessionStep } from '../types/replay.js';
 
@@ -258,6 +259,43 @@ function makeSnippet(text: string, queryLower: string, maxLen = 160): string {
   if (end < text.length) s = s + '…';
   return s;
 }
+
+/** GET /api/knowledge/stats — 统计知识库会话总数（含导入数据） */
+router.get('/stats', (_req, res, next) => {
+  try {
+    res.json({ total: getMergedReplays().length });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** GET /api/knowledge/session/:id — 读取知识库中的单条会话（含导入数据） */
+router.get('/session/:id', (req, res, next) => {
+  try {
+    const replay = findReplayById(req.params.id);
+    if (!replay) {
+      res.status(404).json({ error: '会话不存在 / Session not found' });
+      return;
+    }
+    res.json(replay);
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** GET /api/knowledge/session/:id/insights — 知识库会话智能诊断（含导入数据） */
+router.get('/session/:id/insights', (req, res, next) => {
+  try {
+    const replay = findReplayById(req.params.id);
+    if (!replay) {
+      res.status(404).json({ error: '会话不存在 / Session not found' });
+      return;
+    }
+    res.json({ insights: analyzeReplay(replay) });
+  } catch (e) {
+    next(e);
+  }
+});
 
 /** GET /api/knowledge/export/:id?format=json|markdown */
 router.get('/export/:id', (req, res, next) => {

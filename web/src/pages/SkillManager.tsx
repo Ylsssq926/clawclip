@@ -24,6 +24,9 @@ interface Skill {
   installed: boolean
 }
 
+const SUGGESTED_SKILLS = ['web-search', 'browser-use', 'filesystem']
+const VALID_SKILL_NAME = /^[a-zA-Z0-9_-]+$/
+
 export default function SkillManager() {
   const { t, locale } = useI18n()
   const [skills, setSkills] = useState<Skill[]>([])
@@ -32,6 +35,15 @@ export default function SkillManager() {
   const [error, setError] = useState<string | null>(null)
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const normalizedSearch = search.trim()
+  const hasInvalidInstallName = normalizedSearch.length > 0 && !VALID_SKILL_NAME.test(normalizedSearch)
+  const installInputHint = locale === 'en'
+    ? 'Use letters, numbers, hyphens, or underscores.'
+    : '支持字母、数字、连字符和下划线。'
+  const invalidInstallHint = locale === 'en'
+    ? 'Skill names can only contain letters, numbers, hyphens, and underscores.'
+    : 'Skill 名称只能包含字母、数字、连字符和下划线。'
+  const suggestedSkillsTitle = locale === 'en' ? 'Popular picks' : '常用推荐'
   const emptySkillsHint = locale === 'en'
     ? 'Type a skill name above and click Install to add your first skill.'
     : '在上方输入技能名称并点击安装，就能添加第一个技能。'
@@ -44,11 +56,16 @@ export default function SkillManager() {
   }, [])
 
   const handleInstall = async () => {
-    if (!search.trim()) return
+    if (!normalizedSearch) return
+    if (!VALID_SKILL_NAME.test(normalizedSearch)) {
+      setError(invalidInstallHint)
+      return
+    }
+
     setError(null)
-    setInstalling(search)
+    setInstalling(normalizedSearch)
     try {
-      const result = await apiPost<{ success: boolean; message?: string }>('/api/skills/install', { name: search })
+      const result = await apiPost<{ success: boolean; message?: string }>('/api/skills/install', { name: normalizedSearch })
       if (result.success) {
         setSearch('')
         const list = await apiGet<Skill[]>('/api/skills')
@@ -81,26 +98,47 @@ export default function SkillManager() {
     <div>
       <h2 className="text-2xl font-bold mb-6">{t('skills.title')}</h2>
 
-      <div className="flex gap-3 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleInstall()}
-            placeholder={t('skills.placeholder')}
-            className="w-full bg-surface-raised border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 transition-colors"
-          />
+      <div className="mb-3 flex gap-3">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleInstall()}
+              placeholder={t('skills.placeholder')}
+              aria-invalid={hasInvalidInstallName}
+              className="w-full bg-surface-raised border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+            />
+          </div>
+          <p className={`mt-2 text-xs ${hasInvalidInstallName ? 'text-amber-600' : 'text-slate-500'}`}>
+            {hasInvalidInstallName ? invalidInstallHint : installInputHint}
+          </p>
         </div>
         <button
+          type="button"
           onClick={handleInstall}
-          disabled={!search.trim() || !!installing}
+          disabled={!normalizedSearch || hasInvalidInstallName || !!installing}
           className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:shadow-lg hover:shadow-blue-500/20 disabled:opacity-50 rounded-xl text-sm font-medium transition-all flex items-center gap-2 text-white"
         >
           <Download className="w-4 h-4" />
           {installing ? t('skills.installing') : t('skills.install')}
         </button>
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-slate-500">{suggestedSkillsTitle}</span>
+        {SUGGESTED_SKILLS.map(skill => (
+          <button
+            key={skill}
+            type="button"
+            onClick={() => setSearch(skill)}
+            className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+          >
+            {skill}
+          </button>
+        ))}
       </div>
 
       {error && (

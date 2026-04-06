@@ -29,6 +29,7 @@ export interface CostStats {
   comparedToLastMonth: number;
   pricingSource: PricingSource;
   pricingUpdatedAt: string;
+  usingDemo: boolean;
 }
 
 export interface TaskCost {

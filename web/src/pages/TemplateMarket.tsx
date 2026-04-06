@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Check, ArrowRight, ChevronDown } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
-import { ApiError, apiGet, apiPost } from '../lib/api'
+import { ApiError, apiGet, apiGetSafe, apiPost } from '../lib/api'
 
 const INSTALLED_TEMPLATES_STORAGE_KEY = 'clawclip-installed-templates'
 
@@ -61,6 +61,51 @@ const CAT_I18N: Record<string, string> = {
   '客服': 'templates.cat.support',
 }
 
+const DESCRIPTION_FALLBACKS: Record<string, string> = {
+  'daily-reporter': '自动聚合热点、整理要点并产出适合公众号或小红书发布的日报内容。',
+  'email-assistant': '帮助整理收件箱、识别重点邮件并给出可直接发送的回复草稿。',
+  'customer-service': '处理高频咨询、整理常见问题，并把复杂问题转交给人工继续跟进。',
+  'code-reviewer': '围绕 PR 做代码审查、安全检查和改进建议，适合开发协作流程。',
+  'schedule-manager': '围绕日历、提醒和会议纪要搭建日常安排助手，减少漏看与冲突。',
+}
+
+function buildMeaningfulDescription(template: Pick<Template, 'id' | 'name' | 'description' | 'category' | 'skills'>): string {
+  const description = typeof template.description === 'string' ? template.description.trim() : ''
+  if (description.length >= 10) return description
+  if (DESCRIPTION_FALLBACKS[template.id]) return DESCRIPTION_FALLBACKS[template.id]
+
+  const skills = Array.isArray(template.skills) ? template.skills.filter(Boolean) : []
+  if (skills.length > 0) {
+    return `${template.name} 适合 ${template.category || '通用'} 场景，内置 ${skills.slice(0, 3).join('、')} 等能力，方便直接开跑。`
+  }
+
+  return `${template.name} 是一个可直接导入的 ${template.category || '通用'} 模板，适合快速搭起首版工作流。`
+}
+
+function normalizeTemplate(template: Template, index: number): Template {
+  const fallbackId = `template-${index + 1}`
+  const category = typeof template.category === 'string' && template.category.trim() ? template.category.trim() : '效率'
+  const skills = Array.isArray(template.skills)
+    ? template.skills.filter((skill): skill is string => typeof skill === 'string' && skill.trim().length > 0)
+    : []
+
+  const normalized: Template = {
+    ...template,
+    id: typeof template.id === 'string' && template.id.trim() ? template.id.trim() : fallbackId,
+    name: typeof template.name === 'string' && template.name.trim() ? template.name.trim() : `模板 ${index + 1}`,
+    category,
+    icon: typeof template.icon === 'string' && template.icon.trim() ? template.icon.trim() : '🧩',
+    skills,
+    tags: Array.isArray(template.tags)
+      ? template.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+      : undefined,
+    description: '',
+  }
+
+  normalized.description = buildMeaningfulDescription(normalized)
+  return normalized
+}
+
 export default function TemplateMarket() {
   const { t } = useI18n()
   const [templates, setTemplates] = useState<Template[]>([])
@@ -79,11 +124,42 @@ export default function TemplateMarket() {
   const getCategoryLabel = (category: string) => (CAT_I18N[category] ? t(CAT_I18N[category]) : category)
 
   useEffect(() => {
-    apiGet<Template[]>('/api/templates')
-      .then(d => setTemplates(Array.isArray(d) ? d : []))
-      .catch(err => { setError(formatUserApiError(err, t('templates.error.network'))) })
-      .finally(() => setLoading(false))
-  }, [])
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
+    Promise.all([
+      apiGet<Template[]>('/api/templates'),
+      apiGetSafe<Array<{ name?: string }>>('/api/skills'),
+    ])
+      .then(([templateList, installedSkills]) => {
+        if (cancelled) return
+
+        const normalizedTemplates = (Array.isArray(templateList) ? templateList : []).map((template, index) => normalizeTemplate(template, index))
+        setTemplates(normalizedTemplates)
+
+        if (Array.isArray(installedSkills)) {
+          const next = new Set(
+            installedSkills
+              .map(skill => (typeof skill?.name === 'string' ? skill.name.trim() : ''))
+              .filter(Boolean),
+          )
+          persistInstalledTemplates(next)
+          setApplied(next)
+        }
+      })
+      .catch(err => {
+        if (cancelled) return
+        setError(formatUserApiError(err, t('templates.error.network')))
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [t])
 
   const filtered =
     catIdx === 0

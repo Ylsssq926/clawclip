@@ -624,6 +624,21 @@ function finalizeStepDurationsAndCost(steps: SessionStep[]): SessionStep[] {
   });
 }
 
+function cleanSessionSummary(raw: string): string {
+  const compact = raw
+    .replace(/\r/g, '')
+    .replace(/^Sender \(untrusted metadata\):\s*```[\s\S]*?```\s*/i, '')
+    .replace(/^\[[^\]]+\]\s*/, '')
+    .replace(/```[^\n]*\n?/g, ' ')
+    .replace(/```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (compact) return compact.slice(0, 80);
+  return raw.replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+
 function buildMeta(
   sourceId: string,
   agentName: string,
@@ -631,7 +646,7 @@ function buildMeta(
   steps: SessionStep[],
 ): SessionMeta {
   const firstUser = steps.find(s => s.type === 'user');
-  const summary = (firstUser?.content ?? '').slice(0, 80);
+  const summary = cleanSessionSummary(firstUser?.content ?? '');
   const models = new Set<string>();
   for (const s of steps) {
     if (s.model) models.add(s.model);
@@ -803,23 +818,49 @@ export class SessionParser {
     return data;
   }
 
+  private sortSessionMetas(list: SessionMeta[]): SessionMeta[] {
+    return [...list].sort((a, b) => {
+      const sa = a.storeUpdatedAt ?? a.endTime.getTime();
+      const sb = b.storeUpdatedAt ?? b.endTime.getTime();
+      if (sb !== sa) return sb - sa;
+      return b.endTime.getTime() - a.endTime.getTime();
+    });
+  }
+
+  private applySessionLimit(list: SessionMeta[], limit?: number): SessionMeta[] {
+    if (limit != null && limit > 0) {
+      return list.slice(0, limit);
+    }
+    return list;
+  }
+
   /** 扫所有已配置数据根的会话，按结束时间倒序 */
   getSessions(limit?: number): SessionMeta[] {
     const real = this.getCachedReplays();
     const list: SessionMeta[] =
       real.length === 0 ? DEMO_SESSIONS.map(d => d.meta) : real.map(r => r.meta);
 
-    list.sort((a, b) => {
-      const sa = a.storeUpdatedAt ?? a.endTime.getTime();
-      const sb = b.storeUpdatedAt ?? b.endTime.getTime();
-      if (sb !== sa) return sb - sa;
-      return b.endTime.getTime() - a.endTime.getTime();
-    });
+    return this.applySessionLimit(this.sortSessionMetas(list), limit);
+  }
 
-    if (limit != null && limit > 0) {
-      return list.slice(0, limit);
+  /**
+   * 用于需要“至少有几条可选会话”的页面（如 Compare / Prompt Insight）。
+   * 真实会话不足时，保留真实会话并补齐 Demo，避免页面只剩 0~1 条不可体验。
+   */
+  getSessionsWithDemoFallback(limit?: number, minCount = 1): SessionMeta[] {
+    const real = this.getCachedReplays().map(replay => replay.meta);
+    if (real.length >= minCount) {
+      return this.applySessionLimit(this.sortSessionMetas(real), limit);
     }
-    return list;
+
+    const seen = new Set(real.map(meta => meta.id));
+    const combined = [...real];
+    for (const demo of DEMO_SESSIONS.map(replay => replay.meta)) {
+      if (seen.has(demo.id)) continue;
+      combined.push(demo);
+    }
+
+    return this.applySessionLimit(this.sortSessionMetas(combined), limit);
   }
 
   /** 按 id 取整条会话；支持 URL 解码与旧版 id 别名 */

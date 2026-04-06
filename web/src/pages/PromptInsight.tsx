@@ -75,7 +75,7 @@ const chartTooltipStyle = {
 } as const
 
 function labelsFor(locale: Locale) {
-  const zh = locale === 'zh'
+  const zh = locale.startsWith('zh')
   return {
     summary: zh ? '概览' : 'Summary',
     tips: zh ? '洞察与建议' : 'Insights',
@@ -144,7 +144,7 @@ export default function PromptInsight() {
 
     Promise.all([
       apiGet<PromptInsightsPayload>('/api/analytics/prompt-insights?days=30'),
-      apiGet<SessionMeta[]>('/api/replay/sessions?limit=200').catch(() => [] as SessionMeta[]),
+      apiGet<SessionMeta[]>('/api/replay/sessions?limit=200&fallback=demo&minCount=50').catch(() => [] as SessionMeta[]),
     ])
       .then(([insights, sessions]) => {
         setData(insights)
@@ -164,7 +164,7 @@ export default function PromptInsight() {
   const patterns = data?.patterns ?? []
   const summary = data?.summary ?? null
   const tips = data?.tips ?? []
-  const isZh = locale === 'zh'
+  const isZh = locale.startsWith('zh')
   const emptyPromptTitle = isZh ? '还没有可分析的 Prompt 样本' : 'No prompt analysis samples yet'
   const emptyPromptDesc = isZh
     ? '接入更多真实会话后，这里会统计 Prompt 长度分布、输出/输入比和工具触发率。'
@@ -174,7 +174,7 @@ export default function PromptInsight() {
     : 'How to start: run a few tasks in OpenClaw / ZeroClaw, then come back to see which prompt patterns are leaner and more reliable.'
 
   const tipMessage = (tip: PromptInsightsPayload['tips'][0]) =>
-    locale === 'zh' ? tip.messageZh : tip.messageEn
+    locale.startsWith('zh') ? tip.messageZh : tip.messageEn
 
   const tipStyle = (type: 'good' | 'warning' | 'tip') => {
     switch (type) {

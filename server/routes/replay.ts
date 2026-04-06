@@ -13,7 +13,19 @@ router.get('/sessions', (req, res, next) => {
       const n = parseInt(String(raw), 10);
       if (Number.isFinite(n) && n > 0) limit = Math.min(n, 200);
     }
-    const sessions = sessionParser.getSessions(limit);
+
+    const fallback = String(req.query.fallback ?? '').trim().toLowerCase();
+    const rawMinCount = req.query.minCount;
+    let minCount = 1;
+    if (rawMinCount !== undefined && rawMinCount !== '') {
+      const n = parseInt(String(rawMinCount), 10);
+      if (Number.isFinite(n) && n > 0) minCount = Math.min(n, 50);
+    }
+
+    const sessions =
+      fallback === 'demo'
+        ? sessionParser.getSessionsWithDemoFallback(limit, minCount)
+        : sessionParser.getSessions(limit);
     res.json(sessions);
   } catch (e) {
     next(e);

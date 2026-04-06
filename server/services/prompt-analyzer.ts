@@ -1,3 +1,4 @@
+import type { SessionReplay } from '../types/replay.js';
 import { DEMO_SESSIONS } from './demo-sessions.js';
 import { sessionParser } from './session-parser.js';
 
@@ -30,18 +31,15 @@ export interface PromptInsightsResult {
   }>;
 }
 
-export function getPromptInsights(days?: number): PromptInsightsResult {
-  const realReplays = sessionParser.getRealReplays();
-  const usingDemo = realReplays.length === 0;
-  const sourceReplays = usingDemo ? DEMO_SESSIONS : realReplays;
-  const referenceNow = usingDemo
-    ? sourceReplays.reduce((latest, replay) => Math.max(latest, replay.meta.endTime.getTime()), 0)
-    : Date.now();
-  const cutoff = days ? referenceNow - days * 86400_000 : 0;
+function getLatestReplayTimestamp(replays: SessionReplay[]): number {
+  return replays.reduce((latest, replay) => Math.max(latest, replay.meta.endTime.getTime()), 0);
+}
 
+function buildPromptPatterns(replays: SessionReplay[], days?: number, referenceNow = Date.now()): PromptPattern[] {
+  const cutoff = days ? referenceNow - days * 86400_000 : 0;
   const patterns: PromptPattern[] = [];
 
-  for (const replay of sourceReplays) {
+  for (const replay of replays) {
     const meta = replay.meta;
     if (cutoff && meta.endTime.getTime() < cutoff) continue;
     if (!replay.steps.length) continue;
@@ -65,6 +63,7 @@ export function getPromptInsights(days?: number): PromptInsightsResult {
     }
 
     if (userCount === 0) continue;
+    if (outputCount === 0 && toolCalls === 0) continue;
 
     const avgPromptLength = Math.round(userTokens / userCount);
     const avgOutputLength = outputCount > 0 ? Math.round(outputTokens / outputCount) : 0;
@@ -85,6 +84,16 @@ export function getPromptInsights(days?: number): PromptInsightsResult {
   }
 
   patterns.sort((a, b) => b.outputInputRatio - a.outputInputRatio);
+  return patterns;
+}
+
+export function getPromptInsights(days?: number): PromptInsightsResult {
+  const realReplays = sessionParser.getRealReplays();
+  const realPatterns = buildPromptPatterns(realReplays, days, Date.now());
+  const usingDemo = realPatterns.length === 0;
+  const patterns = usingDemo
+    ? buildPromptPatterns(DEMO_SESSIONS, days, getLatestReplayTimestamp(DEMO_SESSIONS))
+    : realPatterns;
 
   const total = patterns.length;
   const avgPromptLength = total > 0 ? Math.round(patterns.reduce((s, p) => s + p.avgPromptLength, 0) / total) : 0;
@@ -123,8 +132,12 @@ export function getPromptInsights(days?: number): PromptInsightsResult {
   if (usingDemo && total > 0) {
     tips.unshift({
       type: 'tip',
-      messageZh: '当前展示的是 Demo 会话的 Prompt 分析，接入 OpenClaw 后会自动切换为真实数据。',
-      messageEn: 'You are viewing prompt insights from demo sessions. Connect OpenClaw to switch to real data automatically.',
+      messageZh: realReplays.length > 0
+        ? '当前真实会话缺少可分析的 Prompt 样本，已自动回退为 Demo 会话结果。'
+        : '当前展示的是 Demo 会话的 Prompt 分析，接入 OpenClaw 后会自动切换为真实数据。',
+      messageEn: realReplays.length > 0
+        ? 'Current real sessions do not contain analyzable prompt samples, so demo prompt insights are shown instead.'
+        : 'You are viewing prompt insights from demo sessions. Connect OpenClaw to switch to real data automatically.',
     });
   }
 

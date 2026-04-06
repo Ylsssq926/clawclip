@@ -48,6 +48,12 @@ interface CostSummary {
   trend: 'up' | 'down' | 'stable'
 }
 
+const DEMO_COST_SUMMARY: CostSummary = {
+  totalCost: 0.04,
+  totalTokens: 30705,
+  trend: 'up',
+}
+
 interface ReplayDiagnosticsSession {
   id: string
   agentName: string
@@ -102,7 +108,14 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
   useEffect(() => {
     Promise.all([apiGetSafe('/api/status'), apiGetSafe('/api/cost/summary?days=30')])
       .then(([s, c]) => {
-        setStatus(s as StatusData | null); setCost(c as CostSummary | null)
+        const nextStatus = s as StatusData | null
+        const nextCost = c as CostSummary | null
+        const shouldUseDemoCost =
+          !nextStatus?.hasRealSessionData &&
+          (!nextCost || ((nextCost.totalCost ?? 0) <= 0 && (nextCost.totalTokens ?? 0) <= 0))
+
+        setStatus(nextStatus)
+        setCost(shouldUseDemoCost ? DEMO_COST_SUMMARY : nextCost)
         if (!s && !c) setFetchError(true)
       })
       .finally(() => setLoading(false))

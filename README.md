@@ -15,6 +15,8 @@ Run Insights · Agent Scorecard · Cost Report — for OpenClaw, ZeroClaw, and p
 <p>
   <a href="https://clawclip.luelan.online">Live Demo</a> ·
   <a href="#quick-start">Quick Start</a> ·
+  <a href="#visual-proof">Preview</a> ·
+  <a href="./docs/FAQ.md">FAQ</a> ·
   <a href="#core-capabilities">Core Capabilities</a> ·
   <a href="#roadmap">Roadmap</a> ·
   <a href="./README.zh-CN.md">中文</a> ·
@@ -38,6 +40,16 @@ Run Insights · Agent Scorecard · Cost Report — for OpenClaw, ZeroClaw, and p
 > It shows the full run as evidence, scores whether the agent held up, and connects quality back to spend so you can tell whether “better” was actually worth paying for.
 >
 > **Boundary, stated plainly:** session analysis happens locally, agent run data is not uploaded, and price refresh is optional when you want current public pricing references.
+
+<a id="visual-proof"></a>
+
+## See the proof in 15 seconds
+
+One run turns into three decisions at a glance: what happened, whether it held, and whether the gain was worth the spend.
+
+<p align="center">
+  <img src="./docs/radar-animation-en.gif" alt="ClawClip turns one agent run into Run Insights, Agent Scorecard, and Cost Report" />
+</p>
 
 <a id="core-capabilities"></a>
 

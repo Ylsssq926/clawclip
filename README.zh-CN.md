@@ -13,6 +13,8 @@
 <p>
   <a href="https://clawclip.luelan.online">在线体验</a> ·
   <a href="#quick-start">快速开始</a> ·
+  <a href="#visual-proof">一眼看懂</a> ·
+  <a href="./docs/FAQ.md">常见问题</a> ·
   <a href="#core-capabilities">核心能力</a> ·
   <a href="#roadmap">路线图</a> ·
   <a href="./README.md">English</a> ·
@@ -36,6 +38,16 @@
 > 它会把一次运行整理成证据链，判断这次表现有没有顶住，再把成本摆出来，让你知道这次优化到底值不值。
 >
 > **边界先说清：** 会话分析在本地完成，不上传 Agent 运行数据；如果你要更新成本参考，价格表可以按需联网刷新公开定价。
+
+<a id="visual-proof"></a>
+
+## 15 秒先看明白
+
+一次运行，直接摊成三个判断：发生了什么、有没有顶住、值不值，不用先啃完一屏原始日志再猜。
+
+<p align="center">
+  <img src="./docs/radar-animation-zh.gif" alt="虾片把一次 Agent 运行展开成运行洞察、Agent 成绩单和成本报告" />
+</p>
 
 <a id="core-capabilities"></a>
 

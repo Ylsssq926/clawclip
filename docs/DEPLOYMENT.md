@@ -2,6 +2,8 @@
 
 这份文档面向公开仓库用户，说明如何把 ClawClip 作为一个自托管的本地 Agent 诊断台跑起来。
 
+> 如果你现在更想先确认“为什么只有 Demo / 为什么没会话 / Docker 什么时候用”，可先看 [FAQ](./FAQ.md)。
+
 ClawClip 的运行方式很简单：**一个 Node 进程同时提供 API 和已构建的前端静态资源**。你可以直接用 Node 运行，也可以使用仓库内提供的 `Dockerfile` 与 `docker-compose.yml`。
 
 ## 运行前提

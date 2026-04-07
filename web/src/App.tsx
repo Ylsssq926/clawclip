@@ -137,6 +137,11 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
     setReplayInitialSessionId(sessionId)
   }, [])
 
+  const openReplaySession = useCallback((sessionId: string) => {
+    setReplayTargetSession(sessionId)
+    navigateTab('replay')
+  }, [navigateTab, setReplayTargetSession])
+
   const clearReplayInitialSession = useCallback(() => {
     setReplayInitialSessionId('')
   }, [])
@@ -361,7 +366,7 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
                   )}
                   {activeTab === 'benchmark' && <Benchmark />}
                   {activeTab === 'leaderboard' && <Leaderboard />}
-                  {activeTab === 'cost' && <CostMonitor />}
+                  {activeTab === 'cost' && <CostMonitor onOpenReplaySession={openReplaySession} />}
                   {activeTab === 'prompt' && <PromptInsight />}
                   {activeTab === 'compare' && <Compare />}
                   {activeTab === 'skills' && <SkillManager />}

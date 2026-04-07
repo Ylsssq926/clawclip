@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Trophy, Zap, Play, RefreshCw, Shield, Search, Code, Pen, Wrench, Coins, TrendingUp, Share2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Trophy, Zap, Play, RefreshCw, Shield, Search, Code, Pen, Wrench, Coins, TrendingUp, Share2, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
@@ -58,6 +58,22 @@ interface BenchmarkMeta {
   dataSource?: 'demo' | 'real'
   dataCutoffAt?: string
   sampleCountConfidence?: 'low' | 'medium' | 'high'
+}
+
+interface BenchmarkProofDeltas {
+  score: number
+  tokens: number
+  cost: number
+  costPct?: number
+  tokensPct?: number
+}
+
+interface BenchmarkProof {
+  latest: BenchmarkResult
+  previous: BenchmarkResult | null
+  deltas: BenchmarkProofDeltas | null
+  verdictZh?: string
+  verdictEn?: string
 }
 
 const DIMENSION_ICONS: Record<string, typeof Pen> = {
@@ -166,6 +182,39 @@ function formatConfidenceLabel(value: 'low' | 'medium' | 'high' | undefined, isZ
   return '--'
 }
 
+function formatProofTime(value: string, locale: string): string {
+  const timestamp = new Date(value)
+  if (Number.isNaN(timestamp.getTime())) return '--'
+
+  return new Intl.DateTimeFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(timestamp)
+}
+
+function formatSignedInteger(value: number): string {
+  if (value === 0) return '0'
+  return `${value > 0 ? '+' : ''}${Math.round(value).toLocaleString()}`
+}
+
+function formatSignedCurrency(value: number): string {
+  const abs = Math.abs(value).toFixed(2)
+  if (value === 0) return '$0.00'
+  return `${value > 0 ? '+' : '-'}$${abs}`
+}
+
+function formatSignedPercent(value: number | undefined): string | null {
+  if (value == null || !Number.isFinite(value)) return null
+  const digits = Math.abs(value) >= 10 ? 0 : 1
+  return `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`
+}
+
+function getDeltaState(value: number, prefersLower = false): 'positive' | 'negative' | 'neutral' {
+  if (value === 0) return 'neutral'
+  const improved = prefersLower ? value < 0 : value > 0
+  return improved ? 'positive' : 'negative'
+}
+
 function BenchmarkScoringMethod({ isZh }: { isZh: boolean }) {
   return (
     <details className="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
@@ -200,6 +249,7 @@ export default function Benchmark() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showDimTrend, setShowDimTrend] = useState(false)
   const [benchmarkMeta, setBenchmarkMeta] = useState<BenchmarkMeta | null>(null)
+  const [proof, setProof] = useState<BenchmarkProof | null>(null)
   const [showRadarHelp, setShowRadarHelp] = useState(false)
   const [showCurveHelp, setShowCurveHelp] = useState(false)
 
@@ -207,14 +257,18 @@ export default function Benchmark() {
     setLoading(true)
     setError(null)
     try {
-      const [latest, histBody, meta] = await Promise.all([
+      const [latest, histBody, meta, proofBody] = await Promise.all([
         apiGet<BenchmarkResult>('/api/benchmark/latest').catch((e) =>
           e instanceof ApiError && e.status === 404 ? null : Promise.reject(e),
         ),
         apiGet<{ results?: BenchmarkResult[] }>('/api/benchmark/history'),
         apiGetSafe<BenchmarkMeta>('/api/benchmark/meta'),
+        apiGet<BenchmarkProof>('/api/benchmark/proof').catch((e) =>
+          e instanceof ApiError && e.status === 404 ? null : Promise.reject(e),
+        ),
       ])
       setBenchmarkMeta(meta)
+      setProof(proofBody)
       setResult(latest)
       setHistory(Array.isArray(histBody.results) ? histBody.results : [])
     } catch {
@@ -288,11 +342,13 @@ export default function Benchmark() {
       const data = await apiPost<BenchmarkResult>('/api/benchmark/run')
       setResult(data)
       setCompareId(null)
-      const [histBody, meta] = await Promise.all([
+      const [histBody, meta, proofBody] = await Promise.all([
         apiGetSafe<{ results?: BenchmarkResult[] }>('/api/benchmark/history'),
         apiGetSafe<BenchmarkMeta>('/api/benchmark/meta'),
+        apiGetSafe<BenchmarkProof>('/api/benchmark/proof'),
       ])
       if (meta) setBenchmarkMeta(meta)
+      setProof(proofBody)
       if (histBody) setHistory(Array.isArray(histBody.results) ? histBody.results : [])
       setSuccessMessage(isZh ? `✅ 评测完成，综合分 ${data.overallScore} 分` : `✅ Benchmark complete, overall score ${data.overallScore}`)
     } catch {
@@ -317,6 +373,45 @@ export default function Benchmark() {
   const dataSource = benchmarkMeta?.dataSource === 'real' ? 'real' : benchmarkMeta?.dataSource === 'demo' ? 'demo' : null
   const benchmarkCutoffLabel = formatFreshnessTime(result?.dataCutoffAt ?? benchmarkMeta?.dataCutoffAt, locale)
   const benchmarkConfidenceLabel = formatConfidenceLabel(result?.sampleCountConfidence ?? benchmarkMeta?.sampleCountConfidence, isZh)
+  const proofLatest = proof?.latest ?? result
+  const proofPrevious = proof?.previous ?? null
+  const proofDeltas = proof?.deltas ?? null
+  const proofVerdict = (isZh ? proof?.verdictZh : (proof?.verdictEn || proof?.verdictZh))
+    ?? (isZh ? '这次调整变化不大，建议继续观察。' : 'The change is small so far — keep observing.')
+  const proofMetricCards = proofLatest && proofPrevious && proofDeltas
+    ? [
+        {
+          key: 'score',
+          label: isZh ? '分数' : 'Score',
+          latestValue: `${proofLatest.overallScore}${isZh ? ' 分' : ''}`,
+          previousValue: `${proofPrevious.overallScore}${isZh ? ' 分' : ''}`,
+          deltaValue: proofDeltas.score,
+          deltaLabel: `${proofDeltas.score > 0 ? '+' : ''}${proofDeltas.score}${isZh ? ' 分' : ''}`,
+          pctLabel: null,
+          prefersLower: false,
+        },
+        {
+          key: 'tokens',
+          label: 'Token',
+          latestValue: proofLatest.totalTokens.toLocaleString(),
+          previousValue: proofPrevious.totalTokens.toLocaleString(),
+          deltaValue: proofDeltas.tokens,
+          deltaLabel: formatSignedInteger(proofDeltas.tokens),
+          pctLabel: formatSignedPercent(proofDeltas.tokensPct),
+          prefersLower: true,
+        },
+        {
+          key: 'cost',
+          label: isZh ? '成本' : 'Cost',
+          latestValue: `$${proofLatest.totalCost.toFixed(2)}`,
+          previousValue: `$${proofPrevious.totalCost.toFixed(2)}`,
+          deltaValue: proofDeltas.cost,
+          deltaLabel: formatSignedCurrency(proofDeltas.cost),
+          pctLabel: formatSignedPercent(proofDeltas.costPct),
+          prefersLower: true,
+        },
+      ]
+    : []
 
   if (loading) {
     return (
@@ -416,8 +511,6 @@ export default function Benchmark() {
         </div>
       )}
 
-      <BenchmarkScoringMethod isZh={isZh} />
-
       {result && (
         <>
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600">
@@ -476,6 +569,95 @@ export default function Benchmark() {
             </div>
             </div>
           </GlowCard>
+
+          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-accent" />
+                  <GradientText animate={false}>{isZh ? '优化前后证明' : 'Optimization proof'}</GradientText>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {isZh
+                    ? '直接比较最近两次 benchmark，看看这次调整到底是提质、省钱，还是两头都没赚到。'
+                    : 'Compare the last two benchmark runs to see whether this change improved quality, reduced spend, or missed on both.'}
+                </p>
+              </div>
+            </div>
+
+            {proofLatest && proofPrevious && proofDeltas ? (
+              <>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-600">
+                    {isZh ? '最新一次' : 'Latest'} · {formatProofTime(proofLatest.runAt, locale)}
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-600">
+                    {isZh ? '上一次' : 'Previous'} · {formatProofTime(proofPrevious.runAt, locale)}
+                  </span>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  {proofMetricCards.map(card => {
+                    const state = getDeltaState(card.deltaValue, card.prefersLower)
+                    const DeltaIcon = card.deltaValue > 0 ? ArrowUpRight : card.deltaValue < 0 ? ArrowDownRight : Minus
+                    const toneClass = state === 'positive'
+                      ? 'border-emerald-200 bg-emerald-50/80'
+                      : state === 'negative'
+                        ? 'border-rose-200 bg-rose-50/80'
+                        : 'border-slate-200 bg-slate-50/80'
+                    const badgeClass = state === 'positive'
+                      ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                      : state === 'negative'
+                        ? 'border-rose-200 bg-rose-100 text-rose-700'
+                        : 'border-slate-200 bg-white text-slate-500'
+
+                    return (
+                      <div key={card.key} className={`rounded-xl border p-4 ${toneClass}`}>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
+                        <div className="mt-3 flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-2xl font-semibold text-slate-900 tabular-nums">{card.latestValue}</p>
+                            <p className="text-xs text-slate-500 mt-1">{isZh ? `上次 ${card.previousValue}` : `Prev ${card.previousValue}`}</p>
+                          </div>
+                          <div className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>
+                            <DeltaIcon className="w-3.5 h-3.5" />
+                            <span>{card.deltaLabel}</span>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-[11px] text-slate-500">
+                          {card.pctLabel
+                            ? (isZh ? `相对上次 ${card.pctLabel}` : `${card.pctLabel} vs previous`)
+                            : (card.key === 'score'
+                                ? (isZh ? '越高越好' : 'Higher is better')
+                                : (isZh ? '越低越好' : 'Lower is better'))}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-blue-700">{isZh ? '结论' : 'Verdict'}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-blue-900">{proofVerdict}</p>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-6 text-center">
+                <p className="text-sm font-medium text-slate-700">
+                  {isZh ? '至少再跑一次 benchmark，才能看到优化前后变化。' : 'Run benchmark at least one more time to unlock before/after proof.'}
+                </p>
+                <p className="text-xs text-slate-500 mt-2">
+                  {proofLatest
+                    ? (isZh
+                        ? `当前只有最新一次结果（${formatProofTime(proofLatest.runAt, locale)}），还没法判断这次调整到底值不值。`
+                        : `You only have the latest run (${formatProofTime(proofLatest.runAt, locale)}), so there isn't enough history to judge the change yet.`)
+                    : (isZh ? '当前还没有 benchmark 结果。' : 'No benchmark result yet.')}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <BenchmarkScoringMethod isZh={isZh} />
 
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">

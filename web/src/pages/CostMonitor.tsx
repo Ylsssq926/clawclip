@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar } from 'recharts'
-import { TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
@@ -426,7 +426,11 @@ function CostSkeleton() {
   )
 }
 
-export default function CostMonitor() {
+interface Props {
+  onOpenReplaySession: (sessionId: string) => void
+}
+
+export default function CostMonitor({ onOpenReplaySession }: Props) {
   const { t, locale } = useI18n()
   const isZh = locale.startsWith('zh')
   const [daily, setDaily] = useState<DailyData[]>([])
@@ -577,6 +581,8 @@ export default function CostMonitor() {
       || (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel)
     )),
   )
+  const replayActionLabel = isZh ? '查看会话' : 'View session'
+  const canOpenReplaySession = (sessionId?: string): sessionId is string => Boolean(sessionId?.trim())
 
   const openBudgetModal = () => {
     setBudgetError(null)
@@ -1024,38 +1030,70 @@ export default function CostMonitor() {
 
             {wasteDiagnostics.length > 0 ? (
               <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
-                {wasteDiagnostics.map((diagnostic, index) => (
-                  <div key={`${diagnostic.type}-${diagnostic.sessionId ?? diagnostic.sessionLabel ?? index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">{isZh ? diagnostic.titleZh : diagnostic.titleEn}</p>
-                        {diagnostic.sessionLabel && (
-                          <p className="mt-1 truncate text-[11px] text-slate-500">{diagnostic.sessionLabel}</p>
+                {wasteDiagnostics.map((diagnostic, index) => {
+                  const replaySessionId = diagnostic.sessionId?.trim()
+                  const isReplayLinkable = canOpenReplaySession(replaySessionId)
+
+                  const content = (
+                    <>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900">{isZh ? diagnostic.titleZh : diagnostic.titleEn}</p>
+                          {diagnostic.sessionLabel && (
+                            <p className="mt-1 truncate text-[11px] text-slate-500">{diagnostic.sessionLabel}</p>
+                          )}
+                        </div>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-full px-2 py-1 text-[11px] font-medium',
+                            diagnostic.severity === 'high'
+                              ? 'bg-red-500/10 text-red-600'
+                              : diagnostic.severity === 'medium'
+                                ? 'bg-amber-500/10 text-amber-700'
+                                : 'bg-blue-500/10 text-[#3b82c4]',
+                          )}
+                        >
+                          {diagnostic.severity === 'high'
+                            ? (isZh ? '高' : 'High')
+                            : diagnostic.severity === 'medium'
+                              ? (isZh ? '中' : 'Medium')
+                              : (isZh ? '低' : 'Low')}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm leading-relaxed text-slate-600">{isZh ? diagnostic.descZh : diagnostic.descEn}</p>
+                      <div className="mt-4 flex items-end justify-between gap-3">
+                        <p className="text-sm font-medium text-[#3b82c4]">
+                          {isZh ? '预计浪费' : 'Estimated waste'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
+                        </p>
+                        {isReplayLinkable && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
+                            {replayActionLabel}
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </span>
                         )}
                       </div>
-                      <span
-                        className={cn(
-                          'shrink-0 rounded-full px-2 py-1 text-[11px] font-medium',
-                          diagnostic.severity === 'high'
-                            ? 'bg-red-500/10 text-red-600'
-                            : diagnostic.severity === 'medium'
-                              ? 'bg-amber-500/10 text-amber-700'
-                              : 'bg-blue-500/10 text-[#3b82c4]',
-                        )}
+                    </>
+                  )
+
+                  if (isReplayLinkable) {
+                    return (
+                      <button
+                        key={`${diagnostic.type}-${replaySessionId ?? diagnostic.sessionLabel ?? index}`}
+                        type="button"
+                        onClick={() => onOpenReplaySession(replaySessionId)}
+                        className="group w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/35 hover:bg-white hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2"
                       >
-                        {diagnostic.severity === 'high'
-                          ? (isZh ? '高' : 'High')
-                          : diagnostic.severity === 'medium'
-                            ? (isZh ? '中' : 'Medium')
-                            : (isZh ? '低' : 'Low')}
-                      </span>
+                        {content}
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <div key={`${diagnostic.type}-${diagnostic.sessionLabel ?? index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      {content}
                     </div>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">{isZh ? diagnostic.descZh : diagnostic.descEn}</p>
-                    <p className="mt-4 text-sm font-medium text-[#3b82c4]">
-                      {isZh ? '预计浪费' : 'Estimated waste'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
-                    </p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
@@ -1083,62 +1121,92 @@ export default function CostMonitor() {
                   const reasonText = getSavingReasonText(sug, isZh)
                   const actionText = getSavingActionText(sug, isZh)
                   const guardrailText = getSavingGuardrailText(sug, isZh)
+                  const replaySessionId = sug.sessionId?.trim()
+                  const isReplayLinkable = canOpenReplaySession(replaySessionId)
                   const showModelRoute = Boolean(
                     sug.currentModel
                     && sug.alternativeModel
                     && sug.currentModel !== sug.alternativeModel,
                   )
 
-                  return (
-                    <div
-                      key={`${sug.reasonType ?? 'suggestion'}-${sug.sessionId ?? sug.currentModel ?? i}`}
-                      className={cn('rounded-xl border p-4', getSavingCardClass(sug.priority))}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', typeMeta.className)}>
-                              {typeMeta.label}
+                  const content = (
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', typeMeta.className)}>
+                            {typeMeta.label}
+                          </span>
+                          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', priorityMeta.className)}>
+                            {priorityMeta.label}
+                          </span>
+                          {sug.sessionLabel && (
+                            <span className="truncate text-[11px] text-slate-500">
+                              {t('cost.savings.session')}: {sug.sessionLabel}
                             </span>
-                            <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', priorityMeta.className)}>
-                              {priorityMeta.label}
-                            </span>
-                            {sug.sessionLabel && (
-                              <span className="truncate text-[11px] text-slate-500">
-                                {t('cost.savings.session')}: {sug.sessionLabel}
+                          )}
+                        </div>
+                        <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
+                        <div className="mt-3 grid grid-cols-1 xl:grid-cols-2 gap-3">
+                          <div className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5">
+                            <p className="text-[11px] font-medium text-slate-500">{t('cost.savings.next')}</p>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
+                          </div>
+                          <div className={cn('rounded-lg border px-3 py-2.5', guardrailMeta.className)}>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[11px] font-medium">{t('cost.savings.guardrail')}</p>
+                              <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold', guardrailMeta.badgeClassName)}>
+                                {guardrailMeta.label}
                               </span>
-                            )}
-                          </div>
-                          <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
-                          <div className="mt-3 grid grid-cols-1 xl:grid-cols-2 gap-3">
-                            <div className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5">
-                              <p className="text-[11px] font-medium text-slate-500">{t('cost.savings.next')}</p>
-                              <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
                             </div>
-                            <div className={cn('rounded-lg border px-3 py-2.5', guardrailMeta.className)}>
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-[11px] font-medium">{t('cost.savings.guardrail')}</p>
-                                <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold', guardrailMeta.badgeClassName)}>
-                                  {guardrailMeta.label}
-                                </span>
-                              </div>
-                              <p className="mt-1 text-sm leading-relaxed">{guardrailText}</p>
-                            </div>
+                            <p className="mt-1 text-sm leading-relaxed">{guardrailText}</p>
                           </div>
-                          {showModelRoute && (
-                            <p className="mt-3 text-xs text-slate-500">
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                          {showModelRoute ? (
+                            <p className="text-xs text-slate-500">
                               {isZh ? '模型切换：' : 'Route: '}
                               <span className="font-medium text-slate-700">{sug.currentModel}</span>
                               <span className="mx-1">→</span>
                               <span className="font-medium text-emerald-600">{sug.alternativeModel}</span>
                             </p>
+                          ) : <span />}
+                          {isReplayLinkable && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
+                              {replayActionLabel}
+                              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                            </span>
                           )}
                         </div>
-                        <div className="shrink-0 text-right">
-                          <p className="text-xs text-slate-500">{t('cost.savings.estSave')}</p>
-                          <p className="mt-1 text-lg font-semibold text-emerald-500">-${formatWasteCost(sug.saving)}</p>
-                        </div>
                       </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs text-slate-500">{t('cost.savings.estSave')}</p>
+                        <p className="mt-1 text-lg font-semibold text-emerald-500">-${formatWasteCost(sug.saving)}</p>
+                      </div>
+                    </div>
+                  )
+
+                  if (isReplayLinkable) {
+                    return (
+                      <button
+                        key={`${sug.reasonType ?? 'suggestion'}-${replaySessionId ?? sug.currentModel ?? i}`}
+                        type="button"
+                        onClick={() => onOpenReplaySession(replaySessionId)}
+                        className={cn(
+                          'group w-full rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/35 hover:bg-white/95 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2',
+                          getSavingCardClass(sug.priority),
+                        )}
+                      >
+                        {content}
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <div
+                      key={`${sug.reasonType ?? 'suggestion'}-${sug.currentModel ?? i}`}
+                      className={cn('rounded-xl border p-4', getSavingCardClass(sug.priority))}
+                    >
+                      {content}
                     </div>
                   )
                 })}

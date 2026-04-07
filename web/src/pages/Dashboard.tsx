@@ -40,6 +40,9 @@ interface StatusData {
   sessionDataHintZh?: string
   sessionDataHintEn?: string
   ecosystemNotes?: EcosystemNote[]
+  latestSessionAt?: string
+  latestRealSessionAt?: string
+  lastStatusCheckedAt?: string
 }
 
 interface CostSummary {
@@ -52,6 +55,41 @@ const DEMO_COST_SUMMARY: CostSummary = {
   totalCost: 0.04,
   totalTokens: 30705,
   trend: 'up',
+}
+
+type TokenWasteIssueType = 'retry-loop' | 'long-prompt' | 'verbose-output' | 'expensive-model' | 'context-bloat'
+
+interface TokenWasteReport {
+  summary: {
+    estimatedWasteTokens: number
+    estimatedWasteCost: number
+    signals: number
+    topIssue?: TokenWasteIssueType
+    usingDemo: boolean
+  }
+}
+
+function formatWasteCost(value: number): string {
+  if (value >= 1) return value.toFixed(2)
+  if (value >= 0.1) return value.toFixed(3)
+  return value.toFixed(4)
+}
+
+function getTokenWasteIssueLabel(issue: TokenWasteIssueType | undefined, locale: Locale): string {
+  switch (issue) {
+    case 'retry-loop':
+      return locale === 'en' ? 'Tool retry loop' : '工具重试循环'
+    case 'long-prompt':
+      return locale === 'en' ? 'Long prompt, weak payoff' : '长 Prompt 低产出'
+    case 'verbose-output':
+      return locale === 'en' ? 'Overly verbose output' : '输出明显过长'
+    case 'expensive-model':
+      return locale === 'en' ? 'Premium model on a light task' : '高价模型用在轻任务'
+    case 'context-bloat':
+      return locale === 'en' ? 'Context bloat' : '上下文膨胀'
+    default:
+      return locale === 'en' ? 'No major issue yet' : '暂未发现明显问题'
+  }
 }
 
 interface ReplayDiagnosticsSession {
@@ -85,6 +123,21 @@ function sessionListTitle(s: SessionMeta, locale: Locale): string {
   return locale === 'en' ? 'Session' : '会话'
 }
 
+function formatFreshnessTime(value: string | undefined, locale: Locale): string {
+  if (!value) return '--'
+  const timestamp = new Date(value)
+  if (Number.isNaN(timestamp.getTime())) return '--'
+
+  return new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(timestamp)
+}
+
 interface Props {
   onNavigate: (tab: Tab) => void
   onKnowledgeSearch: (query: string) => void
@@ -94,6 +147,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
   const { t, locale } = useI18n()
   const [status, setStatus] = useState<StatusData | null>(null)
   const [cost, setCost] = useState<CostSummary | null>(null)
+  const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [keywords, setKeywords] = useState<KeywordItem[]>([])
@@ -134,6 +188,17 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
   }, [])
 
   useEffect(() => {
+    apiGetSafe<TokenWasteReport>('/api/analytics/token-waste?days=30')
+      .then(d => {
+        if (!d?.summary) {
+          setTokenWaste(null)
+          return
+        }
+        setTokenWaste(d)
+      })
+  }, [])
+
+  useEffect(() => {
     apiGetSafe<ReplayDiagnosticsData>('/api/replay/diagnostics')
       .then(d => {
         if (!d || !Array.isArray(d.sessions)) {
@@ -158,6 +223,16 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
     : hasJsonlButUnparsed
       ? (isEnglish ? '⚠️ JSONL files found, but none are parsable yet' : '⚠️ 已发现 JSONL，但暂时无法解析为可展示会话')
       : (isEnglish ? '📋 Currently showing demo data' : '📋 当前展示的是演示数据')
+  const latestSessionLabel = formatFreshnessTime(status?.latestRealSessionAt ?? status?.latestSessionAt, locale)
+  const statusCheckedLabel = formatFreshnessTime(status?.lastStatusCheckedAt, locale)
+  const tokenWasteSummaryText = tokenWaste
+    ? `${locale === 'en' ? 'Estimated waste' : '预计浪费'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
+    : (locale === 'en' ? 'Analyzing last 30 days…' : '正在分析最近 30 天…')
+  const tokenWasteSubText = tokenWaste
+    ? tokenWaste.summary.signals > 0
+      ? `${locale === 'en' ? 'Top issue:' : '最主要问题：'} ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
+      : `${locale === 'en' ? 'No major waste signals detected' : '暂未发现明显浪费信号'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
+    : (locale === 'en' ? 'Scanning retry loops, prompt overhead, and model waste' : '正在扫描重试循环、Prompt 冗余和模型浪费')
 
   const hour = new Date().getHours()
   const greetingKey =
@@ -407,6 +482,11 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
               </div>
             )}
           </div>
+
+          <div className="mt-4 border-t border-slate-200 pt-4 text-[11px] leading-5 text-slate-500">
+            <p>{isEnglish ? 'Latest session:' : '最近会话：'} <span className="font-medium text-slate-700">{latestSessionLabel}</span></p>
+            <p>{isEnglish ? 'Status checked:' : '状态检查：'} <span className="font-medium text-slate-700">{statusCheckedLabel}</span></p>
+          </div>
         </div>
       )}
 
@@ -506,6 +586,27 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
           </div>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={() => onNavigate('cost')}
+        className="w-full rounded-2xl border border-[#3b82c4]/15 bg-gradient-to-r from-[#3b82c4]/10 via-cyan-500/10 to-teal-500/10 p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/30 hover:shadow-md animate-fade-in"
+        style={{ animationDelay: '220ms' }}
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
+              {locale === 'en' ? '🔥 Token Waste' : '🔥 Token 浪费'}
+            </p>
+            <p className="mt-2 text-xl font-semibold text-slate-900 sm:text-2xl">{tokenWasteSummaryText}</p>
+            <p className="mt-1 text-sm text-slate-600">{tokenWasteSubText}</p>
+          </div>
+          <span className="inline-flex items-center gap-1 text-sm font-medium text-[#3b82c4]">
+            {locale === 'en' ? 'Open cost diagnostics' : '查看成本诊断'}
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        </div>
+      </button>
 
       {/* Quick Actions */}
       <div>

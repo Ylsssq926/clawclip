@@ -1,3 +1,5 @@
+import type { CostMeta } from './index.js';
+
 /** 评测维度 */
 export type BenchmarkDimension =
   | 'writing'
@@ -33,6 +35,7 @@ export interface BenchmarkResult {
   summary: string;
   summaryEn?: string;
   dataSource?: 'demo' | 'real';
+  costMeta?: CostMeta;
 }
 
 export interface BenchmarkHistory {

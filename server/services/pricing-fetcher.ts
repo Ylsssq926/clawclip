@@ -3,6 +3,7 @@ import {
   DEFAULT_DETAILED_PRICING,
   type ModelPricing,
   type DetailedModelPricing,
+  type PricingMode,
   type PricingSource,
 } from '../types/index.js';
 import { log } from './logger.js';
@@ -11,12 +12,22 @@ const PRICETOKEN_URL = 'https://pricetoken.ai/api/v1/text';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const FETCH_TIMEOUT_MS = 8000;
 const STATIC_DEFAULT_PRICING_UPDATED_AT = '2026-03-25T00:00:00.000Z';
+const PRICING_MODE: PricingMode = 'detailed-input-output-v1';
 
 export interface PricingSnapshot {
   pricing: ModelPricing;
   detailed: DetailedModelPricing;
   source: PricingSource;
   updatedAt: string;
+  catalogVersion: string;
+  stale: boolean;
+  pricingMode: PricingMode;
+}
+
+interface CachedPricing {
+  pricing: ModelPricing;
+  detailed: DetailedModelPricing;
+  fetchedAt: number;
 }
 
 interface PriceTokenModel {
@@ -31,8 +42,8 @@ interface PriceTokenResponse {
   data: PriceTokenModel[];
 }
 
-let cached: { pricing: ModelPricing; detailed: DetailedModelPricing; fetchedAt: number } | null = null;
-let fetching: Promise<ModelPricing> | null = null;
+let cached: CachedPricing | null = null;
+let fetching: Promise<void> | null = null;
 
 function normalizeModelId(raw: string): string[] {
   const ids: string[] = [];
@@ -73,7 +84,42 @@ function buildDetailedPricingMap(models: PriceTokenModel[]): DetailedModelPricin
   return map;
 }
 
-async function doFetch(): Promise<ModelPricing> {
+function buildSnapshot(
+  pricing: ModelPricing,
+  detailed: DetailedModelPricing,
+  source: PricingSource,
+  updatedAt: string,
+  stale: boolean,
+): PricingSnapshot {
+  return {
+    pricing,
+    detailed,
+    source,
+    updatedAt,
+    catalogVersion: `${source}@${updatedAt}`,
+    stale,
+    pricingMode: PRICING_MODE,
+  };
+}
+
+function getStaticSnapshot(): PricingSnapshot {
+  return buildSnapshot(
+    DEFAULT_MODEL_PRICING,
+    DEFAULT_DETAILED_PRICING,
+    'static-default',
+    STATIC_DEFAULT_PRICING_UPDATED_AT,
+    false,
+  );
+}
+
+function getCachedSnapshot(now = Date.now()): PricingSnapshot | null {
+  if (!cached) return null;
+  const updatedAt = new Date(cached.fetchedAt).toISOString();
+  const stale = now - cached.fetchedAt >= CACHE_TTL_MS;
+  return buildSnapshot(cached.pricing, cached.detailed, 'pricetoken', updatedAt, stale);
+}
+
+async function doFetch(): Promise<void> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -90,10 +136,8 @@ async function doFetch(): Promise<ModelPricing> {
     const detailed = buildDetailedPricingMap(json.data);
     cached = { pricing, detailed, fetchedAt: Date.now() };
     log.info(`[pricing-fetcher] loaded ${json.data.length} models from PriceToken`);
-    return pricing;
   } catch (err) {
-    log.warn('[pricing-fetcher] failed, using static fallback:', (err as Error).message);
-    return DEFAULT_MODEL_PRICING;
+    log.warn('[pricing-fetcher] failed, using previous cache/static fallback:', (err as Error).message);
   } finally {
     clearTimeout(timer);
     fetching = null;
@@ -101,29 +145,19 @@ async function doFetch(): Promise<ModelPricing> {
 }
 
 export function getPricingSnapshot(): PricingSnapshot {
-  if (cached) {
-    if (Date.now() - cached.fetchedAt >= CACHE_TTL_MS && !fetching) {
+  const cachedSnapshot = getCachedSnapshot();
+  if (cachedSnapshot) {
+    if (cachedSnapshot.stale && !fetching) {
       fetching = doFetch();
     }
-
-    return {
-      pricing: cached.pricing,
-      detailed: cached.detailed,
-      source: 'pricetoken',
-      updatedAt: new Date(cached.fetchedAt).toISOString(),
-    };
+    return cachedSnapshot;
   }
 
   if (!fetching) {
     fetching = doFetch();
   }
 
-  return {
-    pricing: DEFAULT_MODEL_PRICING,
-    detailed: DEFAULT_DETAILED_PRICING,
-    source: 'static-default',
-    updatedAt: STATIC_DEFAULT_PRICING_UPDATED_AT,
-  };
+  return getStaticSnapshot();
 }
 
 export function getModelPricing(): ModelPricing {
@@ -131,19 +165,23 @@ export function getModelPricing(): ModelPricing {
 }
 
 export async function getModelPricingAsync(): Promise<ModelPricing> {
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.pricing;
+  const cachedSnapshot = getCachedSnapshot();
+  if (cachedSnapshot && !cachedSnapshot.stale) {
+    return cachedSnapshot.pricing;
   }
 
   if (!fetching) {
     fetching = doFetch();
   }
 
-  return fetching;
+  await fetching;
+  return cached?.pricing ?? DEFAULT_MODEL_PRICING;
 }
 
 export function initPricingFetcher(): void {
-  doFetch().catch(() => {});
+  if (!fetching) {
+    fetching = doFetch();
+  }
 }
 
 export function getDetailedModelPricing(): DetailedModelPricing {
@@ -151,8 +189,9 @@ export function getDetailedModelPricing(): DetailedModelPricing {
 }
 
 export async function getDetailedModelPricingAsync(): Promise<DetailedModelPricing> {
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.detailed;
+  const cachedSnapshot = getCachedSnapshot();
+  if (cachedSnapshot && !cachedSnapshot.stale) {
+    return cachedSnapshot.detailed;
   }
 
   if (!fetching) {

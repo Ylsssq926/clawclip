@@ -1,18 +1,21 @@
 import { Router } from 'express';
 import { analyticsEngine } from '../services/analytics-engine.js';
 import { getPromptInsights } from '../services/prompt-analyzer.js';
+import { tokenWasteAnalyzer } from '../services/token-waste-analyzer.js';
 
 const router = Router();
+
+function parseDays(rawDays: unknown): number | undefined {
+  if (rawDays === undefined || rawDays === '') return undefined;
+  const days = parseInt(String(rawDays), 10);
+  if (!Number.isFinite(days) || days <= 0) return undefined;
+  return Math.min(days, 365);
+}
 
 /** GET /api/analytics/keywords?days=30&limit=50 — 关键词列表 */
 router.get('/keywords', (req, res, next) => {
   try {
-    let days: number | undefined;
-    const rawDays = req.query.days;
-    if (rawDays !== undefined && rawDays !== '') {
-      const n = parseInt(String(rawDays), 10);
-      if (Number.isFinite(n) && n > 0) days = Math.min(n, 365);
-    }
+    const days = parseDays(req.query.days);
     let limit: number | undefined;
     const rawLimit = req.query.limit;
     if (rawLimit !== undefined && rawLimit !== '') {
@@ -49,13 +52,16 @@ router.get('/session-tags', (_req, res, next) => {
 /** GET /api/analytics/prompt-insights?days=30 — Prompt 效率分析 */
 router.get('/prompt-insights', (req, res, next) => {
   try {
-    const rawDays = req.query.days;
-    let days: number | undefined;
-    if (rawDays !== undefined && rawDays !== '') {
-      const n = parseInt(String(rawDays), 10);
-      if (Number.isFinite(n) && n > 0) days = Math.min(n, 365);
-    }
-    res.json(getPromptInsights(days));
+    res.json(getPromptInsights(parseDays(req.query.days)));
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** GET /api/analytics/token-waste?days=30 — Token 浪费诊断 */
+router.get('/token-waste', (req, res, next) => {
+  try {
+    res.json(tokenWasteAnalyzer.getReport(parseDays(req.query.days)));
   } catch (e) {
     next(e);
   }

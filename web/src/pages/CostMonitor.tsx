@@ -26,6 +26,11 @@ interface CostSummary {
   topTasks: { taskId: string; taskName: string; cost: number; tokens: number }[]
   pricingSource?: 'pricetoken' | 'static-default'
   pricingUpdatedAt?: string
+  latestUsageAt?: string
+  dataCutoffAt?: string
+  costMeta?: {
+    stale?: boolean
+  }
   usingDemo?: boolean
 }
 
@@ -50,6 +55,38 @@ interface SavingsReport {
   suggestions: SavingSuggestion[]
 }
 
+type TokenWasteIssueType = 'retry-loop' | 'long-prompt' | 'verbose-output' | 'expensive-model' | 'context-bloat'
+
+interface TokenWasteDiagnostic {
+  type: TokenWasteIssueType
+  severity: 'high' | 'medium' | 'low'
+  titleZh: string
+  titleEn: string
+  descZh: string
+  descEn: string
+  estimatedWasteTokens: number
+  estimatedWasteCost: number
+  sessionId?: string
+  sessionLabel?: string
+}
+
+interface TokenWasteReport {
+  summary: {
+    estimatedWasteTokens: number
+    estimatedWasteCost: number
+    signals: number
+    topIssue?: TokenWasteIssueType
+    usingDemo: boolean
+  }
+  diagnostics: TokenWasteDiagnostic[]
+}
+
+function formatWasteCost(value: number): string {
+  if (value >= 1) return value.toFixed(2)
+  if (value >= 0.1) return value.toFixed(3)
+  return value.toFixed(4)
+}
+
 interface BudgetConfig {
   monthly: number
   alertThreshold: number
@@ -70,6 +107,17 @@ const chartTooltipStyle = {
   borderRadius: 12,
   backdropFilter: 'blur(12px)',
 } as const
+
+function formatFreshnessTime(value: string | undefined, locale: string): string {
+  if (!value) return '--'
+  const timestamp = new Date(value)
+  if (Number.isNaN(timestamp.getTime())) return '--'
+
+  return new Intl.DateTimeFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(timestamp)
+}
 
 function CostSkeleton() {
   return (
@@ -98,6 +146,7 @@ export default function CostMonitor() {
   const [summary, setSummary] = useState<CostSummary | null>(null)
   const [insights, setInsights] = useState<CostInsight[]>([])
   const [savings, setSavings] = useState<SavingsReport | null>(null)
+  const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
   const [modelBreakdown, setModelBreakdown] = useState<ModelBreakdown>({})
   const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null)
   const [budgetModalOpen, setBudgetModalOpen] = useState(false)
@@ -115,13 +164,14 @@ export default function CostMonitor() {
     setError(null)
 
     try {
-      const [d, s, isDemo, ins, sav, models, budget] = await Promise.all([
+      const [d, s, isDemo, ins, sav, waste, models, budget] = await Promise.all([
         apiGet<DailyData[]>(`/api/cost/daily?days=${days}`),
         apiGet<CostSummary>(`/api/cost/summary?days=${days}`),
         apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
           .then(status => !(status?.hasRealSessionData ?? false)),
         apiGet<CostInsight[]>(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
         apiGetSafe<SavingsReport>(`/api/cost/savings?days=${days}`),
+        apiGetSafe<TokenWasteReport>(`/api/analytics/token-waste?days=${days}`),
         apiGetSafe<ModelBreakdown>(`/api/cost/models?days=${days}`),
         apiGetSafe<BudgetConfig>('/api/cost/budget'),
       ])
@@ -146,6 +196,7 @@ export default function CostMonitor() {
       setDemoCostHint(Boolean(isDemo || s?.usingDemo))
       setInsights(Array.isArray(ins) ? ins : [])
       setSavings(sav)
+      setTokenWaste(waste?.summary ? waste : null)
       setModelBreakdown(normalizedModels)
       setBudgetConfig(normalizedBudget)
     } catch {
@@ -196,10 +247,19 @@ export default function CostMonitor() {
       timeStyle: 'short',
     }).format(timestamp)
   })()
+  const latestUsageLabel = formatFreshnessTime(summary?.latestUsageAt, locale)
+  const dataCutoffLabel = formatFreshnessTime(summary?.dataCutoffAt, locale)
   const showGlobalEmptyState = !loading && !error && !!summary && summary.totalCost === 0
   const emptyStartHint = isZh
     ? '接入本地 JSONL 日志后跑几次真实任务，再回来查看趋势、模型占比和预算提醒。'
     : 'Connect local JSONL logs, run a few real tasks, then come back to review trends, model breakdown, and budget alerts.'
+  const wasteDiagnostics = tokenWaste?.diagnostics.slice(0, 4) ?? []
+  const wasteSummaryText = tokenWaste
+    ? `${isZh ? '预计浪费' : 'Estimated waste'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
+    : (isZh ? '诊断数据暂不可用' : 'Diagnostics unavailable right now')
+  const wasteMetaText = tokenWaste
+    ? `${isZh ? `${tokenWaste.summary.signals} 个信号` : `${tokenWaste.summary.signals} signal${tokenWaste.summary.signals === 1 ? '' : 's'}`}${tokenWaste.summary.usingDemo ? (isZh ? ' · 当前为 Demo 诊断' : ' · Demo diagnostics') : ''}`
+    : (isZh ? '会在这里汇总重试、长 Prompt、冗长输出等浪费信号' : 'Retry loops, long prompts, verbose output, and other waste signals will be summarized here')
 
   const openBudgetModal = () => {
     setBudgetError(null)
@@ -413,6 +473,59 @@ export default function CostMonitor() {
             </div>
           )}
 
+          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h3 className="text-lg font-semibold">{isZh ? '🔥 Token 浪费诊断' : '🔥 Token Waste Diagnostics'}</h3>
+                <p className="mt-2 text-sm text-slate-700">{wasteSummaryText}</p>
+                <p className="mt-1 text-xs text-slate-500">{wasteMetaText}</p>
+              </div>
+            </div>
+
+            {wasteDiagnostics.length > 0 ? (
+              <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {wasteDiagnostics.map((diagnostic, index) => (
+                  <div key={`${diagnostic.type}-${diagnostic.sessionId ?? diagnostic.sessionLabel ?? index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">{isZh ? diagnostic.titleZh : diagnostic.titleEn}</p>
+                        {diagnostic.sessionLabel && (
+                          <p className="mt-1 truncate text-[11px] text-slate-500">{diagnostic.sessionLabel}</p>
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-2 py-1 text-[11px] font-medium',
+                          diagnostic.severity === 'high'
+                            ? 'bg-red-500/10 text-red-600'
+                            : diagnostic.severity === 'medium'
+                              ? 'bg-amber-500/10 text-amber-700'
+                              : 'bg-blue-500/10 text-[#3b82c4]',
+                        )}
+                      >
+                        {diagnostic.severity === 'high'
+                          ? (isZh ? '高' : 'High')
+                          : diagnostic.severity === 'medium'
+                            ? (isZh ? '中' : 'Medium')
+                            : (isZh ? '低' : 'Low')}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-relaxed text-slate-600">{isZh ? diagnostic.descZh : diagnostic.descEn}</p>
+                    <p className="mt-4 text-sm font-medium text-[#3b82c4]">
+                      {isZh ? '预计浪费' : 'Estimated waste'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                {tokenWaste
+                  ? (isZh ? '当前时间范围内暂未发现明显的 Token 浪费信号。' : 'No obvious token waste signals were found in the selected time range.')
+                  : (isZh ? '诊断接口暂不可用，稍后会在这里显示浪费信号。' : 'The diagnostics API is unavailable right now. Waste signals will appear here once it recovers.')}
+              </div>
+            )}
+          </div>
+
           {!loading && savings && savings.suggestions.length > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -584,6 +697,21 @@ export default function CostMonitor() {
             {isZh ? '定价来源：' : 'Pricing source: '}
             <span className="font-medium text-slate-700">{pricingSourceLabel}</span>
             {pricingUpdatedAtLabel ? ` · ${isZh ? '更新时间' : 'Updated'} ${pricingUpdatedAtLabel}` : ''}
+          </p>
+        )}
+        <p>
+          {isZh ? '数据截止到：' : 'Data cutoff: '}
+          <span className="font-medium text-slate-700">{dataCutoffLabel}</span>
+        </p>
+        <p>
+          {isZh ? '最近 usage：' : 'Latest usage: '}
+          <span className="font-medium text-slate-700">{latestUsageLabel}</span>
+        </p>
+        {summary?.costMeta?.stale && (
+          <p className="text-amber-700">
+            {isZh
+              ? '⚠️ 当前价格目录已过期，展示为最近一次成功刷新结果'
+              : '⚠️ Pricing catalog is stale; showing the last successful snapshot'}
           </p>
         )}
         <p>{t('cost.disclaimer.estimate')}</p>

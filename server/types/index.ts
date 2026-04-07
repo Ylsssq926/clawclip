@@ -6,6 +6,7 @@ export interface TokenUsage {
   outputTokens: number;
   cost: number;
   sessionId: string;
+  usageSource?: UsageSource;
 }
 
 export interface DailyUsage {
@@ -17,6 +18,17 @@ export interface DailyUsage {
 }
 
 export type PricingSource = 'pricetoken' | 'static-default';
+export type PricingMode = 'detailed-input-output-v1';
+export type UsageSource = 'replay' | 'log' | 'demo' | 'mixed';
+
+export interface CostMeta {
+  pricingMode: PricingMode;
+  pricingSource: PricingSource;
+  pricingUpdatedAt: string;
+  pricingCatalogVersion: string;
+  usageSource: UsageSource;
+  estimated: boolean;
+}
 
 export interface CostStats {
   totalCost: number;
@@ -27,6 +39,7 @@ export interface CostStats {
   topTasks: TaskCost[];
   trend: 'up' | 'down' | 'stable';
   comparedToLastMonth: number;
+  costMeta: CostMeta;
   pricingSource: PricingSource;
   pricingUpdatedAt: string;
   usingDemo: boolean;

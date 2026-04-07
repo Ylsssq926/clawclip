@@ -50,6 +50,14 @@ interface BenchmarkResult {
   topModel: string
   summary: string
   summaryEn?: string
+  dataCutoffAt?: string
+  sampleCountConfidence?: 'low' | 'medium' | 'high'
+}
+
+interface BenchmarkMeta {
+  dataSource?: 'demo' | 'real'
+  dataCutoffAt?: string
+  sampleCountConfidence?: 'low' | 'medium' | 'high'
 }
 
 const DIMENSION_ICONS: Record<string, typeof Pen> = {
@@ -140,6 +148,24 @@ function dimEvidenceFallback(d: { score: number; maxScore: number }, zh: boolean
   return zh ? `当前分数 ${d.score}/${d.maxScore}` : `Current score ${d.score}/${d.maxScore}`
 }
 
+function formatFreshnessTime(value: string | undefined, locale: string): string {
+  if (!value) return '--'
+  const timestamp = new Date(value)
+  if (Number.isNaN(timestamp.getTime())) return '--'
+
+  return new Intl.DateTimeFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(timestamp)
+}
+
+function formatConfidenceLabel(value: 'low' | 'medium' | 'high' | undefined, isZh: boolean): string {
+  if (value === 'low') return isZh ? '低' : 'Low'
+  if (value === 'medium') return isZh ? '中' : 'Medium'
+  if (value === 'high') return isZh ? '高' : 'High'
+  return '--'
+}
+
 function BenchmarkScoringMethod({ isZh }: { isZh: boolean }) {
   return (
     <details className="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
@@ -173,7 +199,7 @@ export default function Benchmark() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showDimTrend, setShowDimTrend] = useState(false)
-  const [dataSource, setDataSource] = useState<'demo' | 'real' | null>(null)
+  const [benchmarkMeta, setBenchmarkMeta] = useState<BenchmarkMeta | null>(null)
   const [showRadarHelp, setShowRadarHelp] = useState(false)
   const [showCurveHelp, setShowCurveHelp] = useState(false)
 
@@ -186,9 +212,9 @@ export default function Benchmark() {
           e instanceof ApiError && e.status === 404 ? null : Promise.reject(e),
         ),
         apiGet<{ results?: BenchmarkResult[] }>('/api/benchmark/history'),
-        apiGetSafe<{ dataSource?: string }>('/api/benchmark/meta'),
+        apiGetSafe<BenchmarkMeta>('/api/benchmark/meta'),
       ])
-      setDataSource(meta?.dataSource === 'real' ? 'real' : 'demo')
+      setBenchmarkMeta(meta)
       setResult(latest)
       setHistory(Array.isArray(histBody.results) ? histBody.results : [])
     } catch {
@@ -264,9 +290,9 @@ export default function Benchmark() {
       setCompareId(null)
       const [histBody, meta] = await Promise.all([
         apiGetSafe<{ results?: BenchmarkResult[] }>('/api/benchmark/history'),
-        apiGetSafe<{ dataSource?: string }>('/api/benchmark/meta'),
+        apiGetSafe<BenchmarkMeta>('/api/benchmark/meta'),
       ])
-      if (meta) setDataSource(meta.dataSource === 'real' ? 'real' : 'demo')
+      if (meta) setBenchmarkMeta(meta)
       if (histBody) setHistory(Array.isArray(histBody.results) ? histBody.results : [])
       setSuccessMessage(isZh ? `✅ 评测完成，综合分 ${data.overallScore} 分` : `✅ Benchmark complete, overall score ${data.overallScore}`)
     } catch {
@@ -288,6 +314,9 @@ export default function Benchmark() {
     : locale === 'de' ? 'de-DE'
     : locale === 'fr' ? 'fr-FR'
     : 'es-ES'
+  const dataSource = benchmarkMeta?.dataSource === 'real' ? 'real' : benchmarkMeta?.dataSource === 'demo' ? 'demo' : null
+  const benchmarkCutoffLabel = formatFreshnessTime(result?.dataCutoffAt ?? benchmarkMeta?.dataCutoffAt, locale)
+  const benchmarkConfidenceLabel = formatConfidenceLabel(result?.sampleCountConfidence ?? benchmarkMeta?.sampleCountConfidence, isZh)
 
   if (loading) {
     return (
@@ -391,6 +420,11 @@ export default function Benchmark() {
 
       {result && (
         <>
+          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600">
+            <p>{isZh ? `基于最近 ${result.totalSessions} 条会话` : `Based on the latest ${result.totalSessions} sessions`}</p>
+            <p>{isZh ? '数据截止到：' : 'Data cutoff: '}<span className="font-medium text-slate-700">{benchmarkCutoffLabel}</span></p>
+            <p>{isZh ? '置信度：' : 'Confidence: '}<span className="font-medium text-slate-700">{benchmarkConfidenceLabel}</span></p>
+          </div>
           {successMessage && (
             <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
               {successMessage}

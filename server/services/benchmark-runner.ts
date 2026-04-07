@@ -10,6 +10,9 @@ import type {
   DimensionScore,
 } from '../types/benchmark.js';
 import { DIMENSION_LABELS, DIMENSION_LABELS_EN } from '../types/benchmark.js';
+import type { UsageSource } from '../types/index.js';
+import { getPricingSnapshot } from './pricing-fetcher.js';
+import { buildCostMeta } from './pricing-utils.js';
 
 function historyPath(): string {
   return path.join(getClawclipStateDir(), 'benchmark-history.json');
@@ -125,6 +128,11 @@ function loadAllReplays(): SessionReplay[] {
     if (r) out.push(r);
   }
   return out;
+}
+
+function buildBenchmarkCostMeta(replays: SessionReplay[], usageSource: UsageSource) {
+  const meta = replays.find(replay => replay.meta.costMeta)?.meta.costMeta;
+  return meta ?? buildCostMeta(getPricingSnapshot(), usageSource);
 }
 
 function countHanRatio(text: string): number {
@@ -549,7 +557,10 @@ function buildSummaryEn(overall: number, dims: DimensionScore[]): string {
   return `Beginner stage (${overall} pts) — not enough log data yet for a confident score. Run a few more sessions and come back!`;
 }
 
-function computeFromReplays(replays: SessionReplay[]): BenchmarkResult {
+function computeFromReplays(
+  replays: SessionReplay[],
+  usageSource: UsageSource = 'replay',
+): BenchmarkResult {
   const writing = scoreWriting(replays);
   const coding = scoreCoding(replays);
   const toolUse = scoreToolUse(replays);
@@ -590,13 +601,14 @@ function computeFromReplays(replays: SessionReplay[]): BenchmarkResult {
     topModel: pickTopModel(replays),
     summary: buildSummary(overall, dimensions),
     summaryEn: buildSummaryEn(overall, dimensions),
-    dataSource: 'real',
+    dataSource: usageSource === 'demo' ? 'demo' : 'real',
+    costMeta: buildBenchmarkCostMeta(replays, usageSource),
   };
 }
 
 function buildLiveDemoResult(reference: Date = new Date()): BenchmarkResult {
   const replays = loadAllReplays();
-  const result = computeFromReplays(replays.length ? replays : []);
+  const result = computeFromReplays(replays.length ? replays : [], 'demo');
   return {
     ...result,
     id: 'benchmark-demo-live',
@@ -963,6 +975,26 @@ function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
     evidence: typeof d.evidence === 'string' ? d.evidence : undefined,
     evidenceEn: typeof d.evidenceEn === 'string' ? d.evidenceEn : undefined,
   })) as DimensionScore[];
+  const rawCostMeta = o.costMeta && typeof o.costMeta === 'object' ? (o.costMeta as Record<string, unknown>) : null;
+  const costMeta =
+    rawCostMeta?.pricingMode === 'detailed-input-output-v1' &&
+    (rawCostMeta?.pricingSource === 'pricetoken' || rawCostMeta?.pricingSource === 'static-default') &&
+    (rawCostMeta?.usageSource === 'replay' ||
+      rawCostMeta?.usageSource === 'log' ||
+      rawCostMeta?.usageSource === 'demo' ||
+      rawCostMeta?.usageSource === 'mixed') &&
+    typeof rawCostMeta?.pricingUpdatedAt === 'string' &&
+    typeof rawCostMeta?.pricingCatalogVersion === 'string' &&
+    typeof rawCostMeta?.estimated === 'boolean'
+      ? {
+          pricingMode: rawCostMeta.pricingMode as 'detailed-input-output-v1',
+          pricingSource: rawCostMeta.pricingSource as 'pricetoken' | 'static-default',
+          pricingUpdatedAt: rawCostMeta.pricingUpdatedAt,
+          pricingCatalogVersion: rawCostMeta.pricingCatalogVersion,
+          usageSource: rawCostMeta.usageSource as 'replay' | 'log' | 'demo' | 'mixed',
+          estimated: rawCostMeta.estimated,
+        }
+      : undefined;
 
   return {
     id: String(o.id),
@@ -978,6 +1010,7 @@ function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
     summary: String(o.summary),
     summaryEn: typeof o.summaryEn === 'string' ? o.summaryEn : undefined,
     dataSource: o.dataSource === 'demo' || o.dataSource === 'real' ? o.dataSource : undefined,
+    costMeta,
   };
 }
 
@@ -1048,7 +1081,12 @@ export class BenchmarkRunner {
     }
     const { results } = this.readHistoryFile();
     if (results.length === 0) return null;
-    return results.reduce((a, b) => (a.runAt.getTime() >= b.runAt.getTime() ? a : b));
+    const latest = results.reduce((a, b) => (a.runAt.getTime() >= b.runAt.getTime() ? a : b));
+    if (latest.costMeta) return latest;
+    return {
+      ...latest,
+      costMeta: buildCostMeta(getPricingSnapshot(), latest.dataSource === 'demo' ? 'demo' : 'replay'),
+    };
   }
 
   /** 当前会话列表是否仅为内置 Demo（用于前端说明「示例曲线」vs 真实数据） */

@@ -1,3 +1,5 @@
+import type { CostMeta } from './index.js';
+
 export interface SessionMeta {
   id: string;
   agentName: string;
@@ -27,6 +29,7 @@ export interface SessionMeta {
   storeChannel?: string;
   /** 提供方：origin.provider 等 */
   storeProvider?: string;
+  costMeta?: CostMeta;
   parseDiagnostics?: {
     totalLines: number;
     parsedLines: number;

@@ -1,11 +1,13 @@
 /**
- * pricing-utils.ts — 统一定价查找与费用计算
+ * pricing-utils.ts — 统一定价查找、费用计算与回放重计价
  *
- * 消除 session-parser.ts 与 demo-sessions.ts 中各自独立实现的 priceFor/computeCost 冗余。
- * 使用 DetailedModelPricing 实现 input/output 分离计价。
+ * 消除 session-parser.ts 与 demo-sessions.ts 中各自独立实现的价格逻辑。
+ * 使用 DetailedModelPricing / PricingSnapshot 实现 input/output 分离计价。
  */
-import type { DetailedModelPricing, ModelPriceDetail } from '../types/index.js';
+import type { CostMeta, DetailedModelPricing, ModelPriceDetail, UsageSource } from '../types/index.js';
 import { DEFAULT_DETAILED_PRICING } from '../types/index.js';
+import type { SessionReplay } from '../types/replay.js';
+import type { PricingSnapshot } from './pricing-fetcher.js';
 
 const UNKNOWN_MODEL_FALLBACK: ModelPriceDetail = { input: 2.0, output: 2.0 };
 
@@ -55,6 +57,48 @@ export function computeCost(
 ): number {
   const detail = resolveModelDetail(pricing, model);
   return computeDetailedCost(detail, inputTokens, outputTokens);
+}
+
+export function buildCostMeta(snapshot: PricingSnapshot, usageSource: UsageSource): CostMeta {
+  return {
+    pricingMode: snapshot.pricingMode,
+    pricingSource: snapshot.source,
+    pricingUpdatedAt: snapshot.updatedAt,
+    pricingCatalogVersion: snapshot.catalogVersion,
+    usageSource,
+    estimated: usageSource !== 'replay' || snapshot.source === 'static-default' || snapshot.stale,
+  };
+}
+
+export function repriceStep(
+  model: string | undefined,
+  inputTokens: number,
+  outputTokens: number,
+  snapshot: PricingSnapshot,
+): number {
+  return computeCost(snapshot.detailed, model, inputTokens, outputTokens);
+}
+
+export function repriceReplay(
+  replay: SessionReplay,
+  snapshot: PricingSnapshot,
+  usageSource: UsageSource,
+): SessionReplay {
+  const steps = replay.steps.map(step => ({
+    ...step,
+    cost: repriceStep(step.model, step.inputTokens, step.outputTokens, snapshot),
+  }));
+  const totalCost = steps.reduce((sum, step) => sum + step.cost, 0);
+
+  return {
+    ...replay,
+    meta: {
+      ...replay.meta,
+      totalCost,
+      costMeta: buildCostMeta(snapshot, usageSource),
+    },
+    steps,
+  };
 }
 
 /** 预导出的静态默认定价表，供 session-parser / demo-sessions 直接使用 */

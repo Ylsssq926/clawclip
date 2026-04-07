@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { computeCost, DEFAULT_DETAILED_PRICING } from './pricing-utils.js';
+import { computeCost, DEFAULT_DETAILED_PRICING, repriceReplay } from './pricing-utils.js';
+import { getPricingSnapshot } from './pricing-fetcher.js';
 import type { SessionMeta, SessionReplay, SessionStep } from '../types/replay.js';
 import { DEMO_SESSIONS } from './demo-sessions.js';
 import {
@@ -819,6 +820,14 @@ export class SessionParser {
     return data;
   }
 
+  private getRepricedCollections(): { real: SessionReplay[]; demo: SessionReplay[] } {
+    const snapshot = getPricingSnapshot();
+    return {
+      real: this.getCachedReplays().map(replay => repriceReplay(replay, snapshot, 'replay')),
+      demo: DEMO_SESSIONS.map(replay => repriceReplay(replay, snapshot, 'demo')),
+    };
+  }
+
   private sortSessionMetas(list: SessionMeta[]): SessionMeta[] {
     return [...list].sort((a, b) => {
       const sa = a.storeUpdatedAt ?? a.endTime.getTime();
@@ -837,9 +846,8 @@ export class SessionParser {
 
   /** 扫所有已配置数据根的会话，按结束时间倒序 */
   getSessions(limit?: number): SessionMeta[] {
-    const real = this.getCachedReplays();
-    const list: SessionMeta[] =
-      real.length === 0 ? DEMO_SESSIONS.map(d => d.meta) : real.map(r => r.meta);
+    const { real, demo } = this.getRepricedCollections();
+    const list: SessionMeta[] = real.length === 0 ? demo.map(replay => replay.meta) : real.map(replay => replay.meta);
 
     return this.applySessionLimit(this.sortSessionMetas(list), limit);
   }
@@ -849,16 +857,17 @@ export class SessionParser {
    * 真实会话不足时，保留真实会话并补齐 Demo，避免页面只剩 0~1 条不可体验。
    */
   getSessionsWithDemoFallback(limit?: number, minCount = 1): SessionMeta[] {
-    const real = this.getCachedReplays().map(replay => replay.meta);
-    if (real.length >= minCount) {
-      return this.applySessionLimit(this.sortSessionMetas(real), limit);
+    const { real, demo } = this.getRepricedCollections();
+    const realMetas = real.map(replay => replay.meta);
+    if (realMetas.length >= minCount) {
+      return this.applySessionLimit(this.sortSessionMetas(realMetas), limit);
     }
 
-    const seen = new Set(real.map(meta => meta.id));
-    const combined = [...real];
-    for (const demo of DEMO_SESSIONS.map(replay => replay.meta)) {
-      if (seen.has(demo.id)) continue;
-      combined.push(demo);
+    const seen = new Set(realMetas.map(meta => meta.id));
+    const combined = [...realMetas];
+    for (const replay of demo) {
+      if (seen.has(replay.meta.id)) continue;
+      combined.push(replay.meta);
     }
 
     return this.applySessionLimit(this.sortSessionMetas(combined), limit);
@@ -868,15 +877,16 @@ export class SessionParser {
   getSessionReplay(sessionId: string): SessionReplay | null {
     const norm = normalizeSessionId(sessionId);
     const variants = new Set(canonicalReplayIdVariants(norm));
+    const { real, demo } = this.getRepricedCollections();
 
-    for (const r of this.getCachedReplays()) {
-      const rid = normalizeSessionId(r.meta.id);
-      if (variants.has(rid)) return r;
+    for (const replay of real) {
+      const rid = normalizeSessionId(replay.meta.id);
+      if (variants.has(rid)) return replay;
     }
 
-    for (const d of DEMO_SESSIONS) {
-      const rid = normalizeSessionId(d.meta.id);
-      if (variants.has(rid)) return d;
+    for (const replay of demo) {
+      const rid = normalizeSessionId(replay.meta.id);
+      if (variants.has(rid)) return replay;
     }
 
     return null;
@@ -942,7 +952,7 @@ export class SessionParser {
   }
 
   getRealReplays(): SessionReplay[] {
-    return this.getCachedReplays();
+    return this.getRepricedCollections().real;
   }
 }
 

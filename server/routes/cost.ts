@@ -15,9 +15,20 @@ router.get('/summary', (req, res) => {
   const days = parseDays(req);
   try {
     const stats = costParser.getUsageStats(days);
+    const freshness = costParser.getUsageFreshness();
     const requestCount = costParser.getRequestCount(days);
     const budget = costParser.checkBudgetAlert();
-    res.json({ ...stats, requestCount, budget });
+    res.json({
+      ...stats,
+      requestCount,
+      budget,
+      latestUsageAt: freshness.latestUsageAt,
+      dataCutoffAt: freshness.dataCutoffAt,
+      costMeta: {
+        ...stats.costMeta,
+        stale: freshness.pricingStale,
+      },
+    });
   } catch (e) {
     res.status(500).json({ error: '获取费用数据失败 / Failed to get cost data', detail: String(e) });
   }

@@ -1,7 +1,21 @@
 import { Router, type Response } from 'express';
 import { openclawBridge } from '../services/openclaw-bridge.js';
+import { sessionParser } from '../services/session-parser.js';
 
 const router = Router();
+
+function resolveLatestSessionAt(items: Array<{ endTime: Date }>): string | undefined {
+  let latestTs = 0;
+
+  for (const item of items) {
+    const ts = item.endTime.getTime();
+    if (!Number.isNaN(ts) && ts > latestTs) {
+      latestTs = ts;
+    }
+  }
+
+  return latestTs > 0 ? new Date(latestTs).toISOString() : undefined;
+}
 
 function isDev(): boolean {
   return process.env.NODE_ENV === 'development';
@@ -36,7 +50,15 @@ function sendStatusError(res: Response, err: unknown): void {
 router.get('/', async (_req, res) => {
   try {
     const status = await openclawBridge.getStatus();
-    res.json(status);
+    const sessions = sessionParser.getSessions();
+    const realSessions = sessionParser.getRealReplays().map(replay => replay.meta);
+
+    res.json({
+      ...status,
+      latestSessionAt: resolveLatestSessionAt(sessions),
+      latestRealSessionAt: resolveLatestSessionAt(realSessions),
+      lastStatusCheckedAt: new Date().toISOString(),
+    });
   } catch (e) {
     sendStatusError(res, e);
   }

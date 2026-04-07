@@ -62,7 +62,7 @@ function TabFallback() {
   )
 }
 
-function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLanding: () => void; initialTab?: Tab }) {
+function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding: () => void; initialTab?: Tab }) {
   const { t, locale } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>(initialTab)
   const [knowledgeInitialQuery, setKnowledgeInitialQuery] = useState('')
@@ -96,6 +96,10 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
   }, [])
 
   const [showTour, setShowTour] = useState(() => {
+    if (initialTab !== 'dashboard') {
+      return false
+    }
+
     try {
       return localStorage.getItem('clawclip-tour-done') !== '1'
     } catch {
@@ -109,10 +113,10 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
   const showStatusBanner = isDemo || (dataBannerMode === 'real' && showRealDataBanner)
   const statusBannerText = isDemo
     ? (isEnglish
-        ? '📋 Demo data only · connect real Agent logs to switch automatically'
-        : '📋 当前为演示数据 · 接入真实 Agent 日志后自动切换')
+        ? '📋 Demo data · connect logs to switch'
+        : '📋 演示数据 · 接入日志后自动切换')
     : dataBannerMode === 'real'
-      ? (isEnglish ? '✅ Connected to real data' : '✅ 已连接真实数据')
+      ? (isEnglish ? '✅ Real data connected' : '✅ 已连接真实数据')
       : ''
   const sidebarDesktopHeightClass = showStatusBanner ? 'lg:h-[calc(100vh-49px-33px)]' : 'lg:h-[calc(100vh-49px)]'
   const contentMinHeightClass = showStatusBanner ? 'min-h-[calc(100vh-49px-33px)]' : 'min-h-[calc(100vh-49px)]'
@@ -357,7 +361,13 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                 >
-                  {activeTab === 'dashboard' && <Dashboard onNavigate={navigateTab} onKnowledgeSearch={openKnowledgeSearch} />}
+                  {activeTab === 'dashboard' && (
+                    <Dashboard
+                      onNavigate={navigateTab}
+                      onKnowledgeSearch={openKnowledgeSearch}
+                      onOpenReplaySession={openReplaySession}
+                    />
+                  )}
                   {activeTab === 'replay' && (
                     <Replay
                       initialSessionId={replayInitialSessionId}
@@ -390,10 +400,10 @@ function AppShell({ onBackToLanding, initialTab = 'dashboard' }: { onBackToLandi
 
 function App() {
   const [showLanding, setShowLanding] = useState(true)
-  const [landingTab, setLandingTab] = useState<Tab>('dashboard')
+  const [landingTab, setLandingTab] = useState<Tab>('replay')
 
   if (showLanding) {
-    return <ErrorBoundary><Landing onEnterDemo={(tab) => { setLandingTab(tab ?? 'dashboard'); setShowLanding(false) }} /></ErrorBoundary>
+    return <ErrorBoundary><Landing onEnterDemo={(tab) => { setLandingTab(tab ?? 'replay'); setShowLanding(false) }} /></ErrorBoundary>
   }
 
   return <AppShell initialTab={landingTab} onBackToLanding={() => setShowLanding(true)} />

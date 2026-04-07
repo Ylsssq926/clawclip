@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Bot, ChevronDown, ChevronUp, Clock, Cloud, DollarSign, Sparkles, Wifi, WifiOff, X, ArrowRight } from 'lucide-react'
+import { Activity, AlertTriangle, Bot, ChevronDown, ChevronUp, Clock, Cloud, DollarSign, Wifi, WifiOff, X, ArrowRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { Tab } from '../App'
 import WordCloud, { type KeywordItem } from '../components/WordCloud'
@@ -141,9 +141,10 @@ function formatFreshnessTime(value: string | undefined, locale: Locale): string 
 interface Props {
   onNavigate: (tab: Tab) => void
   onKnowledgeSearch: (query: string) => void
+  onOpenReplaySession: (sessionId: string) => void
 }
 
-export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
+export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplaySession }: Props) {
   const { t, locale } = useI18n()
   const [status, setStatus] = useState<StatusData | null>(null)
   const [cost, setCost] = useState<CostSummary | null>(null)
@@ -157,7 +158,6 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
   const [diagnostics, setDiagnostics] = useState<ReplayDiagnosticsData | null>(null)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [diagnosticsDismissed, setDiagnosticsDismissed] = useState(false)
-  const [dataGuideOpen, setDataGuideOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([apiGetSafe('/api/status'), apiGetSafe('/api/cost/summary?days=30')])
@@ -225,6 +225,19 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
       : (isEnglish ? '📋 Currently showing demo data' : '📋 当前展示的是演示数据')
   const latestSessionLabel = formatFreshnessTime(status?.latestRealSessionAt ?? status?.latestSessionAt, locale)
   const statusCheckedLabel = formatFreshnessTime(status?.lastStatusCheckedAt, locale)
+  const connectionHintText = status?.hasRealSessionData
+    ? null
+    : status?.sessionDataHintZh || status?.sessionDataHintEn
+      ? (isEnglish
+          ? status?.sessionDataHintEn ?? status?.sessionDataHintZh ?? ''
+          : status?.sessionDataHintZh ?? status?.sessionDataHintEn ?? '')
+      : hasJsonlButUnparsed
+        ? (isEnglish
+            ? 'Some JSONL files still need cleanup before Replay can show them as real evidence.'
+            : '部分 JSONL 还需要清理后，Replay 才能把它们展示成真实证据。')
+        : (isEnglish
+            ? 'Run a few OpenClaw / ZeroClaw tasks, then restart ClawClip. Only set CLAWCLIP_LOBSTER_DIRS if logs live outside the default folders.'
+            : '先跑几次 OpenClaw / ZeroClaw 任务，再重启虾片；只有日志不在默认目录时再设置 CLAWCLIP_LOBSTER_DIRS。')
   const tokenWasteSummaryText = tokenWaste
     ? `${locale === 'en' ? 'Estimated recoverable waste:' : '最近 30 天可回收浪费：'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
     : (locale === 'en' ? 'Analyzing last 30 days…' : '正在分析最近 30 天…')
@@ -365,11 +378,9 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
             </div>
           </div>
 
-          {(status.sessionDataHintZh || status.sessionDataHintEn) && (
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
-              {isEnglish
-                ? status.sessionDataHintEn ?? status.sessionDataHintZh
-                : status.sessionDataHintZh ?? status.sessionDataHintEn}
+          {connectionHintText && (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
+              {connectionHintText}
             </div>
           )}
 
@@ -463,30 +474,6 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
               ))}
             </div>
           )}
-
-          <div className="mt-4 border-t border-slate-200 pt-4">
-            <button
-              type="button"
-              onClick={() => setDataGuideOpen(open => !open)}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100"
-            >
-              <span>{isEnglish ? 'How to connect real data' : '如何接入真实数据'}</span>
-              {dataGuideOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
-            {dataGuideOpen && (
-              <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
-                <ol className="space-y-2 list-decimal pl-5 leading-relaxed">
-                  <li>{isEnglish ? 'Install OpenClaw / ZeroClaw and run a few tasks.' : '安装 OpenClaw / ZeroClaw 并运行几个任务。'}</li>
-                  <li>{isEnglish ? 'Session logs are usually saved under ~/.openclaw/ or ~/.zeroclaw/.' : '会话日志通常会自动保存到 ~/.openclaw/ 或 ~/.zeroclaw/。'}</li>
-                  <li>{isEnglish ? 'Restart ClawClip and the real data will appear automatically.' : '重启虾片后即可自动看到真实数据。'}</li>
-                </ol>
-                <p className="mt-3 text-xs text-slate-500">
-                  {isEnglish ? 'Custom data directory:' : '自定义数据目录：'}
-                  <span className="ml-1 font-mono text-slate-700">CLAWCLIP_LOBSTER_DIRS</span>
-                </p>
-              </div>
-            )}
-          </div>
 
           <div className="mt-4 border-t border-slate-200 pt-4 text-[11px] leading-5 text-slate-500">
             <p>{isEnglish ? 'Latest session:' : '最近会话：'} <span className="font-medium text-slate-700">{latestSessionLabel}</span></p>
@@ -613,76 +600,6 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
         </div>
       </button>
 
-      {/* Quick Actions */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-blue-400" />
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{t('dashboard.quick')}</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            {
-              tab: 'replay' as const,
-              icon: '🎬',
-              title: t('replay.title'),
-              desc: locale === 'en' ? 'Trace retries, dead ends, and steps that burned tokens without payoff.' : '顺着重试、死循环和失败步骤，找出白烧 Token 的位置。',
-              color: 'card-blue',
-              textColor: 'text-blue-400',
-            },
-            {
-              tab: 'cost' as const,
-              icon: '📊',
-              title: t('cost.title'),
-              desc: locale === 'en' ? 'See spend, waste signals, and what to fix first.' : '查看花费、浪费信号，以及先改哪里最省钱。',
-              color: 'card-blue',
-              textColor: 'text-blue-400',
-            },
-            {
-              tab: 'benchmark' as const,
-              icon: '🏆',
-              title: t('nav.benchmark'),
-              desc: locale === 'en' ? 'Verify whether the savings came without hurting quality.' : '验证省下来的钱有没有以质量受损为代价。',
-              color: 'card-purple',
-              textColor: 'text-violet-400',
-            },
-          ].map((item, i) => (
-            <button
-              key={item.tab}
-              onClick={() => onNavigate(item.tab)}
-              className={`${item.color} p-6 text-left group transition-transform duration-200 hover:scale-[1.02] animate-fade-in`}
-              style={{ animationDelay: `${200 + i * 80}ms` }}
-            >
-              <span className="text-3xl block mb-3">{item.icon}</span>
-              <h4 className="font-semibold text-slate-900 mb-1">{item.title}</h4>
-              <p className="text-xs text-slate-500 mb-3">{item.desc}</p>
-              <span className={`${item.textColor} text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all`}>
-                {t('dashboard.quick.open')} <ArrowRight className="w-3 h-3" />
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Secondary quick links */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
-        {([
-          { tab: 'knowledge' as const, icon: '📚', title: t('nav.knowledge') },
-          { tab: 'leaderboard' as const, icon: '🥇', title: t('nav.leaderboard') },
-          { tab: 'templates' as const, icon: '📦', title: t('nav.templates') },
-          { tab: 'skills' as const, icon: '🧩', title: t('nav.skills') },
-        ] as const).map((item) => (
-          <button
-            key={item.tab}
-            onClick={() => onNavigate(item.tab)}
-            className="card p-4 text-left group hover:bg-slate-100 transition-colors flex items-center gap-3"
-          >
-            <span className="text-lg">{item.icon}</span>
-            <span className="text-sm text-slate-500 group-hover:text-slate-900 transition-colors">{item.title}</span>
-            <ArrowRight className="w-3 h-3 text-slate-600 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-          </button>
-        ))}
-      </div>
-
       {/* Two column: Word Cloud + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Word Cloud */}
@@ -729,7 +646,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
                 return (
                 <button
                   key={s.id}
-                  onClick={() => onNavigate('replay')}
+                  onClick={() => onOpenReplaySession(s.id)}
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 transition-colors group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">

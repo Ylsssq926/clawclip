@@ -7,7 +7,7 @@
 import type { CostMeta, DetailedModelPricing, ModelPriceDetail, UsageSource } from '../types/index.js';
 import { DEFAULT_DETAILED_PRICING } from '../types/index.js';
 import type { SessionReplay } from '../types/replay.js';
-import type { PricingSnapshot } from './pricing-fetcher.js';
+import { normalizeModelId, type PricingSnapshot } from './pricing-fetcher.js';
 
 const UNKNOWN_MODEL_FALLBACK: ModelPriceDetail = { input: 2.0, output: 2.0 };
 
@@ -23,13 +23,17 @@ export function resolveModelDetail(
   model?: string,
 ): ModelPriceDetail {
   if (!model) return UNKNOWN_MODEL_FALLBACK;
-  if (pricing[model] != null) return pricing[model];
 
-  const stripped = model.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/:.*$/, '');
-  if (stripped !== model && pricing[stripped] != null) return pricing[stripped];
+  const variants = normalizeModelId(model);
+  for (const variant of variants) {
+    if (pricing[variant] != null) return pricing[variant];
+  }
 
-  for (const key of Object.keys(pricing)) {
-    if (model.startsWith(key)) return pricing[key];
+  const keys = Object.keys(pricing);
+  for (const variant of variants) {
+    for (const key of keys) {
+      if (variant.startsWith(key)) return pricing[key];
+    }
   }
 
   return UNKNOWN_MODEL_FALLBACK;
@@ -62,6 +66,7 @@ export function computeCost(
 export function buildCostMeta(snapshot: PricingSnapshot, usageSource: UsageSource): CostMeta {
   return {
     pricingMode: snapshot.pricingMode,
+    pricingReference: snapshot.reference,
     pricingSource: snapshot.source,
     pricingUpdatedAt: snapshot.updatedAt,
     pricingCatalogVersion: snapshot.catalogVersion,

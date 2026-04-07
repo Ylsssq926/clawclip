@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Bot, ChevronDown, ChevronUp, Clock, Cloud, DollarSign, Puzzle, Sparkles, Wifi, WifiOff, X, ArrowRight } from 'lucide-react'
+import { Activity, AlertTriangle, Bot, ChevronDown, ChevronUp, Clock, Cloud, DollarSign, Sparkles, Wifi, WifiOff, X, ArrowRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { Tab } from '../App'
 import WordCloud, { type KeywordItem } from '../components/WordCloud'
@@ -226,13 +226,21 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
   const latestSessionLabel = formatFreshnessTime(status?.latestRealSessionAt ?? status?.latestSessionAt, locale)
   const statusCheckedLabel = formatFreshnessTime(status?.lastStatusCheckedAt, locale)
   const tokenWasteSummaryText = tokenWaste
-    ? `${locale === 'en' ? 'Estimated waste' : '预计浪费'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
+    ? `${locale === 'en' ? 'Estimated recoverable waste:' : '最近 30 天可回收浪费：'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
     : (locale === 'en' ? 'Analyzing last 30 days…' : '正在分析最近 30 天…')
   const tokenWasteSubText = tokenWaste
     ? tokenWaste.summary.signals > 0
-      ? `${locale === 'en' ? 'Top issue:' : '最主要问题：'} ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
-      : `${locale === 'en' ? 'No major waste signals detected' : '暂未发现明显浪费信号'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
+      ? `${locale === 'en' ? 'Top leak:' : '最主要漏洞：'} ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
+      : `${locale === 'en' ? 'No major recoverable waste detected' : '暂未发现明显可回收浪费'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
     : (locale === 'en' ? 'Scanning retry loops, prompt overhead, and model waste' : '正在扫描重试循环、Prompt 冗余和模型浪费')
+  const tokenWasteCardValue = tokenWaste
+    ? `$${formatWasteCost(tokenWaste.summary.estimatedWasteCost)}`
+    : (locale === 'en' ? 'Analyzing…' : '分析中…')
+  const tokenWasteCardSub = tokenWaste
+    ? tokenWaste.summary.signals > 0
+      ? `${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens · ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo' : ' · Demo') : ''}`
+      : `${locale === 'en' ? 'No major recoverable waste yet' : '暂未发现明显可回收浪费'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo' : ' · Demo') : ''}`
+    : (locale === 'en' ? 'Potentially recoverable part of spend' : '本月成本里可能可回收的部分')
 
   const hour = new Date().getHours()
   const greetingKey =
@@ -278,11 +286,10 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
       iconColor: 'text-cyan-400',
     },
     {
-      label: t('dashboard.stat.skillsLabel'),
-      value: String(status?.skillCount ?? 0),
-      numValue: status?.skillCount ?? 0,
-      sub: t('dashboard.stat.skillsSub'),
-      icon: Puzzle,
+      label: locale === 'en' ? 'Token waste' : 'Token 浪费',
+      value: tokenWasteCardValue,
+      sub: tokenWasteCardSub,
+      icon: AlertTriangle,
       variant: 'card-blue',
       color: 'text-blue-400',
       iconColor: 'text-blue-400',
@@ -320,9 +327,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
           <span className="text-slate-900">{t('dashboard.greeting.suffix')}</span>
         </h2>
         <p className="text-slate-500 mt-2 text-sm">
-          {status?.running
-            ? t('dashboard.hero.running').replace('{skills}', String(status.skillCount))
-            : t('dashboard.hero.offline')}
+          {status?.running ? t('dashboard.hero.running') : t('dashboard.hero.offline')}
         </p>
       </div>
 
@@ -602,7 +607,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
             <p className="mt-1 text-sm text-slate-600">{tokenWasteSubText}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-sm font-medium text-[#3b82c4]">
-            {locale === 'en' ? 'Open cost diagnostics' : '查看成本诊断'}
+            {locale === 'en' ? 'Open savings analysis' : '查看省钱诊断'}
             <ArrowRight className="h-4 w-4" />
           </span>
         </div>
@@ -620,7 +625,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
               tab: 'replay' as const,
               icon: '🎬',
               title: t('replay.title'),
-              desc: t('replay.subtitle'),
+              desc: locale === 'en' ? 'Trace retries, dead ends, and steps that burned tokens without payoff.' : '顺着重试、死循环和失败步骤，找出白烧 Token 的位置。',
               color: 'card-blue',
               textColor: 'text-blue-400',
             },
@@ -628,7 +633,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
               tab: 'cost' as const,
               icon: '📊',
               title: t('cost.title'),
-              desc: t('cost.empty.desc'),
+              desc: locale === 'en' ? 'See spend, waste signals, and what to fix first.' : '查看花费、浪费信号，以及先改哪里最省钱。',
               color: 'card-blue',
               textColor: 'text-blue-400',
             },
@@ -636,7 +641,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch }: Props) {
               tab: 'benchmark' as const,
               icon: '🏆',
               title: t('nav.benchmark'),
-              desc: t('benchmark.subtitle'),
+              desc: locale === 'en' ? 'Verify whether the savings came without hurting quality.' : '验证省下来的钱有没有以质量受损为代价。',
               color: 'card-purple',
               textColor: 'text-violet-400',
             },

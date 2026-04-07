@@ -10,8 +10,8 @@ import type {
   DimensionScore,
 } from '../types/benchmark.js';
 import { DIMENSION_LABELS, DIMENSION_LABELS_EN } from '../types/benchmark.js';
-import type { UsageSource } from '../types/index.js';
-import { getPricingSnapshot } from './pricing-fetcher.js';
+import type { PricingReference, PricingSource, UsageSource } from '../types/index.js';
+import { getPricingSnapshot, isPricingReference, isPricingSource } from './pricing-fetcher.js';
 import { buildCostMeta } from './pricing-utils.js';
 
 function historyPath(): string {
@@ -976,9 +976,22 @@ function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
     evidenceEn: typeof d.evidenceEn === 'string' ? d.evidenceEn : undefined,
   })) as DimensionScore[];
   const rawCostMeta = o.costMeta && typeof o.costMeta === 'object' ? (o.costMeta as Record<string, unknown>) : null;
+  const pricingSource: PricingSource | null = isPricingSource(rawCostMeta?.pricingSource)
+    ? rawCostMeta.pricingSource
+    : null;
+  const pricingReference: PricingReference | null = isPricingReference(rawCostMeta?.pricingReference)
+    ? rawCostMeta.pricingReference
+    : pricingSource === 'openrouter'
+      ? 'openrouter'
+      : pricingSource === 'pricetoken'
+        ? 'pricetoken'
+        : pricingSource === 'static-default'
+          ? 'official-static'
+          : null;
   const costMeta =
     rawCostMeta?.pricingMode === 'detailed-input-output-v1' &&
-    (rawCostMeta?.pricingSource === 'pricetoken' || rawCostMeta?.pricingSource === 'static-default') &&
+    pricingSource != null &&
+    pricingReference != null &&
     (rawCostMeta?.usageSource === 'replay' ||
       rawCostMeta?.usageSource === 'log' ||
       rawCostMeta?.usageSource === 'demo' ||
@@ -988,7 +1001,8 @@ function resultFromJSON(o: Record<string, unknown>): BenchmarkResult {
     typeof rawCostMeta?.estimated === 'boolean'
       ? {
           pricingMode: rawCostMeta.pricingMode as 'detailed-input-output-v1',
-          pricingSource: rawCostMeta.pricingSource as 'pricetoken' | 'static-default',
+          pricingReference,
+          pricingSource,
           pricingUpdatedAt: rawCostMeta.pricingUpdatedAt,
           pricingCatalogVersion: rawCostMeta.pricingCatalogVersion,
           usageSource: rawCostMeta.usageSource as 'replay' | 'log' | 'demo' | 'mixed',

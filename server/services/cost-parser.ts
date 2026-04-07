@@ -16,10 +16,17 @@ import {
 import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
 import { sessionParser } from './session-parser.js';
 import { DEMO_SESSIONS } from './demo-sessions.js';
-import { getPricingSnapshot } from './pricing-fetcher.js';
+import {
+  getConfiguredPricingReference,
+  getPricingSnapshot,
+  isPricingReference,
+  normalizeModelId,
+  readBudgetConfigFromState,
+} from './pricing-fetcher.js';
 import { buildCostMeta, resolveModelDetail, repriceStep } from './pricing-utils.js';
 import type { PricingSnapshot } from './pricing-fetcher.js';
 import type { SessionReplay } from '../types/replay.js';
+import { tokenWasteAnalyzer, type TokenWasteDiagnostic } from './token-waste-analyzer.js';
 
 interface ModelBreakdownEntry {
   inputTokens: number;
@@ -78,6 +85,42 @@ interface UsageFreshness {
   pricingStale: boolean;
 }
 
+type SavingReasonType = 'switch-model' | 'trim-prompt' | 'trim-output' | 'reduce-retries';
+
+type EnhancedSavingSuggestion = SavingSuggestion & {
+  reasonType?: SavingReasonType;
+  reasonZh?: string;
+  reasonEn?: string;
+  actionZh?: string;
+  actionEn?: string;
+  sessionId?: string;
+  sessionLabel?: string;
+};
+
+interface SessionUsageSummary {
+  sessionId: string;
+  sessionLabel: string;
+  cost: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  modelCosts: Map<string, number>;
+}
+
+interface SessionModelUsageSummary {
+  sessionId: string;
+  sessionLabel: string;
+  model: string;
+  cost: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
+function roundSuggestionMoney(value: number): number {
+  return Math.round(Math.max(0, value) * 1_000_000) / 1_000_000;
+}
+
 export class CostParser {
   private static readonly CHEAP_MODELS = [
     'deepseek-chat', 'deepseek-coder', 'qwen-turbo', 'qwen3.5-flash',
@@ -93,12 +136,30 @@ export class CostParser {
   private logDedupeKeys = new Set<string>();
   private static readonly CACHE_MS = 30_000;
 
+  private hasKnownPriceForModel(model: string, table: PricingSnapshot['pricing']): boolean {
+    const variants = normalizeModelId(model);
+    for (const variant of variants) {
+      if (table[variant] != null) return true;
+    }
+    const keys = Object.keys(table);
+    for (const variant of variants) {
+      for (const key of keys) {
+        if (variant.startsWith(key)) return true;
+      }
+    }
+    return false;
+  }
+
   private priceForModel(model: string, table: PricingSnapshot['pricing']): number {
-    if (table[model] != null) return table[model];
-    const stripped = model.replace(/-\d{4}-\d{2}-\d{2}$/, '').replace(/:.*$/, '');
-    if (stripped !== model && table[stripped] != null) return table[stripped];
-    for (const key of Object.keys(table)) {
-      if (model.startsWith(key)) return table[key];
+    const variants = normalizeModelId(model);
+    for (const variant of variants) {
+      if (table[variant] != null) return table[variant];
+    }
+    const keys = Object.keys(table);
+    for (const variant of variants) {
+      for (const key of keys) {
+        if (variant.startsWith(key)) return table[key];
+      }
     }
     return 2.0;
   }
@@ -172,42 +233,40 @@ export class CostParser {
   }
 
   private loadConfig(): BudgetConfig {
-    const configPath = path.join(this.getCacheDir(), 'config.json');
-    if (fs.existsSync(configPath)) {
-      try {
-        const content = fs.readFileSync(configPath, 'utf-8');
-        const loaded = { ...DEFAULT_BUDGET_CONFIG, ...JSON.parse(content) };
-        if (typeof loaded.monthly !== 'number' || loaded.monthly <= 0) {
-          loaded.monthly = DEFAULT_BUDGET_CONFIG.monthly;
-        }
-        if (
-          typeof loaded.alertThreshold !== 'number' ||
-          loaded.alertThreshold < 1 ||
-          loaded.alertThreshold > 100
-        ) {
-          loaded.alertThreshold = DEFAULT_BUDGET_CONFIG.alertThreshold;
-        }
-        return loaded;
-      } catch {
-        // 配置文件损坏，使用默认值
-      }
-    }
-    return DEFAULT_BUDGET_CONFIG;
+    return readBudgetConfigFromState();
   }
 
   saveConfig(config: Partial<BudgetConfig>): void {
-    this.config = { ...this.config, ...config };
+    const nextConfig: BudgetConfig = { ...this.config };
+
+    if (typeof config.monthly === 'number' && config.monthly > 0) {
+      nextConfig.monthly = config.monthly;
+    }
+    if (typeof config.alertThreshold === 'number' && config.alertThreshold >= 1 && config.alertThreshold <= 100) {
+      nextConfig.alertThreshold = config.alertThreshold;
+    }
+    if (typeof config.currency === 'string' && config.currency.trim()) {
+      nextConfig.currency = config.currency;
+    }
+    if (config.pricingReference !== undefined && isPricingReference(config.pricingReference)) {
+      nextConfig.pricingReference = config.pricingReference;
+    }
+    if (!nextConfig.pricingReference) {
+      nextConfig.pricingReference = DEFAULT_BUDGET_CONFIG.pricingReference;
+    }
+
+    this.config = nextConfig;
     const configPath = path.join(this.getCacheDir(), 'config.json');
     fs.writeFileSync(configPath, JSON.stringify(this.config, null, 2));
     this.usageCache = null;
   }
 
   getConfig(): BudgetConfig {
+    this.config = this.loadConfig();
     return { ...this.config };
   }
 
-  private parseLogFiles(): Pick<UsageCacheEntry, 'data' | 'pricing' | 'replays' | 'isDemo' | 'usageSource'> {
-    const pricing = getPricingSnapshot();
+  private parseLogFiles(pricing = getPricingSnapshot()): Pick<UsageCacheEntry, 'data' | 'pricing' | 'replays' | 'isDemo' | 'usageSource'> {
     const realReplays = sessionParser.getRealReplays();
     const realUsages: TokenUsage[] = [];
     const realSeen = new Set<string>();
@@ -248,10 +307,17 @@ export class CostParser {
 
   private getCachedUsageBatch(): UsageCacheEntry {
     const now = Date.now();
-    if (this.usageCache && now - this.usageCache.at < CostParser.CACHE_MS) {
+    const currentSnapshot = getPricingSnapshot(getConfiguredPricingReference());
+    if (
+      this.usageCache &&
+      now - this.usageCache.at < CostParser.CACHE_MS &&
+      this.usageCache.pricing.reference === currentSnapshot.reference &&
+      this.usageCache.pricing.source === currentSnapshot.source &&
+      this.usageCache.pricing.catalogVersion === currentSnapshot.catalogVersion
+    ) {
       return this.usageCache;
     }
-    const parsed = this.parseLogFiles();
+    const parsed = this.parseLogFiles(currentSnapshot);
     this.usageCache = { at: now, ...parsed };
     return this.usageCache;
   }
@@ -430,8 +496,10 @@ export class CostParser {
       trend,
       comparedToLastMonth: prevCost > 0 ? ((totalCost - prevCost) / prevCost) * 100 : 0,
       costMeta: buildCostMeta(batch.pricing, batch.usageSource),
+      pricingReference: batch.pricing.reference,
       pricingSource: batch.pricing.source,
       pricingUpdatedAt: batch.pricing.updatedAt,
+      pricingCatalogVersion: batch.pricing.catalogVersion,
       usingDemo: batch.isDemo,
     };
   }
@@ -641,7 +709,7 @@ export class CostParser {
     }
 
     const unknownModels = modelKeys.filter(
-      m => this.priceForModel(m, pricing.pricing) >= 2.0 && pricing.pricing[m] == null,
+      m => this.priceForModel(m, pricing.pricing) >= 2.0 && !this.hasKnownPriceForModel(m, pricing.pricing),
     );
     if (unknownModels.length > 0) {
       insights.push({
@@ -656,35 +724,233 @@ export class CostParser {
   }
 
   getSavingSuggestions(days: number = 30): SavingsReport {
-    const pricing = this.getCachedPricingSnapshot();
+    const batch = this.getCachedUsageBatch();
+    const pricing = batch.pricing;
+    const stats = this.getUsageStats(days);
     const models = this.getModelBreakdown(days);
-    const suggestions: SavingSuggestion[] = [];
-    let totalPotentialSaving = 0;
+    const wasteReport = tokenWasteAnalyzer.getReport(days);
+    const cutoff = this.getReferenceNow(batch.data, batch.isDemo) - days * 24 * 60 * 60 * 1000;
+    const filteredUsages = batch.data.filter(
+      usage => !Number.isNaN(usage.timestamp.getTime()) && usage.timestamp.getTime() > cutoff,
+    );
 
-    for (const [model, data] of Object.entries(models)) {
+    const topTaskById = new Map(stats.topTasks.map(task => [task.taskId, task]));
+    const sessionSummaries = new Map<string, SessionUsageSummary>();
+    const modelSessionSummaries = new Map<string, SessionModelUsageSummary>();
+
+    for (const usage of filteredUsages) {
+      const sessionId = usage.sessionId || usage.taskId || 'unknown';
+      const sessionLabel =
+        topTaskById.get(usage.taskId)?.taskName ??
+        topTaskById.get(sessionId)?.taskName ??
+        this.resolveTaskName(usage.taskId, sessionId, batch.replays);
+      const totalTokens = usage.inputTokens + usage.outputTokens;
+
+      const sessionSummary = sessionSummaries.get(sessionId);
+      if (sessionSummary) {
+        sessionSummary.cost += usage.cost;
+        sessionSummary.inputTokens += usage.inputTokens;
+        sessionSummary.outputTokens += usage.outputTokens;
+        sessionSummary.totalTokens += totalTokens;
+        sessionSummary.modelCosts.set(usage.model, (sessionSummary.modelCosts.get(usage.model) ?? 0) + usage.cost);
+      } else {
+        sessionSummaries.set(sessionId, {
+          sessionId,
+          sessionLabel,
+          cost: usage.cost,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          totalTokens,
+          modelCosts: new Map([[usage.model, usage.cost]]),
+        });
+      }
+
+      const modelSessionKey = `${usage.model}::${sessionId}`;
+      const modelSessionSummary = modelSessionSummaries.get(modelSessionKey);
+      if (modelSessionSummary) {
+        modelSessionSummary.cost += usage.cost;
+        modelSessionSummary.inputTokens += usage.inputTokens;
+        modelSessionSummary.outputTokens += usage.outputTokens;
+        modelSessionSummary.totalTokens += totalTokens;
+      } else {
+        modelSessionSummaries.set(modelSessionKey, {
+          sessionId,
+          sessionLabel,
+          model: usage.model,
+          cost: usage.cost,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          totalTokens,
+        });
+      }
+    }
+
+    const resolvePrimaryModel = (summary?: SessionUsageSummary): string => {
+      if (!summary) return '';
+      const topModel = Array.from(summary.modelCosts.entries()).sort((a, b) => b[1] - a[1])[0];
+      return topModel?.[0] ?? '';
+    };
+
+    const modelSessionRankings = new Map<string, SessionModelUsageSummary[]>();
+    for (const summary of modelSessionSummaries.values()) {
+      const list = modelSessionRankings.get(summary.model);
+      if (list) {
+        list.push(summary);
+      } else {
+        modelSessionRankings.set(summary.model, [summary]);
+      }
+    }
+    for (const list of modelSessionRankings.values()) {
+      list.sort((a, b) => b.cost - a.cost);
+    }
+
+    const buildWasteSuggestion = (
+      diagnostic: TokenWasteDiagnostic,
+      reasonType: Exclude<SavingReasonType, 'switch-model'>,
+    ): EnhancedSavingSuggestion | null => {
+      const sessionSummary = diagnostic.sessionId ? sessionSummaries.get(diagnostic.sessionId) : undefined;
+      const sessionLabel = diagnostic.sessionLabel || sessionSummary?.sessionLabel;
+      const currentModel = resolvePrimaryModel(sessionSummary);
+      const currentCost = roundSuggestionMoney(sessionSummary?.cost ?? diagnostic.estimatedWasteCost);
+      const saving = roundSuggestionMoney(Math.min(diagnostic.estimatedWasteCost, currentCost));
+      if (saving <= 0.01) return null;
+
+      const subjectZh = sessionLabel ? `「${sessionLabel}」` : '这类任务';
+      const subjectEn = sessionLabel ? `"${sessionLabel}"` : 'this task type';
+
+      let reasonZh = '';
+      let reasonEn = '';
+      let actionZh = '';
+      let actionEn = '';
+
+      if (reasonType === 'reduce-retries') {
+        reasonZh = `${subjectZh} 的浪费主要来自失败后连续重试，先修重试链路会比换模型更快见效。`;
+        reasonEn = `Most waste in ${subjectEn} comes from repeated retries after a failure, so fixing the retry loop should pay off before changing models.`;
+        actionZh = '先给工具失败加退出条件、错误分类和 fallback，把连续重试压到 1 次内，再决定是否要换模型。';
+        actionEn = 'Add exit conditions, error classification, and fallback paths so failed tool calls stop looping before you revisit model choice.';
+      } else if (reasonType === 'trim-prompt') {
+        reasonZh = `${subjectZh} 投入了很长的上下文，但有效产出偏低，先减输入通常比换模型更值得。`;
+        reasonEn = `${subjectEn} spends a lot of context for weak payoff, so trimming the prompt is usually more valuable than changing models first.`;
+        actionZh = '先删重复背景，把长上下文拆成分步输入；如果内容必须保留，优先改成检索后再注入。';
+        actionEn = 'Remove repeated background, split long context into stages, and prefer retrieval-based injection when the context must stay available.';
+      } else {
+        reasonZh = `${subjectZh} 的回答明显偏长，钱主要花在输出 token 上，先控长度更直接。`;
+        reasonEn = `${subjectEn} is spending too much on long answers, so tightening output length is the most direct fix.`;
+        actionZh = '先加字数 / 条目上限，或改成“先摘要再展开”，优先压缩最终输出。';
+        actionEn = 'Set stricter length limits or switch to a summary-first pattern so the final output gets shorter.';
+      }
+
+      return {
+        currentModel,
+        alternativeModel: currentModel,
+        currentCost,
+        alternativeCost: roundSuggestionMoney(Math.max(currentCost - saving, 0)),
+        saving,
+        tokens: diagnostic.estimatedWasteTokens,
+        reasonType,
+        reasonZh,
+        reasonEn,
+        actionZh,
+        actionEn,
+        sessionId: diagnostic.sessionId,
+        sessionLabel,
+      };
+    };
+
+    const wasteReasonMap: Partial<Record<TokenWasteDiagnostic['type'], Exclude<SavingReasonType, 'switch-model'>>> = {
+      'retry-loop': 'reduce-retries',
+      'long-prompt': 'trim-prompt',
+      'verbose-output': 'trim-output',
+    };
+    const wasteSuggestions = new Map<Exclude<SavingReasonType, 'switch-model'>, EnhancedSavingSuggestion>();
+    const blockedSessionIds = new Set<string>();
+
+    for (const diagnostic of [...wasteReport.diagnostics].sort(
+      (a, b) => b.estimatedWasteCost - a.estimatedWasteCost || b.estimatedWasteTokens - a.estimatedWasteTokens,
+    )) {
+      const reasonType = wasteReasonMap[diagnostic.type];
+      if (!reasonType || wasteSuggestions.has(reasonType)) continue;
+
+      const suggestion = buildWasteSuggestion(diagnostic, reasonType);
+      if (!suggestion) continue;
+
+      wasteSuggestions.set(reasonType, suggestion);
+      if (suggestion.sessionId) {
+        blockedSessionIds.add(suggestion.sessionId);
+      }
+    }
+
+    const modelSuggestions: EnhancedSavingSuggestion[] = [];
+    for (const [model, data] of Object.entries(models).sort((a, b) => b[1].cost - a[1].cost)) {
       if (data.totalTokens <= 0 || data.cost <= 0) continue;
-      const alt = suggestAlternativeDetailed(model, data, pricing);
-      if (!alt) continue;
+      const alternative = suggestAlternativeDetailed(model, data, pricing);
+      if (!alternative) continue;
 
-      const saving = data.cost - alt.cost;
+      const scopedCandidates = modelSessionRankings.get(model) ?? [];
+      const scopedUsage =
+        scopedCandidates.find(candidate => candidate.sessionId && !blockedSessionIds.has(candidate.sessionId)) ??
+        scopedCandidates[0];
+
+      const currentCost = roundSuggestionMoney(scopedUsage?.cost ?? data.cost);
+      const alternativeCost = roundSuggestionMoney(
+        scopedUsage
+          ? repriceStep(alternative.name, scopedUsage.inputTokens, scopedUsage.outputTokens, pricing)
+          : alternative.cost,
+      );
+      const saving = roundSuggestionMoney(Math.max(currentCost - alternativeCost, 0));
       if (saving <= 0.01) continue;
 
-      totalPotentialSaving += saving;
-      suggestions.push({
+      const sharePct = stats.totalCost > 0 ? (data.cost / stats.totalCost) * 100 : 0;
+      const sessionLabel = scopedUsage?.sessionLabel;
+      const focusZh =
+        sharePct >= 15 ? `${model} 占当前周期 ${sharePct.toFixed(0)}% 的成本` : `${model} 是当前周期的高成本模型`;
+      const focusEn =
+        sharePct >= 15
+          ? `${model} accounts for ${sharePct.toFixed(0)}% of spend in this period`
+          : `${model} is one of the higher-cost models in this period`;
+
+      modelSuggestions.push({
         currentModel: model,
-        alternativeModel: alt.name,
-        currentCost: data.cost,
-        alternativeCost: alt.cost,
+        alternativeModel: alternative.name,
+        currentCost,
+        alternativeCost,
         saving,
-        tokens: data.totalTokens,
+        tokens: scopedUsage?.totalTokens ?? data.totalTokens,
+        reasonType: 'switch-model',
+        reasonZh: sessionLabel
+          ? `${focusZh}，其中「${sessionLabel}」最适合先灰度切换到 ${alternative.name}。`
+          : `${focusZh}，在同等 token 量下切到 ${alternative.name} 会更省。`,
+        reasonEn: sessionLabel
+          ? `${focusEn}, and "${sessionLabel}" is a strong place to trial ${alternative.name} first.`
+          : `${focusEn}; switching the same token load to ${alternative.name} should cost less.`,
+        actionZh: sessionLabel
+          ? `先把「${sessionLabel}」这类任务路由到 ${alternative.name}，质量稳定后再扩大范围。`
+          : `先挑一类稳定、低风险任务试跑 ${alternative.name}，确认质量后再扩大路由比例。`,
+        actionEn: sessionLabel
+          ? `Route tasks like "${sessionLabel}" to ${alternative.name} first, then widen the rollout once quality stays stable.`
+          : `Pilot ${alternative.name} on one stable, low-risk task type first, then expand routing after quality checks out.`,
+        sessionId: scopedUsage?.sessionId,
+        sessionLabel,
       });
     }
 
-    suggestions.sort((a, b) => b.saving - a.saving);
+    const reasonPriority: Record<SavingReasonType, number> = {
+      'reduce-retries': 4,
+      'trim-prompt': 3,
+      'trim-output': 2,
+      'switch-model': 1,
+    };
+
+    const suggestions = [...wasteSuggestions.values(), ...modelSuggestions]
+      .sort((a, b) => b.saving - a.saving || reasonPriority[b.reasonType ?? 'switch-model'] - reasonPriority[a.reasonType ?? 'switch-model'])
+      .slice(0, 4);
+    const totalPotentialSaving = roundSuggestionMoney(
+      suggestions.reduce((sum, suggestion) => sum + suggestion.saving, 0),
+    );
 
     return {
       totalPotentialSaving,
-      suggestions: suggestions.slice(0, 5),
+      suggestions,
     };
   }
 }

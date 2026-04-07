@@ -17,12 +17,16 @@ export interface DailyUsage {
   cost: number;
 }
 
-export type PricingSource = 'pricetoken' | 'static-default';
+export const PRICING_REFERENCES = ['official-static', 'pricetoken', 'openrouter'] as const;
+export type PricingReference = (typeof PRICING_REFERENCES)[number];
+export const PRICING_SOURCES = ['pricetoken', 'openrouter', 'static-default'] as const;
+export type PricingSource = (typeof PRICING_SOURCES)[number];
 export type PricingMode = 'detailed-input-output-v1';
 export type UsageSource = 'replay' | 'log' | 'demo' | 'mixed';
 
 export interface CostMeta {
   pricingMode: PricingMode;
+  pricingReference: PricingReference;
   pricingSource: PricingSource;
   pricingUpdatedAt: string;
   pricingCatalogVersion: string;
@@ -40,8 +44,10 @@ export interface CostStats {
   trend: 'up' | 'down' | 'stable';
   comparedToLastMonth: number;
   costMeta: CostMeta;
+  pricingReference: PricingReference;
   pricingSource: PricingSource;
   pricingUpdatedAt: string;
+  pricingCatalogVersion: string;
   usingDemo: boolean;
 }
 
@@ -57,6 +63,7 @@ export interface BudgetConfig {
   monthly: number;
   alertThreshold: number;
   currency: string;
+  pricingReference?: PricingReference;
 }
 
 export interface ModelPricing {
@@ -310,6 +317,7 @@ export const DEFAULT_BUDGET_CONFIG: BudgetConfig = {
   monthly: 50,
   alertThreshold: 80,
   currency: 'USD',
+  pricingReference: 'pricetoken',
 };
 
 /** 单个「龙虾」数据根在本机的探测结果（用于兼容多框架/多路径） */

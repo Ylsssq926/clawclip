@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Request } from 'express';
 import { costParser } from '../services/cost-parser.js';
+import * as pricingFetcher from '../services/pricing-fetcher.js';
 
 const router = Router();
 
@@ -83,9 +84,9 @@ router.get('/budget', (_req, res) => {
 });
 
 /** 预算配置 - 更新 */
-router.post('/budget', (req, res) => {
+router.post('/budget', async (req, res) => {
   try {
-    const { monthly, alertThreshold } = req.body;
+    const { monthly, alertThreshold, pricingReference } = req.body;
 
     if (monthly !== undefined && (typeof monthly !== 'number' || monthly <= 0 || monthly > 1_000_000)) {
       res.status(400).json({ error: '月预算必须是正数 / Monthly budget must be a positive number (1-1000000)' });
@@ -95,8 +96,15 @@ router.post('/budget', (req, res) => {
       res.status(400).json({ error: '告警阈值须在 1-100 / Alert threshold must be 1-100' });
       return;
     }
+    if (pricingReference !== undefined && !pricingFetcher.isPricingReference(pricingReference)) {
+      res.status(400).json({ error: '价格参考模式不合法 / Invalid pricing reference' });
+      return;
+    }
 
-    costParser.saveConfig({ monthly, alertThreshold });
+    costParser.saveConfig({ monthly, alertThreshold, pricingReference });
+    if (pricingReference !== undefined) {
+      await pricingFetcher.getPricingSnapshotAsync(pricingReference);
+    }
     res.json({ success: true, config: costParser.getConfig() });
   } catch (e) {
     res.status(500).json({ error: '更新预算失败 / Failed to update budget', detail: String(e) });

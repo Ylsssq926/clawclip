@@ -36,14 +36,14 @@ export type Tab =
 const tabs = [
   { id: 'dashboard' as const, nameKey: 'nav.dashboard', icon: LayoutDashboard },
   { id: 'replay' as const, nameKey: 'nav.replay', icon: Play },
-  { id: 'benchmark' as const, nameKey: 'nav.benchmark', icon: Trophy },
-  { id: 'leaderboard' as const, nameKey: 'nav.leaderboard', icon: Medal },
   { id: 'cost' as const, nameKey: 'nav.cost', icon: DollarSign },
   { id: 'prompt' as const, nameKey: 'nav.prompt', icon: Lightbulb },
+  { id: 'benchmark' as const, nameKey: 'nav.benchmark', icon: Trophy },
   { id: 'compare' as const, nameKey: 'nav.compare', icon: GitCompareArrows },
-  { id: 'skills' as const, nameKey: 'nav.skills', icon: Puzzle },
-  { id: 'templates' as const, nameKey: 'nav.templates', icon: Store },
+  { id: 'leaderboard' as const, nameKey: 'nav.leaderboard', icon: Medal },
   { id: 'knowledge' as const, nameKey: 'nav.knowledge', icon: Database },
+  { id: 'templates' as const, nameKey: 'nav.templates', icon: Store },
+  { id: 'skills' as const, nameKey: 'nav.skills', icon: Puzzle },
 ] as const
 
 const TOUR_KEYS = ['app.tour.s1', 'app.tour.s2', 'app.tour.s3', 'app.tour.s4'] as const

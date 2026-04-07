@@ -15,6 +15,51 @@ interface DailyData {
   totalTokens: number
 }
 
+type PricingReference = 'official-static' | 'pricetoken' | 'openrouter'
+type PricingSource = 'pricetoken' | 'openrouter' | 'static-default'
+
+const PRICING_REFERENCE_OPTIONS: Array<{
+  value: PricingReference
+  labelZh: string
+  labelEn: string
+}> = [
+  { value: 'pricetoken', labelZh: 'PriceToken', labelEn: 'PriceToken' },
+  { value: 'official-static', labelZh: 'Official', labelEn: 'Official' },
+  { value: 'openrouter', labelZh: 'OpenRouter', labelEn: 'OpenRouter' },
+]
+
+function isPricingReference(value: unknown): value is PricingReference {
+  return value === 'official-static' || value === 'pricetoken' || value === 'openrouter'
+}
+
+function getPricingReferenceLabel(reference: PricingReference | undefined, isZh: boolean): string | null {
+  if (!reference) return null
+  switch (reference) {
+    case 'official-static':
+      return isZh ? 'Official 静态表' : 'Official static table'
+    case 'pricetoken':
+      return 'PriceToken'
+    case 'openrouter':
+      return 'OpenRouter'
+    default:
+      return null
+  }
+}
+
+function getPricingSourceLabel(source: PricingSource | undefined, isZh: boolean): string | null {
+  if (!source) return null
+  switch (source) {
+    case 'pricetoken':
+      return isZh ? 'PriceToken 动态价格' : 'Dynamic PriceToken pricing'
+    case 'openrouter':
+      return isZh ? 'OpenRouter 官方 models 接口' : 'OpenRouter public models API'
+    case 'static-default':
+      return isZh ? '内置静态默认表' : 'Built-in static defaults'
+    default:
+      return null
+  }
+}
+
 interface CostSummary {
   totalCost: number
   totalTokens: number
@@ -24,11 +69,15 @@ interface CostSummary {
   comparedToLastMonth: number
   budget: { isAlert: boolean; percentage: number; message: string }
   topTasks: { taskId: string; taskName: string; cost: number; tokens: number }[]
-  pricingSource?: 'pricetoken' | 'static-default'
+  pricingReference?: PricingReference
+  pricingSource?: PricingSource
   pricingUpdatedAt?: string
+  pricingCatalogVersion?: string
   latestUsageAt?: string
   dataCutoffAt?: string
   costMeta?: {
+    pricingReference?: PricingReference
+    pricingCatalogVersion?: string
     stale?: boolean
   }
   usingDemo?: boolean
@@ -41,6 +90,8 @@ interface CostInsight {
   messageEn: string
 }
 
+type SavingReasonType = 'switch-model' | 'trim-prompt' | 'trim-output' | 'reduce-retries'
+
 interface SavingSuggestion {
   currentModel: string
   alternativeModel: string
@@ -48,6 +99,13 @@ interface SavingSuggestion {
   alternativeCost: number
   saving: number
   tokens: number
+  reasonType?: SavingReasonType
+  reasonZh?: string
+  reasonEn?: string
+  actionZh?: string
+  actionEn?: string
+  sessionId?: string
+  sessionLabel?: string
 }
 
 interface SavingsReport {
@@ -87,9 +145,72 @@ function formatWasteCost(value: number): string {
   return value.toFixed(4)
 }
 
+function getSavingTypeMeta(reasonType: SavingReasonType | undefined, isZh: boolean) {
+  switch (reasonType) {
+    case 'reduce-retries':
+      return {
+        label: isZh ? '先修重试' : 'Fix retries',
+        className: 'border-amber-200 bg-amber-50 text-amber-700',
+      }
+    case 'trim-prompt':
+      return {
+        label: isZh ? '缩 Prompt' : 'Trim prompt',
+        className: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+      }
+    case 'trim-output':
+      return {
+        label: isZh ? '缩输出' : 'Trim output',
+        className: 'border-violet-200 bg-violet-50 text-violet-700',
+      }
+    case 'switch-model':
+      return {
+        label: isZh ? '换模型' : 'Switch model',
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      }
+    default:
+      return {
+        label: isZh ? '优化建议' : 'Suggestion',
+        className: 'border-slate-200 bg-slate-50 text-slate-600',
+      }
+  }
+}
+
+function getSavingReasonText(suggestion: SavingSuggestion, isZh: boolean): string {
+  if (isZh) {
+    if (suggestion.reasonZh) return suggestion.reasonZh
+    if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
+      return `${suggestion.currentModel} 的这部分成本偏高，可以优先尝试切到 ${suggestion.alternativeModel}。`
+    }
+    return '这类任务有明确的降本空间，适合优先处理。'
+  }
+
+  if (suggestion.reasonEn) return suggestion.reasonEn
+  if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
+    return `${suggestion.currentModel} is expensive for this slice of work, so ${suggestion.alternativeModel} is worth trying first.`
+  }
+  return 'This workload has a clear cost-saving opportunity and is worth tackling first.'
+}
+
+function getSavingActionText(suggestion: SavingSuggestion, isZh: boolean): string {
+  if (isZh) {
+    if (suggestion.actionZh) return suggestion.actionZh
+    if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
+      return `先把这类任务灰度到 ${suggestion.alternativeModel}，确认质量稳定后再逐步扩大。`
+    }
+    return '先从一个稳定、低风险的任务入口试改，再观察成本变化。'
+  }
+
+  if (suggestion.actionEn) return suggestion.actionEn
+  if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
+    return `Pilot ${suggestion.alternativeModel} on this task type first, then expand gradually once quality stays stable.`
+  }
+  return 'Start with one stable, low-risk task entry point and watch how the cost changes.'
+}
+
 interface BudgetConfig {
   monthly: number
   alertThreshold: number
+  pricingReference?: PricingReference
 }
 
 type ModelBreakdown = Record<string, { tokens: number; cost: number }>
@@ -152,6 +273,7 @@ export default function CostMonitor() {
   const [budgetModalOpen, setBudgetModalOpen] = useState(false)
   const [budgetForm, setBudgetForm] = useState({ monthly: '', alertThreshold: '80' })
   const [budgetSaving, setBudgetSaving] = useState(false)
+  const [referenceSaving, setReferenceSaving] = useState(false)
   const [budgetError, setBudgetError] = useState<string | null>(null)
   const [budgetSuccessMessage, setBudgetSuccessMessage] = useState<string | null>(null)
   const [days, setDays] = useState(7)
@@ -188,7 +310,11 @@ export default function CostMonitor() {
 
       const normalizedBudget =
         budget && typeof budget.monthly === 'number' && typeof budget.alertThreshold === 'number'
-          ? { monthly: budget.monthly, alertThreshold: budget.alertThreshold }
+          ? {
+              monthly: budget.monthly,
+              alertThreshold: budget.alertThreshold,
+              pricingReference: isPricingReference(budget.pricingReference) ? budget.pricingReference : 'pricetoken',
+            }
           : null
 
       setDaily(Array.isArray(d) ? d : [])
@@ -233,11 +359,10 @@ export default function CostMonitor() {
       }))
     : []
   const averageDailyCost = daily.length > 0 ? daily.reduce((sum, item) => sum + item.cost, 0) / daily.length : 0
-  const pricingSourceLabel = summary?.pricingSource
-    ? summary.pricingSource === 'pricetoken'
-      ? (isZh ? 'PriceToken 动态价格' : 'Dynamic PriceToken pricing')
-      : (isZh ? '内置静态默认表' : 'Built-in static defaults')
-    : null
+  const selectedPricingReference = budgetConfig?.pricingReference ?? summary?.costMeta?.pricingReference ?? 'pricetoken'
+  const pricingReferenceLabel = getPricingReferenceLabel(summary?.costMeta?.pricingReference ?? selectedPricingReference, isZh)
+  const pricingSourceLabel = getPricingSourceLabel(summary?.pricingSource, isZh)
+  const pricingCatalogVersion = summary?.costMeta?.pricingCatalogVersion ?? summary?.pricingCatalogVersion ?? null
   const pricingUpdatedAtLabel = (() => {
     if (!summary?.pricingUpdatedAt) return null
     const timestamp = new Date(summary.pricingUpdatedAt)
@@ -260,6 +385,12 @@ export default function CostMonitor() {
   const wasteMetaText = tokenWaste
     ? `${isZh ? `${tokenWaste.summary.signals} 个信号` : `${tokenWaste.summary.signals} signal${tokenWaste.summary.signals === 1 ? '' : 's'}`}${tokenWaste.summary.usingDemo ? (isZh ? ' · 当前为 Demo 诊断' : ' · Demo diagnostics') : ''}`
     : (isZh ? '会在这里汇总重试、长 Prompt、冗长输出等浪费信号' : 'Retry loops, long prompts, verbose output, and other waste signals will be summarized here')
+  const hasSwitchModelSuggestion = Boolean(
+    savings?.suggestions.some(suggestion => (
+      suggestion.reasonType === 'switch-model'
+      || (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel)
+    )),
+  )
 
   const openBudgetModal = () => {
     setBudgetError(null)
@@ -300,6 +431,34 @@ export default function CostMonitor() {
     }
   }
 
+  const handlePricingReferenceChange = async (pricingReference: PricingReference) => {
+    const previousReference = selectedPricingReference
+    setReferenceSaving(true)
+    setBudgetError(null)
+    setBudgetSuccessMessage(null)
+    setError(null)
+    setBudgetConfig(current => (
+      current
+        ? { ...current, pricingReference }
+        : { monthly: 50, alertThreshold: 80, pricingReference }
+    ))
+
+    try {
+      await apiPost('/api/cost/budget', { pricingReference })
+      await loadData()
+      setBudgetSuccessMessage(isZh ? '✅ 价格参考已更新' : '✅ Pricing reference updated')
+    } catch (err) {
+      setBudgetConfig(current => (
+        current
+          ? { ...current, pricingReference: previousReference }
+          : { monthly: 50, alertThreshold: 80, pricingReference: previousReference }
+      ))
+      setError(parseApiErrorMessage(err, isZh ? '切换价格参考失败' : 'Failed to update pricing reference'))
+    } finally {
+      setReferenceSaving(false)
+    }
+  }
+
   const TrendIcon = summary?.trend === 'up' ? TrendingUp : summary?.trend === 'down' ? TrendingDown : Minus
   const trendColor = summary?.trend === 'up' ? 'text-red-400' : summary?.trend === 'down' ? 'text-green-400' : 'text-slate-500'
 
@@ -321,6 +480,21 @@ export default function CostMonitor() {
               {t('cost.days').replace('{n}', String(d))}
             </button>
           ))}
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 shadow-sm">
+            <span className="text-xs text-slate-500">{isZh ? '价格参考' : 'Pricing reference'}</span>
+            <select
+              value={selectedPricingReference}
+              onChange={event => void handlePricingReferenceChange(event.target.value as PricingReference)}
+              disabled={referenceSaving}
+              className="bg-transparent text-sm text-slate-700 focus:outline-none disabled:opacity-60"
+            >
+              {PRICING_REFERENCE_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {isZh ? option.labelZh : option.labelEn}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             onClick={openBudgetModal}
@@ -528,29 +702,70 @@ export default function CostMonitor() {
 
           {!loading && savings && savings.suggestions.length > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                 <h3 className="text-lg font-semibold">{t('cost.savings.title')}</h3>
                 <div className="text-right">
                   <span className="text-xs text-slate-500">{t('cost.savings.total')}</span>
-                  <span className="text-lg font-bold text-green-400 ml-2">${savings.totalPotentialSaving.toFixed(2)}</span>
+                  <span className="text-lg font-bold text-emerald-500 ml-2">${formatWasteCost(savings.totalPotentialSaving)}</span>
                 </div>
               </div>
               <div className="space-y-3">
-                {savings.suggestions.map((sug, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
-                    <div className="flex items-center gap-3 text-sm min-w-0">
-                      <span className="font-medium text-slate-800 truncate">{sug.currentModel}</span>
-                      <span className="text-slate-500">→</span>
-                      <span className="text-green-400 truncate">{sug.alternativeModel}</span>
+                {savings.suggestions.map((sug, i) => {
+                  const typeMeta = getSavingTypeMeta(sug.reasonType, isZh)
+                  const reasonText = getSavingReasonText(sug, isZh)
+                  const actionText = getSavingActionText(sug, isZh)
+                  const showModelRoute = Boolean(
+                    sug.currentModel
+                    && sug.alternativeModel
+                    && sug.currentModel !== sug.alternativeModel,
+                  )
+
+                  return (
+                    <div
+                      key={`${sug.reasonType ?? 'suggestion'}-${sug.sessionId ?? sug.currentModel ?? i}`}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', typeMeta.className)}>
+                              {typeMeta.label}
+                            </span>
+                            {sug.sessionLabel && (
+                              <span className="truncate text-[11px] text-slate-500">
+                                {isZh ? `会话：${sug.sessionLabel}` : `Session: ${sug.sessionLabel}`}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
+                          <div className="mt-3 rounded-lg border border-slate-200 bg-white/70 px-3 py-2.5">
+                            <p className="text-[11px] font-medium text-slate-500">{isZh ? '下一步' : 'Next action'}</p>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
+                          </div>
+                          {showModelRoute && (
+                            <p className="mt-3 text-xs text-slate-500">
+                              {isZh ? '模型切换：' : 'Route: '}
+                              <span className="font-medium text-slate-700">{sug.currentModel}</span>
+                              <span className="mx-1">→</span>
+                              <span className="font-medium text-emerald-600">{sug.alternativeModel}</span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs text-slate-500">{isZh ? '预计可省' : 'Est. save'}</p>
+                          <p className="mt-1 text-lg font-semibold text-emerald-500">-${formatWasteCost(sug.saving)}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0 ml-4">
-                      <span className="text-green-400 font-medium text-sm">-${sug.saving.toFixed(2)}</span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
               <div className="mt-3 space-y-1">
-                <p className="text-xs text-amber-700">⚠️ {isZh ? '注意：更换模型可能影响输出质量' : 'Note: switching models may affect output quality'}</p>
+                {hasSwitchModelSuggestion && (
+                  <p className="text-xs text-amber-700">
+                    ⚠️ {isZh ? '换模型建议请先灰度验证质量，再逐步扩大路由范围' : 'Validate model-switch suggestions on a small slice first before expanding routing'}
+                  </p>
+                )}
                 <p className="text-xs text-slate-600">{t('cost.savings.disclaimer')}</p>
               </div>
             </div>
@@ -692,11 +907,23 @@ export default function CostMonitor() {
 
       {/* Pricing disclaimer */}
       <div className="text-[11px] text-slate-600 leading-relaxed mt-4 px-1 space-y-1">
+        {pricingReferenceLabel && (
+          <p>
+            {isZh ? '当前参考模式：' : 'Current reference: '}
+            <span className="font-medium text-slate-700">{pricingReferenceLabel}</span>
+          </p>
+        )}
         {pricingSourceLabel && (
           <p>
             {isZh ? '定价来源：' : 'Pricing source: '}
             <span className="font-medium text-slate-700">{pricingSourceLabel}</span>
             {pricingUpdatedAtLabel ? ` · ${isZh ? '更新时间' : 'Updated'} ${pricingUpdatedAtLabel}` : ''}
+          </p>
+        )}
+        {pricingCatalogVersion && (
+          <p>
+            {isZh ? '价格目录版本：' : 'Pricing catalog: '}
+            <span className="font-medium text-slate-700">{pricingCatalogVersion}</span>
           </p>
         )}
         <p>

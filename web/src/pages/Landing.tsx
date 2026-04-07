@@ -20,34 +20,36 @@ const CURVE_Y_AXIS_LABEL: Record<string, string> = {
 
 const LANDING_LOCAL_COPY = {
   zh: {
-    'landing.hero.title': '你的 AI Agent，今天表现怎么样？',
-    'landing.hero.kicker': '——让数据回答。',
-    'landing.hero.meta': '能力成绩单 · 成本账单 · 运行洞察 — 100% 本地运行',
-    'landing.feature.replay.desc': '审查每一步思考、工具调用、错误与结果',
-    'landing.feature.benchmark.desc': '六维启发式评分，量化运行质量',
-    'landing.feature.cost.desc': '模型拆分、趋势追踪、预算告警',
-    'landing.feature.prompt.desc': '投入产出比分析',
-    'landing.feature.compare.desc': '不同配置的效果对比',
+    'landing.hero.title': '你的 AI Agent，正在为结构性浪费买单。',
+    'landing.hero.kicker': '龙虾链路里的重试循环、长 Prompt、上下文膨胀和高价模型误配，不是偶发噪音，而是会持续吞掉预算的结构性问题。虾片不是只给你看账单，而是把这些浪费揪出来，并告诉你先改哪类问题最省钱。',
+    'landing.hero.meta': '运行证据 · 成本结构 · 优先修复顺序 — 100% 本地运行',
+    'landing.feature.replay.desc': '审查每一步思考、工具调用、重试与失败，找出哪些步骤只烧 Token、不买结果',
+    'landing.feature.benchmark.desc': '六维启发式评分，不只看跑没跑通，还帮你判断该先补质量短板，还是先修最浪费钱的问题',
+    'landing.feature.cost.desc': '按模型、重试、上下文和任务类型拆开成本，把结构性浪费摊开，并标出更省钱的优先动作',
+    'landing.feature.prompt.desc': '看清长 Prompt 和长输出到底值不值，找出低 ROI 的 Token 消耗和上下文包袱',
+    'landing.feature.compare.desc': '对比优化前后效果，验证省下来的钱是不是来自真实优化，而不是把问题转移',
     'landing.feature.resources': '模板库 + 知识库',
-    'landing.feature.resources.desc': '模板复用、知识沉淀与导入导出',
+    'landing.feature.resources.desc': '复用模板、沉淀知识，少把 Token 烧在重复试错和重复解释上',
     'landing.radar.title': '六维表现雷达',
-    'landing.radar.subtitle': '分数从 0 平滑展开到目标值',
+    'landing.radar.subtitle': '能力评分和省钱优先级一起看，才知道该先修哪里',
     'landing.radar.badge': '100% 本地',
+    'landing.radar.signalTitle': '重点盯住的成本漏洞',
   },
   en: {
-    'landing.hero.title': 'How is your AI agent performing today?',
-    'landing.hero.kicker': 'Let the data answer.',
-    'landing.hero.meta': 'Scorecards · Cost ledger · Run insights — 100% local',
-    'landing.feature.replay.desc': 'Inspect every thought, tool call, error, and outcome',
-    'landing.feature.benchmark.desc': 'Six-dimension heuristics to quantify run quality',
-    'landing.feature.cost.desc': 'Model breakdowns, trend tracking, and budget alerts',
-    'landing.feature.prompt.desc': 'Analyze output-versus-input efficiency',
-    'landing.feature.compare.desc': 'Compare outcomes across different configurations',
+    'landing.hero.title': 'Your AI agent is paying for structural waste.',
+    'landing.hero.kicker': 'Retry churn, long prompts, bloated context, and premium models on light work are not random noise. They are structural leaks that keep draining budget. ClawClip does more than show the bill: it exposes the waste and tells you what to fix first for the biggest savings.',
+    'landing.hero.meta': 'Run evidence · Cost structure · Fix-first priorities — 100% local',
+    'landing.feature.replay.desc': 'Inspect every thought, tool call, retry, and failure to see which steps burn tokens without buying results',
+    'landing.feature.benchmark.desc': 'Six-dimension heuristics that show whether you should fix quality gaps first or attack the costliest waste first',
+    'landing.feature.cost.desc': 'Break spend by model, retries, context, and task type so structural waste is exposed instead of hiding inside totals',
+    'landing.feature.prompt.desc': 'See whether long prompts and verbose outputs deserve their token bill, and spot low-ROI context overhead',
+    'landing.feature.compare.desc': 'Compare before and after to verify the savings came from real optimization, not from shifting the problem elsewhere',
     'landing.feature.resources': 'Template Library + Knowledge',
-    'landing.feature.resources.desc': 'Reuse templates and keep run knowledge searchable',
+    'landing.feature.resources.desc': 'Reuse templates and stored knowledge so fewer tokens are burned on repeating the same trial and error',
     'landing.radar.title': 'Six-dimension radar',
-    'landing.radar.subtitle': 'Scores animate from 0 to target values',
+    'landing.radar.subtitle': 'Read capability and savings priority together before deciding what to fix',
     'landing.radar.badge': '100% local',
+    'landing.radar.signalTitle': 'Cost leaks we track',
   },
 } as const
 
@@ -63,6 +65,10 @@ const RADAR_METRICS = [
 const RADAR_LEVELS = [0.25, 0.5, 0.75, 1] as const
 const RADAR_CENTER = 120
 const RADAR_RADIUS = 78
+const RADAR_WASTE_SIGNALS: Record<'zh' | 'en', string[]> = {
+  zh: ['重试循环', '长 Prompt', '上下文膨胀', '高价模型误配'],
+  en: ['Retry churn', 'Long prompts', 'Context bloat', 'Premium model mismatch'],
+}
 
 function getRadarPoint(index: number, scale: number) {
   const angle = (Math.PI * 2 * index) / RADAR_METRICS.length - Math.PI / 2
@@ -97,20 +103,20 @@ const FEATURES = [
     iconColor: 'text-blue-600',
   },
   {
-    icon: Trophy,
-    tab: 'benchmark' as const,
-    titleKey: 'feat.benchmark',
-    descKey: 'landing.feature.benchmark.desc',
-    iconBg: 'bg-cyan-50',
-    iconColor: 'text-cyan-600',
-  },
-  {
     icon: Coins,
     tab: 'cost' as const,
     titleKey: 'nav.cost',
     descKey: 'landing.feature.cost.desc',
     iconBg: 'bg-emerald-50',
     iconColor: 'text-emerald-600',
+  },
+  {
+    icon: Trophy,
+    tab: 'benchmark' as const,
+    titleKey: 'feat.benchmark',
+    descKey: 'landing.feature.benchmark.desc',
+    iconBg: 'bg-cyan-50',
+    iconColor: 'text-cyan-600',
   },
   {
     icon: Zap,
@@ -150,6 +156,7 @@ export default function Landing({ onEnterDemo }: Props) {
   const [radarReady, setRadarReady] = useState(false)
   const copyLocale = locale === 'zh' ? 'zh' : 'en'
   const copy = (key: string) => (LANDING_LOCAL_COPY[copyLocale] as Record<string, string>)[key] ?? t(key as never)
+  const radarWasteSignals = RADAR_WASTE_SIGNALS[copyLocale]
   const radarId = useId().replace(/:/g, '')
 
   useEffect(() => {
@@ -340,6 +347,22 @@ export default function Landing({ onEnterDemo }: Props) {
                     </text>
                   ))}
                 </svg>
+
+                <div className="mt-5 border-t border-slate-200/70 pt-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    {copy('landing.radar.signalTitle')}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {radarWasteSignals.map(signal => (
+                      <span
+                        key={signal}
+                        className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-700"
+                      >
+                        {signal}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -368,7 +391,7 @@ export default function Landing({ onEnterDemo }: Props) {
           className="mt-12 flex flex-wrap justify-center gap-8 lg:gap-16"
         >
           {[
-            { num: String(FEATURES.length), labelKey: 'landing.stats.features' as const },
+            { num: String(radarWasteSignals.length), labelKey: 'landing.stats.wasteSignals' as const },
             { num: '6', labelKey: 'landing.stats.dimensions' as const },
             { num: '7', labelKey: 'landing.stats.languages' as const },
             { num: '0', labelKey: 'landing.stats.apicost' as const },
@@ -584,8 +607,8 @@ export default function Landing({ onEnterDemo }: Props) {
                   {[
                     { label: t('dashboard.stat.cli'), value: '🟢 Online' },
                     { label: t('dashboard.stat.monthCost'), value: '$3.42' },
-                    { label: t('nav.skills'), value: '15' },
-                    { label: t('dashboard.stat.sessionsLabel'), value: '8' },
+                    { label: copyLocale === 'zh' ? 'Token 浪费' : 'Token waste', value: '$0.91' },
+                    { label: copyLocale === 'zh' ? '优先修复' : 'Fix first', value: copyLocale === 'zh' ? '重试循环' : 'Retry churn' },
                   ].map((cell, i) => (
                     <div key={i} className="rounded-lg bg-slate-700/40 border border-slate-600/30 p-3">
                       <div className="text-[10px] text-slate-500 mb-1 truncate">{cell.label}</div>

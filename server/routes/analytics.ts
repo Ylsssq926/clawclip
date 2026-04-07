@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { analyticsEngine } from '../services/analytics-engine.js';
 import { getPromptInsights } from '../services/prompt-analyzer.js';
 import { tokenWasteAnalyzer } from '../services/token-waste-analyzer.js';
+import { modelValueAnalyzer } from '../services/model-value-analyzer.js';
 
 const router = Router();
 
@@ -62,6 +63,15 @@ router.get('/prompt-insights', (req, res, next) => {
 router.get('/token-waste', (req, res, next) => {
   try {
     res.json(tokenWasteAnalyzer.getReport(parseDays(req.query.days)));
+  } catch (e) {
+    next(e);
+  }
+});
+
+/** GET /api/analytics/model-value?days=30 — 模型效果 / 成本矩阵 */
+router.get('/model-value', (req, res, next) => {
+  try {
+    res.json(modelValueAnalyzer.getReport(parseDays(req.query.days)));
   } catch (e) {
     next(e);
   }

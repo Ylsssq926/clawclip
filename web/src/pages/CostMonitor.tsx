@@ -83,6 +83,21 @@ interface CostSummary {
   usingDemo?: boolean
 }
 
+interface ReferenceCompareRow {
+  reference: PricingReference
+  label: string
+  totalCost: number
+  deltaVsCurrent: number
+  pricingSource: PricingSource
+  pricingCatalogVersion: string
+}
+
+interface ReferenceCompareData {
+  currentReference: PricingReference
+  currentTotalCost: number
+  rows: ReferenceCompareRow[]
+}
+
 interface CostInsight {
   type: 'info' | 'warning' | 'tip'
   icon: string
@@ -91,6 +106,7 @@ interface CostInsight {
 }
 
 type SavingReasonType = 'switch-model' | 'trim-prompt' | 'trim-output' | 'reduce-retries'
+type SavingPriority = 'high' | 'medium' | 'low'
 
 interface SavingSuggestion {
   currentModel: string
@@ -104,6 +120,9 @@ interface SavingSuggestion {
   reasonEn?: string
   actionZh?: string
   actionEn?: string
+  qualityGuardrailZh?: string
+  qualityGuardrailEn?: string
+  priority?: SavingPriority
   sessionId?: string
   sessionLabel?: string
 }
@@ -145,6 +164,11 @@ function formatWasteCost(value: number): string {
   return value.toFixed(4)
 }
 
+function formatSignedCostDelta(value: number): string {
+  if (Math.abs(value) < 0.0000005) return '$0.0000'
+  return `${value > 0 ? '+' : '-'}$${formatWasteCost(Math.abs(value))}`
+}
+
 function getSavingTypeMeta(reasonType: SavingReasonType | undefined, isZh: boolean) {
   switch (reasonType) {
     case 'reduce-retries':
@@ -172,6 +196,55 @@ function getSavingTypeMeta(reasonType: SavingReasonType | undefined, isZh: boole
         label: isZh ? '优化建议' : 'Suggestion',
         className: 'border-slate-200 bg-slate-50 text-slate-600',
       }
+  }
+}
+
+function getSavingCardClass(priority: SavingPriority | undefined): string {
+  switch (priority) {
+    case 'high':
+      return 'border-[#3b82c4]/25 bg-[#3b82c4]/5'
+    case 'medium':
+      return 'border-cyan-200 bg-cyan-50/60'
+    case 'low':
+    default:
+      return 'border-slate-200 bg-slate-50'
+  }
+}
+
+function getSavingPriorityMeta(priority: SavingPriority | undefined, t: (key: string) => string) {
+  switch (priority) {
+    case 'high':
+      return {
+        label: t('cost.savings.priority.high'),
+        className: 'border-[#3b82c4]/20 bg-[#3b82c4]/10 text-[#2f6fa8]',
+      }
+    case 'low':
+      return {
+        label: t('cost.savings.priority.low'),
+        className: 'border-slate-200 bg-slate-100 text-slate-600',
+      }
+    case 'medium':
+    default:
+      return {
+        label: t('cost.savings.priority.medium'),
+        className: 'border-amber-200 bg-amber-50 text-amber-700',
+      }
+  }
+}
+
+function getSavingGuardrailMeta(reasonType: SavingReasonType | undefined, t: (key: string) => string) {
+  if (reasonType === 'switch-model') {
+    return {
+      label: t('cost.savings.guardrail.cautious'),
+      className: 'border-amber-200 bg-amber-50 text-amber-800',
+      badgeClassName: 'bg-amber-100 text-amber-700',
+    }
+  }
+
+  return {
+    label: t('cost.savings.guardrail.lowRisk'),
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    badgeClassName: 'bg-emerald-100 text-emerald-700',
   }
 }
 
@@ -207,6 +280,20 @@ function getSavingActionText(suggestion: SavingSuggestion, isZh: boolean): strin
   return 'Start with one stable, low-risk task entry point and watch how the cost changes.'
 }
 
+function getSavingGuardrailText(suggestion: SavingSuggestion, isZh: boolean): string {
+  if (isZh) {
+    if (suggestion.qualityGuardrailZh) return suggestion.qualityGuardrailZh
+    return suggestion.reasonType === 'switch-model'
+      ? '建议先在低风险任务灰度切换，确认质量稳定后再扩大范围。'
+      : '这类优化通常不直接牺牲模型能力，适合优先尝试。'
+  }
+
+  if (suggestion.qualityGuardrailEn) return suggestion.qualityGuardrailEn
+  return suggestion.reasonType === 'switch-model'
+    ? 'Roll this out on lower-risk tasks first, then expand once quality stays stable.'
+    : 'This kind of optimization usually reduces waste without directly sacrificing model capability.'
+}
+
 interface BudgetConfig {
   monthly: number
   alertThreshold: number
@@ -220,6 +307,85 @@ interface ModelBreakdownRow {
   cost: number
   tokens: number
   percentage: number
+}
+
+type ModelValueLabel = 'cheap-workhorse' | 'balanced' | 'premium-specialist' | 'experimental'
+
+interface ModelValueRow {
+  model: string
+  sessions: number
+  totalCost: number
+  totalTokens: number
+  avgCostPerSession: number
+  avgOutputInputRatio: number
+  toolUsageRate: number
+  errorRate: number
+  valueLabel: ModelValueLabel
+  valueLabelZh: string
+  valueLabelEn: string
+  recommendationZh: string
+  recommendationEn: string
+}
+
+interface ModelValueReport {
+  rows: ModelValueRow[]
+}
+
+function formatMatrixCost(value: number): string {
+  if (value >= 1) return value.toFixed(2)
+  if (value >= 0.1) return value.toFixed(3)
+  if (value >= 0.01) return value.toFixed(4)
+  return value.toFixed(5)
+}
+
+function formatRate(value: number): string {
+  return `${(value * 100).toFixed(value * 100 >= 10 ? 0 : 1)}%`
+}
+
+function formatCompactTokens(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
+function getModelValueBadgeClass(valueLabel: ModelValueLabel): string {
+  switch (valueLabel) {
+    case 'cheap-workhorse':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    case 'premium-specialist':
+      return 'border-violet-200 bg-violet-50 text-violet-700'
+    case 'experimental':
+      return 'border-amber-200 bg-amber-50 text-amber-700'
+    case 'balanced':
+    default:
+      return 'border-cyan-200 bg-cyan-50 text-cyan-700'
+  }
+}
+
+function getStabilityMeta(errorRate: number, isZh: boolean): { label: string; className: string } {
+  if (errorRate <= 0.03) {
+    return {
+      label: isZh ? '很稳' : 'Very stable',
+      className: 'text-emerald-600',
+    }
+  }
+  if (errorRate <= 0.08) {
+    return {
+      label: isZh ? '较稳' : 'Stable',
+      className: 'text-cyan-700',
+    }
+  }
+  if (errorRate <= 0.15) {
+    return {
+      label: isZh ? '可接受' : 'Acceptable',
+      className: 'text-amber-700',
+    }
+  }
+  return {
+    label: isZh ? '波动偏大' : 'Needs watching',
+    className: 'text-rose-600',
+  }
 }
 
 const chartTooltipStyle = {
@@ -265,10 +431,12 @@ export default function CostMonitor() {
   const isZh = locale.startsWith('zh')
   const [daily, setDaily] = useState<DailyData[]>([])
   const [summary, setSummary] = useState<CostSummary | null>(null)
+  const [referenceCompare, setReferenceCompare] = useState<ReferenceCompareData | null>(null)
   const [insights, setInsights] = useState<CostInsight[]>([])
   const [savings, setSavings] = useState<SavingsReport | null>(null)
   const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
   const [modelBreakdown, setModelBreakdown] = useState<ModelBreakdown>({})
+  const [modelValueRows, setModelValueRows] = useState<ModelValueRow[]>([])
   const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null)
   const [budgetModalOpen, setBudgetModalOpen] = useState(false)
   const [budgetForm, setBudgetForm] = useState({ monthly: '', alertThreshold: '80' })
@@ -286,15 +454,17 @@ export default function CostMonitor() {
     setError(null)
 
     try {
-      const [d, s, isDemo, ins, sav, waste, models, budget] = await Promise.all([
+      const [d, s, compare, isDemo, ins, sav, waste, models, modelValue, budget] = await Promise.all([
         apiGet<DailyData[]>(`/api/cost/daily?days=${days}`),
         apiGet<CostSummary>(`/api/cost/summary?days=${days}`),
+        apiGetSafe<ReferenceCompareData>(`/api/cost/reference-compare?days=${days}`),
         apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
           .then(status => !(status?.hasRealSessionData ?? false)),
         apiGet<CostInsight[]>(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
         apiGetSafe<SavingsReport>(`/api/cost/savings?days=${days}`),
         apiGetSafe<TokenWasteReport>(`/api/analytics/token-waste?days=${days}`),
         apiGetSafe<ModelBreakdown>(`/api/cost/models?days=${days}`),
+        apiGetSafe<ModelValueReport>(`/api/analytics/model-value?days=${days}`),
         apiGetSafe<BudgetConfig>('/api/cost/budget'),
       ])
 
@@ -319,11 +489,13 @@ export default function CostMonitor() {
 
       setDaily(Array.isArray(d) ? d : [])
       setSummary(s)
+      setReferenceCompare(compare?.rows?.length ? compare : null)
       setDemoCostHint(Boolean(isDemo || s?.usingDemo))
       setInsights(Array.isArray(ins) ? ins : [])
       setSavings(sav)
       setTokenWaste(waste?.summary ? waste : null)
       setModelBreakdown(normalizedModels)
+      setModelValueRows(Array.isArray(modelValue?.rows) ? modelValue.rows : [])
       setBudgetConfig(normalizedBudget)
     } catch {
       setError(t('cost.error'))
@@ -358,6 +530,9 @@ export default function CostMonitor() {
         percentage: (row.cost / modelTotalCost) * 100,
       }))
     : []
+  const modelValueDisplayRows = modelValueRows
+    .filter(row => row.sessions > 0)
+    .slice(0, 6)
   const averageDailyCost = daily.length > 0 ? daily.reduce((sum, item) => sum + item.cost, 0) / daily.length : 0
   const selectedPricingReference = budgetConfig?.pricingReference ?? summary?.costMeta?.pricingReference ?? 'pricetoken'
   const pricingReferenceLabel = getPricingReferenceLabel(summary?.costMeta?.pricingReference ?? selectedPricingReference, isZh)
@@ -374,6 +549,17 @@ export default function CostMonitor() {
   })()
   const latestUsageLabel = formatFreshnessTime(summary?.latestUsageAt, locale)
   const dataCutoffLabel = formatFreshnessTime(summary?.dataCutoffAt, locale)
+  const referenceCompareRows = referenceCompare?.rows ?? []
+  const currentReferenceRow = referenceCompareRows.find(row => row.reference === referenceCompare?.currentReference) ?? null
+  const officialReferenceRow = referenceCompareRows.find(row => row.reference === 'official-static') ?? null
+  const referenceVsOfficialRows = officialReferenceRow
+    ? referenceCompareRows
+      .filter(row => row.reference !== 'official-static')
+      .map(row => ({
+        ...row,
+        deltaVsOfficial: row.totalCost - officialReferenceRow.totalCost,
+      }))
+    : []
   const showGlobalEmptyState = !loading && !error && !!summary && summary.totalCost === 0
   const emptyStartHint = isZh
     ? '接入本地 JSONL 日志后跑几次真实任务，再回来查看趋势、模型占比和预算提醒。'
@@ -591,6 +777,102 @@ export default function CostMonitor() {
             </GlowCard>
           </div>
 
+          {referenceCompareRows.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-lg font-semibold">{isZh ? '参考价格对比' : 'Reference pricing comparison'}</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {referenceCompare && currentReferenceRow
+                      ? (
+                        isZh
+                          ? `同一批会话按 3 套参考价格重算，当前 ${currentReferenceRow.label} 总计 $${formatWasteCost(referenceCompare.currentTotalCost)}。`
+                          : `The same sessions repriced across 3 catalogs. Current ${currentReferenceRow.label} total: $${formatWasteCost(referenceCompare.currentTotalCost)}.`
+                      )
+                      : (isZh ? '同一批会话按 3 套价格目录重新计算。' : 'The same sessions repriced across 3 catalogs.')}
+                  </p>
+                </div>
+                {referenceVsOfficialRows.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {referenceVsOfficialRows.map(row => (
+                      <span
+                        key={`official-${row.reference}`}
+                        className={cn(
+                          'rounded-full px-3 py-1 text-xs font-medium',
+                          row.deltaVsOfficial > 0
+                            ? 'bg-red-50 text-red-600'
+                            : row.deltaVsOfficial < 0
+                              ? 'bg-emerald-50 text-emerald-600'
+                              : 'bg-slate-100 text-slate-500',
+                        )}
+                      >
+                        {row.label} {isZh ? '较 Official' : 'vs Official'} {formatSignedCostDelta(row.deltaVsOfficial)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 xl:grid-cols-3 gap-4">
+                {referenceCompareRows.map(row => {
+                  const isCurrentRow = row.reference === referenceCompare?.currentReference
+                  const deltaTone = isCurrentRow
+                    ? 'bg-[#3b82c4]/10 text-[#3b82c4]'
+                    : row.deltaVsCurrent > 0
+                      ? 'bg-red-50 text-red-600'
+                      : row.deltaVsCurrent < 0
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-slate-100 text-slate-500'
+                  const deltaDescription = isCurrentRow
+                    ? (isZh ? '当前模式基准' : 'Current baseline')
+                    : row.deltaVsCurrent > 0
+                      ? (isZh ? '比当前模式更贵' : 'More expensive than current')
+                      : row.deltaVsCurrent < 0
+                        ? (isZh ? '比当前模式更便宜' : 'Cheaper than current')
+                        : (isZh ? '与当前模式持平' : 'Same as current')
+
+                  return (
+                    <div
+                      key={row.reference}
+                      className={cn(
+                        'rounded-xl border p-4 transition-colors',
+                        isCurrentRow
+                          ? 'border-[#3b82c4]/30 bg-[#3b82c4]/5 shadow-[0_0_0_1px_rgba(59,130,196,0.15)]'
+                          : 'border-slate-200 bg-slate-50',
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{row.label}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {getPricingSourceLabel(row.pricingSource, isZh) ?? row.pricingSource}
+                          </p>
+                        </div>
+                        {isCurrentRow && (
+                          <span className="rounded-full bg-[#3b82c4]/10 px-2.5 py-1 text-[11px] font-medium text-[#3b82c4]">
+                            {isZh ? '当前模式' : 'Current'}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-4 text-2xl font-bold tabular-nums text-slate-900">
+                        ${formatWasteCost(row.totalCost)}
+                      </p>
+
+                      <div className={cn('mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-medium', deltaTone)}>
+                        {isCurrentRow
+                          ? (isZh ? '基准 · $0.0000' : 'Baseline · $0.0000')
+                          : `${isZh ? '较当前' : 'vs current'} ${formatSignedCostDelta(row.deltaVsCurrent)}`}
+                      </div>
+
+                      <p className="mt-2 text-xs text-slate-500">{deltaDescription}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {modelBreakdownRows.length > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
               <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -622,6 +904,90 @@ export default function CostMonitor() {
                   <Bar dataKey="percentage" name={isZh ? '成本占比' : 'Cost share'} fill="#3b82c4" radius={[0, 8, 8, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+          )}
+
+          {modelValueDisplayRows.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-lg font-semibold">{isZh ? '模型效果 / 成本矩阵' : 'Model value matrix'}</h3>
+                  <p className="mt-2 text-sm text-slate-600 max-w-3xl">
+                    {isZh
+                      ? '不是只看哪个便宜，还要看谁更适合便宜跑量、谁值得留给高价值任务。这里把成本、会话样本、output/input、工具使用率和稳定性放在一起看。'
+                      : 'Don’t just ask which model is cheaper. Ask which one deserves bulk traffic and which one should be saved for high-value work.'}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right">
+                  <p className="text-xs font-medium text-cyan-700">{isZh ? '看值不值' : 'Worth it > cheap'}</p>
+                  <p className="mt-1 text-xs text-cyan-700/80">
+                    {isZh ? '成本 × 稳定性 × 工具表现' : 'Cost × stability × tool behavior'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '模型' : 'Model'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '会话数' : 'Sessions'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '平均成本' : 'Avg cost'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '效果代理' : 'Proxy effect'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '稳定性' : 'Stability'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '角色标签' : 'Role label'}</th>
+                      <th className="pb-3 font-medium">{isZh ? '推荐用途' : 'Recommended use'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modelValueDisplayRows.map(row => {
+                      const stabilityMeta = getStabilityMeta(row.errorRate, isZh)
+                      return (
+                        <tr key={row.model} className="border-b border-slate-100 align-top last:border-0">
+                          <td className="py-4 pr-4 min-w-[180px]">
+                            <div className="font-medium text-slate-900">{row.model}</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              ${formatMatrixCost(row.totalCost)} · {formatCompactTokens(row.totalTokens, locale)} {isZh ? 'Token' : 'tokens'}
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className="font-semibold text-slate-900">{row.sessions}</div>
+                            <div className="mt-1 text-xs text-slate-500">{isZh ? '个会话样本' : 'session samples'}</div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className="font-semibold text-slate-900">${formatMatrixCost(row.avgCostPerSession)}</div>
+                            <div className="mt-1 text-xs text-slate-500">{isZh ? '每会话均值' : 'per session'}</div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className="font-semibold text-slate-900">{row.avgOutputInputRatio.toFixed(2)}×</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              {isZh ? '工具使用率' : 'Tool usage'} {formatRate(row.toolUsageRate)}
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className={cn('font-semibold', stabilityMeta.className)}>{formatRate(row.errorRate)}</div>
+                            <div className={cn('mt-1 text-xs', stabilityMeta.className)}>{stabilityMeta.label}</div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium', getModelValueBadgeClass(row.valueLabel))}>
+                              {isZh ? row.valueLabelZh : row.valueLabelEn}
+                            </span>
+                          </td>
+                          <td className="py-4 min-w-[240px] max-w-[360px] text-sm leading-6 text-slate-600">
+                            {isZh ? row.recommendationZh : row.recommendationEn}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="mt-4 text-xs leading-relaxed text-slate-500">
+                {isZh
+                  ? '注：output/input、工具使用率和错误率都只是轻量代理指标，不替代真实业务验收；这个矩阵主要帮你判断“谁更值得承担什么角色”。'
+                  : 'Note: output/input, tool usage, and error rate are lightweight proxy metrics, not substitutes for real task evaluation. The matrix is here to show which model is worth which role.'}
+              </p>
             </div>
           )}
 
@@ -712,8 +1078,11 @@ export default function CostMonitor() {
               <div className="space-y-3">
                 {savings.suggestions.map((sug, i) => {
                   const typeMeta = getSavingTypeMeta(sug.reasonType, isZh)
+                  const priorityMeta = getSavingPriorityMeta(sug.priority, t)
+                  const guardrailMeta = getSavingGuardrailMeta(sug.reasonType, t)
                   const reasonText = getSavingReasonText(sug, isZh)
                   const actionText = getSavingActionText(sug, isZh)
+                  const guardrailText = getSavingGuardrailText(sug, isZh)
                   const showModelRoute = Boolean(
                     sug.currentModel
                     && sug.alternativeModel
@@ -723,7 +1092,7 @@ export default function CostMonitor() {
                   return (
                     <div
                       key={`${sug.reasonType ?? 'suggestion'}-${sug.sessionId ?? sug.currentModel ?? i}`}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                      className={cn('rounded-xl border p-4', getSavingCardClass(sug.priority))}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
@@ -731,16 +1100,30 @@ export default function CostMonitor() {
                             <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', typeMeta.className)}>
                               {typeMeta.label}
                             </span>
+                            <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', priorityMeta.className)}>
+                              {priorityMeta.label}
+                            </span>
                             {sug.sessionLabel && (
                               <span className="truncate text-[11px] text-slate-500">
-                                {isZh ? `会话：${sug.sessionLabel}` : `Session: ${sug.sessionLabel}`}
+                                {t('cost.savings.session')}: {sug.sessionLabel}
                               </span>
                             )}
                           </div>
                           <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
-                          <div className="mt-3 rounded-lg border border-slate-200 bg-white/70 px-3 py-2.5">
-                            <p className="text-[11px] font-medium text-slate-500">{isZh ? '下一步' : 'Next action'}</p>
-                            <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
+                          <div className="mt-3 grid grid-cols-1 xl:grid-cols-2 gap-3">
+                            <div className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5">
+                              <p className="text-[11px] font-medium text-slate-500">{t('cost.savings.next')}</p>
+                              <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
+                            </div>
+                            <div className={cn('rounded-lg border px-3 py-2.5', guardrailMeta.className)}>
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[11px] font-medium">{t('cost.savings.guardrail')}</p>
+                                <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold', guardrailMeta.badgeClassName)}>
+                                  {guardrailMeta.label}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm leading-relaxed">{guardrailText}</p>
+                            </div>
                           </div>
                           {showModelRoute && (
                             <p className="mt-3 text-xs text-slate-500">
@@ -752,7 +1135,7 @@ export default function CostMonitor() {
                           )}
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-xs text-slate-500">{isZh ? '预计可省' : 'Est. save'}</p>
+                          <p className="text-xs text-slate-500">{t('cost.savings.estSave')}</p>
                           <p className="mt-1 text-lg font-semibold text-emerald-500">-${formatWasteCost(sug.saving)}</p>
                         </div>
                       </div>

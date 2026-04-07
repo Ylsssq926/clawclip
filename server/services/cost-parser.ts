@@ -11,6 +11,9 @@ import {
   SavingSuggestion,
   SavingsReport,
   DEFAULT_BUDGET_CONFIG,
+  PRICING_REFERENCES,
+  type PricingReference,
+  type PricingSource,
   type UsageSource,
 } from '../types/index.js';
 import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
@@ -19,6 +22,7 @@ import { DEMO_SESSIONS } from './demo-sessions.js';
 import {
   getConfiguredPricingReference,
   getPricingSnapshot,
+  getPricingSnapshotAsync,
   isPricingReference,
   normalizeModelId,
   readBudgetConfigFromState,
@@ -85,7 +89,36 @@ interface UsageFreshness {
   pricingStale: boolean;
 }
 
+export interface ReferenceCompareRow {
+  reference: PricingReference;
+  label: string;
+  totalCost: number;
+  deltaVsCurrent: number;
+  pricingSource: PricingSource;
+  pricingCatalogVersion: string;
+}
+
+export interface ReferenceCompareResult {
+  currentReference: PricingReference;
+  currentTotalCost: number;
+  rows: ReferenceCompareRow[];
+}
+
+function getPricingReferenceLabel(reference: PricingReference): string {
+  switch (reference) {
+    case 'official-static':
+      return 'Official';
+    case 'pricetoken':
+      return 'PriceToken';
+    case 'openrouter':
+      return 'OpenRouter';
+    default:
+      return reference;
+  }
+}
+
 type SavingReasonType = 'switch-model' | 'trim-prompt' | 'trim-output' | 'reduce-retries';
+type SavingPriority = 'high' | 'medium' | 'low';
 
 type EnhancedSavingSuggestion = SavingSuggestion & {
   reasonType?: SavingReasonType;
@@ -93,6 +126,9 @@ type EnhancedSavingSuggestion = SavingSuggestion & {
   reasonEn?: string;
   actionZh?: string;
   actionEn?: string;
+  qualityGuardrailZh?: string;
+  qualityGuardrailEn?: string;
+  priority?: SavingPriority;
   sessionId?: string;
   sessionLabel?: string;
 };
@@ -119,6 +155,29 @@ interface SessionModelUsageSummary {
 
 function roundSuggestionMoney(value: number): number {
   return Math.round(Math.max(0, value) * 1_000_000) / 1_000_000;
+}
+
+const LOW_RISK_GUARDRAIL_ZH = '这类优化通常不直接牺牲模型能力，适合优先尝试。';
+const LOW_RISK_GUARDRAIL_EN = 'This kind of optimization usually reduces waste without directly sacrificing model capability.';
+const SWITCH_MODEL_GUARDRAIL_ZH = '建议先在低风险任务灰度切换，确认质量稳定后再扩大范围。';
+const SWITCH_MODEL_GUARDRAIL_EN = 'Roll this out on lower-risk tasks first, then expand once quality stays stable.';
+const HIGH_VALUE_SWITCH_MODEL_GUARDRAIL_ZH = '如果这是高价值任务，建议先在低风险任务灰度切换，确认质量稳定后再扩大范围。';
+const HIGH_VALUE_SWITCH_MODEL_GUARDRAIL_EN = 'If this is a high-value workflow, roll this out on lower-risk tasks first, then expand once quality stays stable.';
+
+function getSavingPriorityRank(priority: SavingPriority | undefined): number {
+  switch (priority) {
+    case 'high':
+      return 3;
+    case 'medium':
+      return 2;
+    case 'low':
+    default:
+      return 1;
+  }
+}
+
+function getSavingSafetyRank(reasonType: SavingReasonType | undefined): number {
+  return reasonType === 'switch-model' ? 1 : 2;
 }
 
 export class CostParser {
@@ -441,8 +500,45 @@ export class CostParser {
     return added;
   }
 
+  private getFilteredUsages(batch: UsageCacheEntry, days: number): TokenUsage[] {
+    const cutoff = this.getReferenceNow(batch.data, batch.isDemo) - days * 24 * 60 * 60 * 1000;
+    return batch.data.filter(usage => !Number.isNaN(usage.timestamp.getTime()) && usage.timestamp.getTime() > cutoff);
+  }
+
+  private getRepricedTotalCost(usages: TokenUsage[], pricing: PricingSnapshot): number {
+    return usages.reduce(
+      (sum, usage) => sum + repriceStep(usage.model, usage.inputTokens, usage.outputTokens, pricing),
+      0,
+    );
+  }
+
   getUsageFreshness(): UsageFreshness {
     return this.buildUsageFreshness(this.getCachedUsageBatch());
+  }
+
+  async getReferenceComparison(days: number = 30): Promise<ReferenceCompareResult> {
+    const batch = this.getCachedUsageBatch();
+    const filtered = this.getFilteredUsages(batch, days);
+    const snapshots = await Promise.all(PRICING_REFERENCES.map(reference => getPricingSnapshotAsync(reference)));
+    const baseRows = snapshots.map(snapshot => ({
+      reference: snapshot.reference,
+      label: getPricingReferenceLabel(snapshot.reference),
+      totalCost: this.getRepricedTotalCost(filtered, snapshot),
+      pricingSource: snapshot.source,
+      pricingCatalogVersion: snapshot.catalogVersion,
+    }));
+    const currentReference = batch.pricing.reference;
+    const currentRow = baseRows.find(row => row.reference === currentReference) ?? baseRows[0];
+    const currentTotalCost = currentRow?.totalCost ?? 0;
+
+    return {
+      currentReference,
+      currentTotalCost,
+      rows: baseRows.map(row => ({
+        ...row,
+        deltaVsCurrent: row.totalCost - currentTotalCost,
+      })),
+    };
   }
 
   getUsageStats(days: number = 30): CostStats {
@@ -450,7 +546,7 @@ export class CostParser {
     const usages = batch.data;
     const now = this.getReferenceNow(usages, batch.isDemo);
     const cutoff = now - days * 24 * 60 * 60 * 1000;
-    const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
+    const filtered = this.getFilteredUsages(batch, days);
 
     const totalCost = filtered.reduce((s, u) => s + u.cost, 0);
     const totalTokens = filtered.reduce((s, u) => s + u.inputTokens + u.outputTokens, 0);
@@ -533,9 +629,7 @@ export class CostParser {
 
   getModelBreakdown(days: number = 30): Record<string, ModelBreakdownEntry> {
     const batch = this.getCachedUsageBatch();
-    const usages = batch.data;
-    const cutoff = this.getReferenceNow(usages, batch.isDemo) - days * 24 * 60 * 60 * 1000;
-    const filtered = usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff);
+    const filtered = this.getFilteredUsages(batch, days);
 
     const models: Record<string, ModelBreakdownEntry> = {};
     if (batch.isDemo) {
@@ -562,10 +656,7 @@ export class CostParser {
   }
 
   getRequestCount(days: number = 30): number {
-    const batch = this.getCachedUsageBatch();
-    const usages = batch.data;
-    const cutoff = this.getReferenceNow(usages, batch.isDemo) - days * 24 * 60 * 60 * 1000;
-    return usages.filter(u => !Number.isNaN(u.timestamp.getTime()) && u.timestamp.getTime() > cutoff).length;
+    return this.getFilteredUsages(this.getCachedUsageBatch(), days).length;
   }
 
   checkBudgetAlert(): { isAlert: boolean; percentage: number; message: string } {
@@ -840,6 +931,9 @@ export class CostParser {
         actionEn = 'Set stricter length limits or switch to a summary-first pattern so the final output gets shorter.';
       }
 
+      const priority: SavingPriority =
+        reasonType === 'reduce-retries' || saving >= Math.max(0.03, stats.totalCost * 0.05) ? 'high' : 'medium';
+
       return {
         currentModel,
         alternativeModel: currentModel,
@@ -852,6 +946,9 @@ export class CostParser {
         reasonEn,
         actionZh,
         actionEn,
+        qualityGuardrailZh: LOW_RISK_GUARDRAIL_ZH,
+        qualityGuardrailEn: LOW_RISK_GUARDRAIL_EN,
+        priority,
         sessionId: diagnostic.sessionId,
         sessionLabel,
       };
@@ -880,6 +977,7 @@ export class CostParser {
       }
     }
 
+    const highestWasteSaving = Math.max(0, ...Array.from(wasteSuggestions.values()).map(suggestion => suggestion.saving));
     const modelSuggestions: EnhancedSavingSuggestion[] = [];
     for (const [model, data] of Object.entries(models).sort((a, b) => b[1].cost - a[1].cost)) {
       if (data.totalTokens <= 0 || data.cost <= 0) continue;
@@ -902,6 +1000,16 @@ export class CostParser {
 
       const sharePct = stats.totalCost > 0 ? (data.cost / stats.totalCost) * 100 : 0;
       const sessionLabel = scopedUsage?.sessionLabel;
+      const isHighValueTask =
+        sharePct >= 25 || (scopedUsage?.cost ?? 0) >= Math.max(0.1, stats.averageCostPerTask * 1.5);
+      const mediumModelSavingThreshold = Math.max(0.03, stats.totalCost * 0.04, stats.averageCostPerTask * 0.25);
+      const highModelSavingThreshold = Math.max(0.12, stats.totalCost * 0.12, highestWasteSaving * 1.25);
+      const priority: SavingPriority =
+        saving >= highModelSavingThreshold
+          ? 'high'
+          : saving >= mediumModelSavingThreshold && !isHighValueTask
+            ? 'medium'
+            : 'low';
       const focusZh =
         sharePct >= 15 ? `${model} 占当前周期 ${sharePct.toFixed(0)}% 的成本` : `${model} 是当前周期的高成本模型`;
       const focusEn =
@@ -929,6 +1037,9 @@ export class CostParser {
         actionEn: sessionLabel
           ? `Route tasks like "${sessionLabel}" to ${alternative.name} first, then widen the rollout once quality stays stable.`
           : `Pilot ${alternative.name} on one stable, low-risk task type first, then expand routing after quality checks out.`,
+        qualityGuardrailZh: isHighValueTask ? HIGH_VALUE_SWITCH_MODEL_GUARDRAIL_ZH : SWITCH_MODEL_GUARDRAIL_ZH,
+        qualityGuardrailEn: isHighValueTask ? HIGH_VALUE_SWITCH_MODEL_GUARDRAIL_EN : SWITCH_MODEL_GUARDRAIL_EN,
+        priority,
         sessionId: scopedUsage?.sessionId,
         sessionLabel,
       });
@@ -942,7 +1053,13 @@ export class CostParser {
     };
 
     const suggestions = [...wasteSuggestions.values(), ...modelSuggestions]
-      .sort((a, b) => b.saving - a.saving || reasonPriority[b.reasonType ?? 'switch-model'] - reasonPriority[a.reasonType ?? 'switch-model'])
+      .sort(
+        (a, b) =>
+          getSavingPriorityRank(b.priority) - getSavingPriorityRank(a.priority) ||
+          getSavingSafetyRank(b.reasonType) - getSavingSafetyRank(a.reasonType) ||
+          reasonPriority[b.reasonType ?? 'switch-model'] - reasonPriority[a.reasonType ?? 'switch-model'] ||
+          b.saving - a.saving,
+      )
       .slice(0, 4);
     const totalPotentialSaving = roundSuggestionMoney(
       suggestions.reduce((sum, suggestion) => sum + suggestion.saving, 0),

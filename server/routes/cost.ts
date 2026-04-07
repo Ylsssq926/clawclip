@@ -35,6 +35,17 @@ router.get('/summary', (req, res) => {
   }
 });
 
+/** 参考价格对比 */
+router.get('/reference-compare', async (req, res) => {
+  const days = parseDays(req);
+  try {
+    const comparison = await costParser.getReferenceComparison(days);
+    res.json(comparison);
+  } catch (e) {
+    res.status(500).json({ error: '获取参考价格对比失败 / Failed to get reference pricing comparison', detail: String(e) });
+  }
+});
+
 /** 每日明细 */
 router.get('/daily', (req, res) => {
   const days = parseDays(req);

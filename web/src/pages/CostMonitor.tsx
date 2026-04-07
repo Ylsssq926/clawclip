@@ -17,6 +17,54 @@ interface DailyData {
 
 type PricingReference = 'official-static' | 'pricetoken' | 'openrouter'
 type PricingSource = 'pricetoken' | 'openrouter' | 'static-default'
+type UsageSource = 'replay' | 'log' | 'demo' | 'mixed'
+
+type UsageSourceBreakdown = Record<UsageSource, number>
+
+interface CostReconciliationMeta {
+  currentReference: PricingReference
+  baselineReference: PricingReference
+  pricingSource: PricingSource
+  pricingCatalogVersion: string
+  pricingUpdatedAt: string
+  stale: boolean
+  baselinePricingSource: PricingSource
+  baselinePricingCatalogVersion: string
+  baselinePricingUpdatedAt: string
+  baselineStale: boolean
+  latestUsageAt?: string
+  dataCutoffAt: string
+}
+
+interface CostReconciliationSummary {
+  sessions: number
+  currentCost: number
+  baselineCost: number
+  delta: number
+  estimatedRows: number
+  usageSourceBreakdown: UsageSourceBreakdown
+}
+
+interface CostReconciliationRow {
+  sessionId: string
+  sessionLabel: string
+  provider: string | null
+  primaryModel: string | null
+  usageSource: UsageSource
+  estimated: boolean
+  replayAvailable: boolean
+  inputTokens: number
+  outputTokens: number
+  currentCost: number
+  baselineCost: number
+  delta: number
+}
+
+interface CostReconciliationData {
+  meta: CostReconciliationMeta
+  summary: CostReconciliationSummary
+  rows: CostReconciliationRow[]
+}
 
 const PRICING_REFERENCE_OPTIONS: Array<{
   value: PricingReference
@@ -57,6 +105,36 @@ function getPricingSourceLabel(source: PricingSource | undefined, isZh: boolean)
       return isZh ? '内置静态默认表' : 'Built-in static defaults'
     default:
       return null
+  }
+}
+
+function getUsageSourceLabel(source: UsageSource | undefined, isZh: boolean): string {
+  switch (source) {
+    case 'replay':
+      return isZh ? '回放' : 'Replay'
+    case 'log':
+      return isZh ? '日志' : 'Logs'
+    case 'demo':
+      return isZh ? 'Demo' : 'Demo'
+    case 'mixed':
+      return isZh ? '混合' : 'Mixed'
+    default:
+      return '--'
+  }
+}
+
+function getUsageSourceBadgeClass(source: UsageSource | undefined): string {
+  switch (source) {
+    case 'replay':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    case 'log':
+      return 'border-amber-200 bg-amber-50 text-amber-700'
+    case 'demo':
+      return 'border-violet-200 bg-violet-50 text-violet-700'
+    case 'mixed':
+      return 'border-cyan-200 bg-cyan-50 text-cyan-700'
+    default:
+      return 'border-slate-200 bg-slate-100 text-slate-500'
   }
 }
 
@@ -436,6 +514,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   const [daily, setDaily] = useState<DailyData[]>([])
   const [summary, setSummary] = useState<CostSummary | null>(null)
   const [referenceCompare, setReferenceCompare] = useState<ReferenceCompareData | null>(null)
+  const [reconciliation, setReconciliation] = useState<CostReconciliationData | null>(null)
   const [insights, setInsights] = useState<CostInsight[]>([])
   const [savings, setSavings] = useState<SavingsReport | null>(null)
   const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
@@ -458,10 +537,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
     setError(null)
 
     try {
-      const [d, s, compare, isDemo, ins, sav, waste, models, modelValue, budget] = await Promise.all([
+      const [d, s, compare, recon, isDemo, ins, sav, waste, models, modelValue, budget] = await Promise.all([
         apiGet<DailyData[]>(`/api/cost/daily?days=${days}`),
         apiGet<CostSummary>(`/api/cost/summary?days=${days}`),
         apiGetSafe<ReferenceCompareData>(`/api/cost/reference-compare?days=${days}`),
+        apiGetSafe<CostReconciliationData>(`/api/cost/reconciliation?days=${days}&baseline=official-static`),
         apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
           .then(status => !(status?.hasRealSessionData ?? false)),
         apiGet<CostInsight[]>(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
@@ -494,6 +574,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       setDaily(Array.isArray(d) ? d : [])
       setSummary(s)
       setReferenceCompare(compare?.rows?.length ? compare : null)
+      setReconciliation(recon?.rows?.length ? recon : null)
       setDemoCostHint(Boolean(isDemo || s?.usingDemo))
       setInsights(Array.isArray(ins) ? ins : [])
       setSavings(sav)
@@ -564,6 +645,14 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         deltaVsOfficial: row.totalCost - officialReferenceRow.totalCost,
       }))
     : []
+  const reconciliationRows = reconciliation?.rows ?? []
+  const reconciliationSummary = reconciliation?.summary ?? null
+  const reconciliationMeta = reconciliation?.meta ?? null
+  const reconciliationUsageBreakdown = reconciliationSummary?.usageSourceBreakdown ?? null
+  const reconciliationCurrentReferenceLabel = getPricingReferenceLabel(reconciliationMeta?.currentReference, isZh)
+  const reconciliationBaselineReferenceLabel = getPricingReferenceLabel(reconciliationMeta?.baselineReference, isZh)
+  const reconciliationCurrentSourceLabel = getPricingSourceLabel(reconciliationMeta?.pricingSource, isZh)
+  const reconciliationBaselineSourceLabel = getPricingSourceLabel(reconciliationMeta?.baselinePricingSource, isZh)
   const showGlobalEmptyState = !loading && !error && !!summary && summary.totalCost === 0
   const emptyStartHint = isZh
     ? '接入本地 JSONL 日志后跑几次真实任务，再回来查看趋势、模型占比和预算提醒。'
@@ -876,6 +965,185 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {reconciliationSummary && reconciliationRows.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-lg font-semibold">{isZh ? '成本对账' : 'Cost reconciliation'}</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {isZh
+                      ? `当前按 ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} 口径，与 ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'} 基线重算同一批会话。`
+                      : `The same sessions repriced with ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} versus the ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'} baseline.`}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-[#3b82c4]/20 bg-[#3b82c4]/10 px-3 py-1 text-xs font-medium text-[#2f6fa8]">
+                    {isZh ? '当前口径' : 'Current'} · {reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    {isZh ? '基线' : 'Baseline'} · {reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}
+                  </span>
+                  {(reconciliationMeta?.stale || reconciliationMeta?.baselineStale) && (
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                      {isZh ? '价格缓存偏旧' : 'Pricing cache is stale'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="rounded-xl border border-[#3b82c4]/20 bg-[#3b82c4]/5 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '当前总账' : 'Current total'}</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">${formatWasteCost(reconciliationSummary.currentCost)}</p>
+                  <p className="mt-1 text-xs text-slate-500">{reconciliationCurrentSourceLabel ?? reconciliationMeta?.pricingSource ?? '--'}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '基线总账' : 'Baseline total'}</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">${formatWasteCost(reconciliationSummary.baselineCost)}</p>
+                  <p className="mt-1 text-xs text-slate-500">{reconciliationBaselineSourceLabel ?? reconciliationMeta?.baselinePricingSource ?? '--'}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '差额' : 'Delta'}</p>
+                  <p className={cn(
+                    'mt-2 text-2xl font-semibold tabular-nums',
+                    reconciliationSummary.delta > 0
+                      ? 'text-red-600'
+                      : reconciliationSummary.delta < 0
+                        ? 'text-emerald-600'
+                        : 'text-slate-900',
+                  )}>
+                    {formatSignedCostDelta(reconciliationSummary.delta)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {reconciliationSummary.delta > 0
+                      ? (isZh ? '当前口径高于基线' : 'Current is above baseline')
+                      : reconciliationSummary.delta < 0
+                        ? (isZh ? '当前口径低于基线' : 'Current is below baseline')
+                        : (isZh ? '当前口径与基线持平' : 'Current matches baseline')}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '会话 / 估算' : 'Sessions / estimated'}</p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">{reconciliationSummary.sessions}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {isZh ? `估算行 ${reconciliationSummary.estimatedRows}` : `${reconciliationSummary.estimatedRows} estimated row${reconciliationSummary.estimatedRows === 1 ? '' : 's'}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {(['replay', 'log', 'demo', 'mixed'] as const).map(source => {
+                  const count = reconciliationUsageBreakdown?.[source] ?? 0
+                  if (count <= 0) return null
+                  return (
+                    <span
+                      key={`recon-source-${source}`}
+                      className={cn('rounded-full border px-3 py-1 text-xs font-medium', getUsageSourceBadgeClass(source))}
+                    >
+                      {getUsageSourceLabel(source, isZh)} · {count}
+                    </span>
+                  )
+                })}
+                {reconciliationMeta?.pricingCatalogVersion && (
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
+                    {isZh ? '当前目录' : 'Current catalog'} · {reconciliationMeta.pricingCatalogVersion}
+                  </span>
+                )}
+                {reconciliationMeta?.baselinePricingCatalogVersion && (
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
+                    {isZh ? '基线目录' : 'Baseline catalog'} · {reconciliationMeta.baselinePricingCatalogVersion}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-5 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '会话' : 'Session'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '服务商' : 'Provider'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '主模型' : 'Primary model'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? 'Token' : 'Tokens'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '当前成本' : 'Current cost'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '基线成本' : 'Baseline cost'}</th>
+                      <th className="pb-3 font-medium">{isZh ? '差额' : 'Delta'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reconciliationRows.map(row => {
+                      const replaySessionId = row.sessionId?.trim()
+                      const isReplayLinkable = row.replayAvailable && canOpenReplaySession(replaySessionId)
+                      return (
+                        <tr
+                          key={`reconciliation-${row.sessionId}`}
+                          tabIndex={isReplayLinkable ? 0 : undefined}
+                          role={isReplayLinkable ? 'button' : undefined}
+                          onClick={isReplayLinkable ? () => onOpenReplaySession(replaySessionId) : undefined}
+                          onKeyDown={isReplayLinkable ? event => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              onOpenReplaySession(replaySessionId)
+                            }
+                          } : undefined}
+                          className={cn(
+                            'border-b border-slate-100 align-top last:border-0',
+                            isReplayLinkable && 'group cursor-pointer transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30',
+                          )}
+                        >
+                          <td className="py-4 pr-4 min-w-[300px]">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate font-medium text-slate-900">{row.sessionLabel || row.sessionId}</div>
+                                <div className="mt-1 break-all font-mono text-[11px] text-slate-500">{row.sessionId}</div>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  <span className={cn('inline-flex rounded-full border px-2 py-1 text-[11px] font-medium', getUsageSourceBadgeClass(row.usageSource))}>
+                                    {getUsageSourceLabel(row.usageSource, isZh)}
+                                  </span>
+                                  {row.estimated && (
+                                    <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
+                                      {isZh ? '估算' : 'Estimated'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {isReplayLinkable && (
+                                <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
+                                  {replayActionLabel}
+                                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4 min-w-[120px] text-slate-600">{row.provider || '--'}</td>
+                          <td className="py-4 pr-4 min-w-[180px] text-slate-600">{row.primaryModel || '--'}</td>
+                          <td className="py-4 pr-4 min-w-[150px] text-slate-600">
+                            <div className="font-medium text-slate-900">{(row.inputTokens + row.outputTokens).toLocaleString()}</div>
+                            <div className="mt-1 text-xs text-slate-500">{isZh ? '输入' : 'In'} {row.inputTokens.toLocaleString()}</div>
+                            <div className="text-xs text-slate-500">{isZh ? '输出' : 'Out'} {row.outputTokens.toLocaleString()}</div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap font-semibold tabular-nums text-slate-900">${formatWasteCost(row.currentCost)}</td>
+                          <td className="py-4 pr-4 whitespace-nowrap font-semibold tabular-nums text-slate-600">${formatWasteCost(row.baselineCost)}</td>
+                          <td className={cn(
+                            'py-4 whitespace-nowrap font-semibold tabular-nums',
+                            row.delta > 0 ? 'text-red-600' : row.delta < 0 ? 'text-emerald-600' : 'text-slate-500',
+                          )}>
+                            {formatSignedCostDelta(row.delta)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="mt-4 text-xs leading-relaxed text-slate-500">
+                {isZh
+                  ? '说明：当前成本使用你当前选中的 pricing reference；基线默认 official-static。行内的 Estimated 表示该行至少包含静态目录、旧缓存或非 Replay 用量等估算因素。'
+                  : 'Note: current cost uses the selected pricing reference, while the baseline defaults to official-static. “Estimated” means the row depends on static catalogs, stale pricing, or non-replay usage.'}
+              </p>
             </div>
           )}
 

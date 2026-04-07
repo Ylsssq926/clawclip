@@ -46,6 +46,25 @@ router.get('/reference-compare', async (req, res) => {
   }
 });
 
+/** 成本对账 */
+router.get('/reconciliation', async (req, res) => {
+  const days = parseDays(req);
+  const rawBaseline = req.query.baseline;
+  const baseline = rawBaseline == null ? 'official-static' : String(rawBaseline);
+
+  if (!pricingFetcher.isPricingReference(baseline)) {
+    res.status(400).json({ error: 'baseline 不合法 / Invalid baseline pricing reference' });
+    return;
+  }
+
+  try {
+    const reconciliation = await costParser.getReconciliation(days, baseline);
+    res.json(reconciliation);
+  } catch (e) {
+    res.status(500).json({ error: '获取成本对账失败 / Failed to get cost reconciliation', detail: String(e) });
+  }
+});
+
 /** 每日明细 */
 router.get('/daily', (req, res) => {
   const days = parseDays(req);

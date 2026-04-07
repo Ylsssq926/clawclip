@@ -15,6 +15,11 @@ import {
   type PricingReference,
   type PricingSource,
   type UsageSource,
+  type UsageSourceBreakdown,
+  type CostReconciliationMeta,
+  type CostReconciliationSummary,
+  type CostReconciliationRow,
+  type CostReconciliationResult,
 } from '../types/index.js';
 import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
 import { sessionParser } from './session-parser.js';
@@ -151,6 +156,20 @@ interface SessionModelUsageSummary {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+}
+
+interface ReconciliationSessionSummary {
+  sessionId: string;
+  sessionLabel: string;
+  provider: string | null;
+  replayAvailable: boolean;
+  inputTokens: number;
+  outputTokens: number;
+  currentCost: number;
+  baselineCost: number;
+  usageSources: Set<UsageSource>;
+  modelCosts: Map<string, number>;
+  preferredModel: string | null;
 }
 
 function roundSuggestionMoney(value: number): number {
@@ -512,6 +531,64 @@ export class CostParser {
     );
   }
 
+  private createUsageSourceBreakdown(): UsageSourceBreakdown {
+    return {
+      replay: 0,
+      log: 0,
+      demo: 0,
+      mixed: 0,
+    };
+  }
+
+  private normalizeUsageSource(source: UsageSource | undefined, fallback: UsageSource): UsageSource {
+    switch (source) {
+      case 'replay':
+      case 'log':
+      case 'demo':
+      case 'mixed':
+        return source;
+      default:
+        return fallback;
+    }
+  }
+
+  private resolveSessionUsageSource(sources: Set<UsageSource>, fallback: UsageSource): UsageSource {
+    if (sources.size === 0) return fallback;
+    if (sources.size === 1) {
+      return sources.values().next().value ?? fallback;
+    }
+    return 'mixed';
+  }
+
+  private isReconciliationEstimated(
+    usageSource: UsageSource,
+    currentPricing: PricingSnapshot,
+    baselinePricing: PricingSnapshot,
+  ): boolean {
+    return (
+      usageSource !== 'replay' ||
+      currentPricing.source === 'static-default' ||
+      currentPricing.stale ||
+      baselinePricing.source === 'static-default' ||
+      baselinePricing.stale
+    );
+  }
+
+  private buildReplayMetaLookup(replays: SessionReplay[]): Map<string, SessionReplay['meta']> {
+    const lookup = new Map<string, SessionReplay['meta']>();
+    for (const replay of replays) {
+      lookup.set(replay.meta.id, replay.meta);
+      lookup.set(this.decodeTaskLabel(replay.meta.id), replay.meta);
+    }
+    return lookup;
+  }
+
+  private resolvePrimaryModelName(modelCosts: Map<string, number>, preferredModel?: string | null): string | null {
+    if (preferredModel && preferredModel.trim()) return preferredModel.trim();
+    const topModel = Array.from(modelCosts.entries()).sort((a, b) => b[1] - a[1])[0];
+    return topModel?.[0] ?? null;
+  }
+
   getUsageFreshness(): UsageFreshness {
     return this.buildUsageFreshness(this.getCachedUsageBatch());
   }
@@ -538,6 +615,145 @@ export class CostParser {
         ...row,
         deltaVsCurrent: row.totalCost - currentTotalCost,
       })),
+    };
+  }
+
+  async getReconciliation(
+    days: number = 30,
+    baselineReference: PricingReference = 'official-static',
+  ): Promise<CostReconciliationResult> {
+    const batch = this.getCachedUsageBatch();
+    const currentPricing = batch.pricing;
+    const baselinePricing = await getPricingSnapshotAsync(baselineReference);
+    const filtered = this.getFilteredUsages(batch, days);
+    const replayLookup = this.buildReplayMetaLookup(batch.replays);
+    const sessionMap = new Map<string, ReconciliationSessionSummary>();
+
+    for (const usage of filtered) {
+      try {
+        const rawSessionId = typeof usage.sessionId === 'string' ? usage.sessionId.trim() : '';
+        const rawTaskId = typeof usage.taskId === 'string' ? usage.taskId.trim() : '';
+        const replayMeta =
+          (rawSessionId ? replayLookup.get(rawSessionId) : undefined) ??
+          (rawTaskId ? replayLookup.get(rawTaskId) : undefined);
+        const sessionId = replayMeta?.id || rawSessionId || rawTaskId || `unknown-${sessionMap.size + 1}`;
+        const inputTokens = Number.isFinite(usage.inputTokens) ? Math.max(0, usage.inputTokens) : 0;
+        const outputTokens = Number.isFinite(usage.outputTokens) ? Math.max(0, usage.outputTokens) : 0;
+        const usageSource = this.normalizeUsageSource(usage.usageSource, batch.usageSource);
+        const model = typeof usage.model === 'string' ? usage.model.trim() : '';
+        const sessionLabel =
+          replayMeta?.sessionLabel?.trim() ||
+          replayMeta?.summary?.trim() ||
+          replayMeta?.agentName?.trim() ||
+          this.resolveTaskName(rawTaskId || sessionId, sessionId, batch.replays) ||
+          sessionId;
+        const provider = replayMeta?.storeProvider?.trim() || null;
+        const preferredModel = replayMeta?.storeModel?.trim() || null;
+        const currentCost = repriceStep(model || undefined, inputTokens, outputTokens, currentPricing);
+        const baselineCost = repriceStep(model || undefined, inputTokens, outputTokens, baselinePricing);
+
+        const existing = sessionMap.get(sessionId);
+        if (existing) {
+          existing.inputTokens += inputTokens;
+          existing.outputTokens += outputTokens;
+          existing.currentCost += currentCost;
+          existing.baselineCost += baselineCost;
+          existing.usageSources.add(usageSource);
+          if (model) {
+            existing.modelCosts.set(model, (existing.modelCosts.get(model) ?? 0) + currentCost);
+          }
+          if (!existing.provider && provider) {
+            existing.provider = provider;
+          }
+          if (!existing.preferredModel && preferredModel) {
+            existing.preferredModel = preferredModel;
+          }
+          if (!existing.replayAvailable && Boolean(replayMeta)) {
+            existing.replayAvailable = true;
+          }
+          if ((!existing.sessionLabel || existing.sessionLabel === existing.sessionId) && sessionLabel) {
+            existing.sessionLabel = sessionLabel;
+          }
+          continue;
+        }
+
+        const modelCosts = new Map<string, number>();
+        if (model) {
+          modelCosts.set(model, currentCost);
+        }
+
+        sessionMap.set(sessionId, {
+          sessionId,
+          sessionLabel,
+          provider,
+          replayAvailable: Boolean(replayMeta),
+          inputTokens,
+          outputTokens,
+          currentCost,
+          baselineCost,
+          usageSources: new Set([usageSource]),
+          modelCosts,
+          preferredModel,
+        });
+      } catch {
+        // 坏数据按会话粒度跳过，不影响整体接口。
+      }
+    }
+
+    const usageSourceBreakdown = this.createUsageSourceBreakdown();
+    const rows: CostReconciliationRow[] = Array.from(sessionMap.values())
+      .map(session => {
+        const usageSource = this.resolveSessionUsageSource(session.usageSources, batch.usageSource);
+        usageSourceBreakdown[usageSource] += 1;
+        const estimated = this.isReconciliationEstimated(usageSource, currentPricing, baselinePricing);
+        const primaryModel = this.resolvePrimaryModelName(session.modelCosts, session.preferredModel);
+        return {
+          sessionId: session.sessionId,
+          sessionLabel: session.sessionLabel || session.sessionId,
+          provider: session.provider,
+          primaryModel,
+          usageSource,
+          estimated,
+          replayAvailable: session.replayAvailable,
+          inputTokens: session.inputTokens,
+          outputTokens: session.outputTokens,
+          currentCost: session.currentCost,
+          baselineCost: session.baselineCost,
+          delta: session.currentCost - session.baselineCost,
+        };
+      })
+      .sort((a, b) => b.currentCost - a.currentCost || Math.abs(b.delta) - Math.abs(a.delta));
+
+    const summary: CostReconciliationSummary = {
+      sessions: rows.length,
+      currentCost: rows.reduce((sum, row) => sum + row.currentCost, 0),
+      baselineCost: rows.reduce((sum, row) => sum + row.baselineCost, 0),
+      delta: 0,
+      estimatedRows: rows.filter(row => row.estimated).length,
+      usageSourceBreakdown,
+    };
+    summary.delta = summary.currentCost - summary.baselineCost;
+
+    const freshness = this.buildUsageFreshness(batch);
+    const meta: CostReconciliationMeta = {
+      currentReference: currentPricing.reference,
+      baselineReference: baselinePricing.reference,
+      pricingSource: currentPricing.source,
+      pricingCatalogVersion: currentPricing.catalogVersion,
+      pricingUpdatedAt: currentPricing.updatedAt,
+      stale: currentPricing.stale,
+      baselinePricingSource: baselinePricing.source,
+      baselinePricingCatalogVersion: baselinePricing.catalogVersion,
+      baselinePricingUpdatedAt: baselinePricing.updatedAt,
+      baselineStale: baselinePricing.stale,
+      latestUsageAt: freshness.latestUsageAt,
+      dataCutoffAt: freshness.dataCutoffAt,
+    };
+
+    return {
+      meta,
+      summary,
+      rows,
     };
   }
 

@@ -34,6 +34,53 @@ export interface CostMeta {
   estimated: boolean;
 }
 
+export type UsageSourceBreakdown = Record<UsageSource, number>;
+
+export interface CostReconciliationMeta {
+  currentReference: PricingReference;
+  baselineReference: PricingReference;
+  pricingSource: PricingSource;
+  pricingCatalogVersion: string;
+  pricingUpdatedAt: string;
+  stale: boolean;
+  baselinePricingSource: PricingSource;
+  baselinePricingCatalogVersion: string;
+  baselinePricingUpdatedAt: string;
+  baselineStale: boolean;
+  latestUsageAt?: string;
+  dataCutoffAt: string;
+}
+
+export interface CostReconciliationSummary {
+  sessions: number;
+  currentCost: number;
+  baselineCost: number;
+  delta: number;
+  estimatedRows: number;
+  usageSourceBreakdown: UsageSourceBreakdown;
+}
+
+export interface CostReconciliationRow {
+  sessionId: string;
+  sessionLabel: string;
+  provider: string | null;
+  primaryModel: string | null;
+  usageSource: UsageSource;
+  estimated: boolean;
+  replayAvailable: boolean;
+  inputTokens: number;
+  outputTokens: number;
+  currentCost: number;
+  baselineCost: number;
+  delta: number;
+}
+
+export interface CostReconciliationResult {
+  meta: CostReconciliationMeta;
+  summary: CostReconciliationSummary;
+  rows: CostReconciliationRow[];
+}
+
 export interface CostStats {
   totalCost: number;
   totalTokens: number;

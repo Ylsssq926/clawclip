@@ -1,0 +1,131 @@
+name: Bug Report
+description: Report a reproducible problem in ClawClip.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please focus on a real failure we can reproduce.
+
+        If the report involves secrets, tokens, private session logs, or a security issue, do not post them publicly.
+        Use the private process in `SECURITY.md` for security-sensitive reports.
+
+  - type: input
+    id: version
+    attributes:
+      label: ClawClip version
+      description: Which version are you running?
+      placeholder: "1.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: run_mode
+    attributes:
+      label: How are you running ClawClip?
+      options:
+        - npm start
+        - dev workspace (npm run dev:server / npm run dev:web)
+        - Docker / docker-compose
+        - PM2
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Agent framework / session source
+      description: Pick the source that best matches the failing data.
+      multiple: true
+      options:
+        - OpenClaw
+        - ZeroClaw
+        - Claw
+        - custom JSONL export
+        - Demo data only
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Docker container
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: demo_repro
+    attributes:
+      label: Can you reproduce it with built-in Demo data?
+      options:
+        - No
+        - Yes
+        - Not tested
+    validations:
+      required: true
+
+  - type: textarea
+    id: custom_paths
+    attributes:
+      label: Custom data directories or environment variables
+      description: Tell us if you changed things like OPENCLAW_STATE_DIR, CLAWCLIP_LOBSTER_DIRS, CLAWCLIP_SESSION_EXTENSIONS, or CLAWCLIP_STATE_DIR.
+      placeholder: |
+        Example:
+        - OPENCLAW_STATE_DIR=/data/.openclaw
+        - CLAWCLIP_LOBSTER_DIRS=/mnt/runs;/mnt/export
+        - No custom paths
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do right before the bug happened?
+      placeholder: |
+        1. Start ClawClip
+        2. Open ...
+        3. Import / scan ...
+        4. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: ClawClip should ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, console output, or stack trace
+      description: Please redact secrets, tokens, and private session content before pasting.
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or short screen recording notes
+      description: If UI behavior is involved, add screenshots or describe what is visible.

@@ -2,94 +2,108 @@
 
 > [English](#contributing) | [中文](#参与贡献)
 
-Thank you for your interest in ClawClip!
+Thanks for helping improve ClawClip.
 
 ## Before You Start
 
-- Node.js ≥ 18
-- Run `npm run check` (type-checks both server and web) before submitting
-- If you changed build-related configs, also run `npm run build`
+- Use **Node.js 18+** and **npm 9+**.
+- Install dependencies from the repo root: `npm install`
+- Keep each PR focused. Small, reviewable changes beat bundled cleanup.
+- If you touch **pricing, ratios, model names, provider claims, or compatibility statements**, include a source link or a clear **"verified as of YYYY-MM-DD"** note in the PR.
+- If you change shared product copy across languages, update the relevant **README** and **i18n** content together when practical. If you intentionally leave some translations for follow-up, say so in the PR description.
 
-## Pull Requests
+## Local Development
 
-- Clearly describe the motivation and scope of your changes.
-- If your PR touches **model names, pricing, or ratios** in README or code, please include your **verification source or "data as of" date** in the PR description.
-- All PRs are **reviewed by a human maintainer** before merge (security, copy accuracy, roadmap consistency).
+```bash
+npm run dev:server   # backend on http://localhost:8080
+npm run dev:web      # Vite dev server on http://localhost:3000
+npm run check        # type-check server + web
+npm run build        # production build for both workspaces
+npm start            # run the built app; first run auto-builds if dist is missing
+```
 
-## Versioning & Releases
+## Minimum Checks Before Opening a PR
 
-- Version scheme: **CalVer `YYYY.MM.DD`** (e.g. `2026.03.25`). Same-day patches use `.N` suffix (e.g. `2026.03.25.1`).
-- `v0.1.0` is the initial baseline tag. All subsequent releases use CalVer.
-- Each release: update `package.json` version, add entry to `CHANGELOG.md`, tag + push.
-- See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+- Run `npm run check`
+- If your change affects runtime behavior, build output, or the UI, also run `npm run build`
+- For docs-only changes, verify commands, paths, and version wording against the current codebase
+
+## What to Include in the PR Description
+
+Please include:
+
+- what changed
+- why it changed
+- how you verified it
+- screenshots or recordings for visible UI changes
+- any source links or dates for pricing / ratio / model-name changes
+- a note about README / i18n updates, or what is intentionally deferred
+
+## Versioning
+
+- ClawClip uses **SemVer** (`1.1.0`, `1.1.1`, `1.2.0`)
+- Do not switch docs or PR language back to the old CalVer wording
+- Unless a maintainer asks for it, you usually do **not** need to bump versions, edit release tags, or write release notes in a contribution PR
+
+## Release Notes
+
+Release work is maintainer-facing, not the center of normal contribution flow. If your change should be called out in release notes, mention that briefly in the PR.
 
 ## Code of Conduct
 
-Be friendly and constructive. Issues are welcome for product direction and compatibility discussions.
+Be respectful, direct, and constructive. Issues and PRs are welcome for product direction, parser coverage, compatibility, and documentation clarity.
 
 ---
 
 # 参与贡献
 
-感谢你对虾片 (ClawClip) 的兴趣。
+感谢你帮助改进虾片（ClawClip）。
 
-## 开发前
+## 开始前准备
 
-- Node.js ≥ 18
-- 提交前在仓库根目录执行：`npm run check`
-- 若改动前端构建相关，再执行：`npm run build`
+- 使用 **Node.js 18+** 与 **npm 9+**
+- 在仓库根目录安装依赖：`npm install`
+- 每个 PR 尽量聚焦一件事；小而清晰的改动比一锅端式“顺手整理”更容易合并
+- 如果你改动了**价格、比例、模型名、厂商说法或兼容性描述**，请在 PR 中附上来源链接，或明确写出**“信息核实日期 / verified as of YYYY-MM-DD”**
+- 如果你修改的是多语言共享文案，请尽量同步更新相关 **README** 与 **i18n** 内容；如果有些语言打算后补，也请在 PR 描述里写清楚
 
-## Pull Request
+## 本地开发命令
 
-- 请写清楚动机与影响范围；涉及 README 中的**模型名、价格或比例**时，请在 PR 描述中附上**核实来源或「信息截至日期」**。
-- 合入前由维护者进行**人工审查**（安全、文案与路线图一致性）。
+```bash
+npm run dev:server   # 后端，默认 http://localhost:8080
+npm run dev:web      # 前端 Vite，默认 http://localhost:3000
+npm run check        # server + web 类型检查
+npm run build        # 两个 workspace 的生产构建
+npm start            # 运行构建产物；若 dist 缺失会先自动构建
+```
 
-## 版本与发布
+## 提交前最少检查
 
-- 版本号采用 **日期版本 `YYYY.MM.DD`**（如 `2026.03.25`），同日多版本用 `.N` 后缀（如 `2026.03.25.1`）。
-- `v0.1.0` 是初始基线 tag，后续全部使用日期版本。
-- 每次发版：更新 `package.json` version、在 `CHANGELOG.md` 顶部追加条目、打 tag 并推送。
-- 完整发布记录见 [CHANGELOG.md](CHANGELOG.md)。
+- 运行 `npm run check`
+- 如果改动会影响运行行为、构建产物或界面，再额外运行 `npm run build`
+- 如果是纯文档改动，也请按当前代码核对命令、路径和版本口径，避免文档先跑偏
+
+## PR 描述建议包含什么
+
+请至少写清楚：
+
+- 改了什么
+- 为什么改
+- 你怎么验证的
+- 若有可见界面变化，附截图或录屏
+- 若涉及价格 / 比例 / 模型名，附来源链接或日期
+- README / i18n 是否已同步，或哪些内容明确留待后续补齐
+
+## 版本说明
+
+- ClawClip 使用 **SemVer**（例如 `1.1.0`、`1.1.1`、`1.2.0`）
+- 不要再把文档或 PR 口径写回旧的 CalVer
+- 除非维护者明确要求，普通贡献 PR 通常**不需要**自己改版本号、发 tag 或写完整发布说明
+
+## 发布说明
+
+发布流程是维护者侧工作，不是贡献文档的主角。如果你的改动值得进 release notes，在 PR 里顺手标一下即可。
 
 ## 行为准则
 
-保持友善与建设性；欢迎 issue 讨论产品方向与兼容性。
-
-## 本地开发环境
-
-### 环境要求
-- Node.js ≥ 18
-- npm ≥ 9
-
-### 目录结构
-```text
-clawclip/
-├── server/          # Express + TypeScript 后端
-│   ├── routes/      # API 路由
-│   ├── services/    # 核心服务（解析、评测、成本、分析）
-│   ├── types/       # TypeScript 类型定义
-│   └── dist/        # 编译产物
-├── web/             # React 18 + Vite + Tailwind 前端
-│   ├── src/pages/   # 页面组件
-│   ├── src/components/ # 通用组件
-│   ├── src/lib/     # 工具库（i18n、API、样式）
-│   └── dist/        # 构建产物
-├── templates/       # 内置模板
-├── docs/            # 文档
-└── bin/             # CLI 入口
-```
-
-### 开发命令
-```bash
-npm run dev:server   # 后端热重载（tsx watch）
-npm run dev:web      # 前端开发服务器（Vite，端口 3000）
-npm run check        # 双端类型检查
-npm run build        # 生产构建
-```
-
-### 提交规范
-- feat: 新功能
-- fix: 修复
-- docs: 文档
-- chore: 构建/版本/配置
-- refactor: 重构
+保持尊重、直接、建设性。欢迎通过 Issue 或 PR 讨论产品方向、解析覆盖、兼容性与文档准确性。

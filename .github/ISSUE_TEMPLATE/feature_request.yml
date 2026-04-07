@@ -1,0 +1,73 @@
+name: Feature Request
+description: Suggest a workflow or product improvement for ClawClip.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the problem first, not just the button.
+        Helpful requests explain what is hard today, how you work around it, and what success would change.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the real review, diagnosis, or iteration problem behind the request.
+      placeholder: |
+        Example:
+        I can see high-cost runs, but I still need too many clicks to prove whether the regression came from prompt changes or model changes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How do you work around it today?
+      description: Manual steps, spreadsheets, scripts, screenshots, or anything else you do instead.
+      placeholder: |
+        Example:
+        I export runs to CSV, compare costs manually, then jump back into replay tabs one by one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: success
+    attributes:
+      label: If this works well, how would you use it?
+      description: Tell us what you would do after the feature exists.
+      placeholder: |
+        Example:
+        After every prompt change, I would compare baseline vs candidate, confirm the scorecard did not drop, and share the result with my team.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mainline
+    attributes:
+      label: Which core workflow is this most related to?
+      description: Pick the closest match.
+      options:
+        - Run Insights
+        - Agent Scorecard
+        - Cost Report
+        - More than one of the three
+        - Not sure / adjacent workflow
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Example run, scenario, or evidence
+      description: Optional, but very helpful. Share a redacted example, screenshot, or short story about where this breaks today.
+
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: What should this not turn into?
+      description: Optional. Tell us the complexity or product direction you do not want.
+      placeholder: |
+        Example:
+        I want a faster review loop, not a heavy team dashboard.

@@ -8,6 +8,11 @@ import EmptyState from '../components/ui/EmptyState'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
+import {
+  DEFAULT_COST_RECONCILIATION_SORT,
+  getCostReconciliationDisplayRows,
+  type CostReconciliationSortKey,
+} from '../lib/costReconciliationRows'
 
 interface DailyData {
   date: string
@@ -531,6 +536,9 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [demoCostHint, setDemoCostHint] = useState(false)
+  const [reconciliationSortBy, setReconciliationSortBy] = useState<CostReconciliationSortKey>(DEFAULT_COST_RECONCILIATION_SORT)
+  const [showEstimatedOnly, setShowEstimatedOnly] = useState(false)
+  const [showReplayableOnly, setShowReplayableOnly] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -653,6 +661,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   const reconciliationBaselineReferenceLabel = getPricingReferenceLabel(reconciliationMeta?.baselineReference, isZh)
   const reconciliationCurrentSourceLabel = getPricingSourceLabel(reconciliationMeta?.pricingSource, isZh)
   const reconciliationBaselineSourceLabel = getPricingSourceLabel(reconciliationMeta?.baselinePricingSource, isZh)
+  const displayedReconciliationRows = getCostReconciliationDisplayRows(reconciliationRows, {
+    sortBy: reconciliationSortBy,
+    onlyEstimated: showEstimatedOnly,
+    onlyReplayable: showReplayableOnly,
+  })
   const showGlobalEmptyState = !loading && !error && !!summary && summary.totalCost === 0
   const emptyStartHint = isZh
     ? '接入本地 JSONL 日志后跑几次真实任务，再回来查看趋势、模型占比和预算提醒。'
@@ -672,6 +685,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   )
   const replayActionLabel = isZh ? '查看会话' : 'View session'
   const canOpenReplaySession = (sessionId?: string): sessionId is string => Boolean(sessionId?.trim())
+  const reconciliationSortOptions: Array<{ value: CostReconciliationSortKey; label: string }> = [
+    { value: 'abs-delta', label: isZh ? '偏差最大' : 'Largest delta' },
+    { value: 'current-cost', label: isZh ? '当前成本最高' : 'Highest current cost' },
+    { value: 'tokens', label: isZh ? 'Token 最多' : 'Most tokens' },
+  ]
 
   const openBudgetModal = () => {
     setBudgetError(null)
@@ -1059,7 +1077,60 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 )}
               </div>
 
-              <div className="mt-5 overflow-x-auto">
+              <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-sm">
+                  <span className="text-xs text-slate-500">{isZh ? '排序' : 'Sort'}</span>
+                  <select
+                    value={reconciliationSortBy}
+                    onChange={event => setReconciliationSortBy(event.target.value as CostReconciliationSortKey)}
+                    className="bg-transparent text-sm text-slate-700 focus:outline-none"
+                  >
+                    {reconciliationSortOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={cn(
+                  'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
+                  showEstimatedOnly
+                    ? 'border-[#3b82c4]/20 bg-[#3b82c4]/5 text-[#2f6fa8]'
+                    : 'border-slate-200 bg-white text-slate-600',
+                )}>
+                  <input
+                    type="checkbox"
+                    checked={showEstimatedOnly}
+                    onChange={event => setShowEstimatedOnly(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#3b82c4] focus:ring-[#3b82c4]/30"
+                  />
+                  <span>{isZh ? '只看 Estimated' : 'Estimated only'}</span>
+                </label>
+
+                <label className={cn(
+                  'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
+                  showReplayableOnly
+                    ? 'border-[#3b82c4]/20 bg-[#3b82c4]/5 text-[#2f6fa8]'
+                    : 'border-slate-200 bg-white text-slate-600',
+                )}>
+                  <input
+                    type="checkbox"
+                    checked={showReplayableOnly}
+                    onChange={event => setShowReplayableOnly(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#3b82c4] focus:ring-[#3b82c4]/30"
+                  />
+                  <span>{isZh ? '只看可回放' : 'Replayable only'}</span>
+                </label>
+
+                <span className="text-xs text-slate-500 sm:ml-auto">
+                  {isZh
+                    ? `显示 ${displayedReconciliationRows.length} / ${reconciliationRows.length} 行`
+                    : `Showing ${displayedReconciliationRows.length} / ${reconciliationRows.length} rows`}
+                </span>
+              </div>
+
+              <div className="mt-4 overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -1073,7 +1144,16 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {reconciliationRows.map(row => {
+                    {displayedReconciliationRows.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
+                          {isZh
+                            ? '当前筛选下没有会话，试试取消上面的过滤条件。'
+                            : 'No sessions match the current filters. Try clearing the filters above.'}
+                        </td>
+                      </tr>
+                    )}
+                    {displayedReconciliationRows.map(row => {
                       const replaySessionId = row.sessionId?.trim()
                       const isReplayLinkable = row.replayAvailable && canOpenReplaySession(replaySessionId)
                       return (

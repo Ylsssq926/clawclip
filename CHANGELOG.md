@@ -3,15 +3,33 @@
 All notable changes to ClawClip will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Version scheme: `YYYY.MM.DD` (CalVer, daily). Patch suffix `.N` for same-day releases.
+Public release versioning now follows SemVer (`MAJOR.MINOR.PATCH`).
+Date-based releases below are retained as historical milestones from the pre-1.0 product-shaping period.
 
 ---
+
+## [1.1.0] — 2026-04-07
+
+### Stable Release Enhancement
+- **Pricing reference comparison**: Cost review now puts actual spend next to a reference pricing baseline, making pricing mismatches, mapping drift, and unexpectedly expensive runs easier to spot.
+- **Model value matrix**: Quality and spend can be judged together, so teams can see whether a more expensive model is actually buying better outcomes.
+- **Outcome guardrails**: Savings and scorecard signals are framed more clearly as guardrails, helping teams distinguish low-risk optimizations from changes that deserve a cautious rollout.
+- **Before/after proof**: Version comparison is presented more explicitly as baseline vs candidate evidence, so optimization work can be defended with visible improvement instead of anecdotes.
+- **Replay deep links**: Investigation flows can jump directly into the relevant replay context, shortening the path from “this run looks wrong” to the exact step worth reviewing.
+- **Cost reconciliation and variance filters**: Cost review makes it easier to isolate runs whose billed cost, reference cost, or variance deserves follow-up.
+
+### Clarified
+- Public release numbering is unified on SemVer for the `1.x` line.
+- Older CalVer entries are preserved below for traceability, not as competing definitions of the stable release.
+- Historical entries may still reference earlier working names such as Session Replay, Benchmark, and Cost Monitor where needed for accuracy.
+
+[1.1.0]: https://github.com/Ylsssq926/clawclip/compare/1.0.0...1.1.0
 
 ## [1.0.0] — 2026-04-05
 
 ### First Stable Release
 
-ClawClip v1.0 — a mature local Agent diagnostic tool.
+ClawClip v1.0 established the product as a mature local Agent diagnostic console.
 
 #### Product Identity
 - Repositioned as Local Agent Diagnostic Console: Run Insights + Agent Scorecard + Cost Report
@@ -21,12 +39,12 @@ ClawClip v1.0 — a mature local Agent diagnostic tool.
 
 #### Landing & Brand
 - Dual-column hero with animated SVG radar chart
-- Features reordered: Run Insights > Scorecard > Cost Report
+- Features reordered: Run Insights > Agent Scorecard > Cost Report
 
 #### Core Capabilities
-- Benchmark: evidence-based scoring with per-dimension explanations
+- Agent Scorecard: evidence-based scoring with per-dimension explanations
 - Cost Report: model breakdown chart, budget config UI, daily average line
-- Replay: error highlighting, high-cost markers, tool failure detection
+- Run Insights: replay with error highlighting, high-cost markers, tool failure detection
 - Prompt Efficiency: length histogram, efficient/wasteful comparison, auto-suggestions
 - Version Compare: cost bar chart, auto-generated conclusions
 
@@ -36,6 +54,12 @@ ClawClip v1.0 — a mature local Agent diagnostic tool.
 - Unified pricing source with transparency
 
 [1.0.0]: https://github.com/Ylsssq926/clawclip/compare/2026.04.05...1.0.0
+
+---
+
+## Historical milestones before 1.0
+
+Date-based versions below are preserved for traceability during the transition into the stable release line.
 
 ## [2026.04.05] — 2026-04-05
 
@@ -110,9 +134,9 @@ ClawClip v1.0 — a mature local Agent diagnostic tool.
 
 ---
 
-## [v0.1.0] — 2026-03-25
+## [0.1.0] — 2026-03-25
 
-First stable release.
+Early public baseline before the `1.x` stable release line.
 
 ### Added
 - Session Replay: interactive timeline visualization of AI Agent JSONL logs
@@ -148,4 +172,4 @@ First stable release.
 - Benchmark history capped at 100 entries
 - Safe JSON.parse in error handling (parseApiErrorMessage)
 
-[v0.1.0]: https://github.com/Ylsssq926/clawclip/releases/tag/v0.1.0
+[0.1.0]: https://github.com/Ylsssq926/clawclip/releases/tag/v0.1.0

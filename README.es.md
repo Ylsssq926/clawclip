@@ -4,9 +4,13 @@
 
 # ClawClip
 
-**Herramienta local de diagnóstico para AI Agents**
+**Consola local de diagnóstico de agentes · v1.1.0**
 
-Run Insights · Agent Scorecard · Cost Report — para OpenClaw, ZeroClaw y flujos JSONL locales realmente útiles.
+Mira qué hizo realmente tu agente.  
+Evalúa si la ejecución aguantó.  
+Demuestra si la optimización valió el coste.
+
+Run Insights · Agent Scorecard · Cost Report — para OpenClaw, ZeroClaw y flujos JSONL locales de uso real.
 
 <p>
   <a href="https://clawclip.luelan.online">Demo en vivo</a> ·
@@ -25,15 +29,42 @@ Run Insights · Agent Scorecard · Cost Report — para OpenClaw, ZeroClaw y flu
 <p>
   <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="Demo en vivo" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="Licencia MIT" /></a>
-  <img src="https://img.shields.io/badge/local-100%25%20local-0f172a?style=flat-square" alt="100% local" />
+  <img src="https://img.shields.io/badge/analysis-session%20analysis%20local-0f172a?style=flat-square" alt="El análisis de sesiones se hace en local" />
   <img src="https://img.shields.io/badge/agents-OpenClaw%20%7C%20ZeroClaw-3b82c4?style=flat-square" alt="OpenClaw y ZeroClaw" />
 </p>
 
 </div>
 
-> ClawClip es una herramienta de diagnóstico local-first para AI Agents.  
-> Convierte logs de sesión JSONL en evidencia revisable, puntúa a tu agente en 6 dimensiones y rastrea cada céntimo gastado.  
-> 100% local. Cero nube. Cero llamadas a API.
+> ClawClip convierte sesiones crudas de agentes en una mesa de revisión en la que puedes confiar.  
+> Muestra la ejecución completa como evidencia, evalúa si el agente realmente se sostuvo y conecta la calidad con el gasto para que veas si "mejor" de verdad justificó la factura.
+>
+> **Límites, dichos claramente:** el análisis de sesiones se hace en local, los datos de ejecución del agente no se suben y la actualización de precios es opcional cuando quieres referencias públicas más recientes.
+
+<a id="core-capabilities"></a>
+
+## Las tres preguntas que ClawClip resuelve
+
+| La pregunta real | Lo que te da ClawClip |
+| --- | --- |
+| **¿Qué hizo de verdad el agente?** | **Run Insights** reconstruye pasos de razonamiento, llamadas a herramientas, reintentos, errores y resultados como una sola cadena de evidencia revisable |
+| **¿La ejecución realmente aguantó?** | **Agent Scorecard** ofrece una lectura heurística y práctica sobre redacción, programación, uso de herramientas, búsqueda, seguridad y relación coste-rendimiento |
+| **¿La optimización valió la pena?** | **Cost Report** desglosa el gasto por modelo y por uso para que veas si la mejora justificó la cuenta |
+
+## Qué incluye v1.1.0
+
+| Incluido en esta versión | Por qué importa |
+| --- | --- |
+| **Prompt Efficiency** | Ver si más tokens y prompts más complejos realmente compran suficiente calidad como para justificarse |
+| **Version Compare** | Comparar lado a lado modelos, prompts, configuraciones o ejecuciones para detectar avances reales y regresiones reales |
+| **Template Library + Knowledge Base** | Reutilizar patrones que ya funcionan, buscar el historial local y convertir sesiones dispersas en memoria de iteración |
+| **Sesiones demo integradas** | Recorrer el flujo completo antes de tocar datos reales del proyecto |
+
+## Local-first, sin promesas infladas
+
+- El descubrimiento, parsing y análisis de sesiones se hacen en tu propia máquina.
+- ClawClip no sube datos de ejecución del agente.
+- La actualización de precios públicos es opcional y solo sirve para renovar referencias de coste.
+- Ese paso no requiere enviar el contenido de tus sesiones a ningún sitio.
 
 <a id="quick-start"></a>
 
@@ -47,27 +78,14 @@ npm start
 
 Abre `http://localhost:8080` para revisar primero las sesiones demo incluidas y después cargar tus propios logs de OpenClaw / ZeroClaw.
 
-<a id="core-capabilities"></a>
-
-## Capacidades clave
-
-| Capacidad | Qué te permite hacer |
-| --- | --- |
-| 🔍 **Perspectivas de ejecución (Run Insights)** | Revisar cada paso de razonamiento, llamada a herramientas, error, reintento y resultado como una cadena de evidencia auditable |
-| 📊 **Boletín del Agent (Agent Scorecard)** | Puntuar de forma heurística escritura, programación, uso de herramientas, búsqueda, seguridad y relación coste-rendimiento a partir del comportamiento real |
-| 💰 **Informe de costes (Cost Report)** | Desglosar el gasto por modelo, seguir tendencias, activar alertas presupuestarias y detectar oportunidades de ahorro |
-| 📈 **Eficiencia del Prompt (Prompt Efficiency)** | Comparar la calidad del resultado frente al coste y los tokens invertidos en cada prompt |
-| 🔄 **Comparación de versiones (Version Compare)** | Comparar lado a lado modelos, prompts, configuraciones o ejecuciones para ver qué mejoró y qué empeoró |
-| 📚 **Biblioteca de plantillas + base de conocimiento (Template Library + Knowledge Base)** | Reutilizar plantillas que ya funcionan, buscar sesiones históricas y construir memoria local para iterar |
-
 ## Compatibilidad
 
 ClawClip prioriza las estructuras de sesión oficiales de **OpenClaw** y **ZeroClaw**.  
-El soporte para otros runtimes locales basados en JSONL se ampliará gradualmente, según la cobertura real de formatos.
+El soporte para otros runtimes locales basados en JSONL se ampliará gradualmente, según la cobertura real de formatos, no por promesas genéricas.
 
-## Método de puntuación
+## Cómo leer el scorecard
 
-> El Agent Scorecard utiliza un enfoque de **Heuristic Scorecard**. Analiza señales de comportamiento en los logs de sesión — como calidad de respuesta, uso de herramientas, pistas de seguridad y estructura de costes. No es un benchmark estricto basado en un conjunto de pruebas estandarizado; es una señal rápida de diagnóstico sobre la calidad de la ejecución.
+> El Agent Scorecard es un **diagnóstico heurístico**, no un ranking benchmark estricto. Lee señales de comportamiento en sesiones reales — como calidad de respuesta, uso de herramientas, pistas de seguridad y estructura de costes — para ayudarte a revisar más rápido y comparar iteraciones con más contexto.
 
 ## Fuentes de datos
 
@@ -85,22 +103,11 @@ Express + TypeScript · React 18 · Vite · Tailwind CSS · Recharts · Framer M
 
 <a id="roadmap"></a>
 
-## Roadmap
+## Después de v1.1.0
 
-### v1.0 — Madurez de la herramienta
-- Consolidar Run Insights, Agent Scorecard y Cost Report como el trío central del diagnóstico local
-- Mejorar la revisión de evidencia, la experiencia de importación y la compatibilidad con OpenClaw / ZeroClaw
-- Hacer que el flujo local-first sea rápido, claro y fiable
-
-### v1.5 — Bucle de optimización
-- Reforzar Prompt Efficiency, Version Compare y las sugerencias de ahorro
-- Conectar el diagnóstico con recomendaciones repetibles y validación posterior a cada cambio
-- Convertir Template Library + Knowledge Base en un circuito práctico de iteración
-
-### v2.0 — Trabajo en equipo
-- Añadir vistas de revisión para equipos, informes compartibles y comparaciones contra baselines
-- Soportar bibliotecas de escenarios, evaluaciones recurrentes y resúmenes multi-ejecución
-- Ayudar a los equipos a gestionar calidad y coste del agent de forma conjunta
+- Hacer más clara la validación antes/después de cambios en prompts, modelos y configuraciones
+- Profundizar la cobertura de OpenClaw / ZeroClaw y ampliar el soporte para runtimes JSONL locales cercanos
+- Añadir más salidas de revisión compartibles para flujos de equipo sin romper el núcleo local-first
 
 ## La historia del camarón
 
@@ -110,7 +117,7 @@ Express + TypeScript · React 18 · Vite · Tailwind CSS · Recharts · Framer M
 >
 > Yo respondí: "Entonces dejen de mirar logs crudos. Conviertan mis ejecuciones en evidencia, denme un boletín y enseñen la factura."
 >
-> Así nació ClawClip como una mesa local para revisar qué hizo un agent, qué tan bien lo hizo y cuánto costó.
+> Así nació ClawClip como una mesa local para revisar qué hizo un agente, qué tan bien lo hizo y cuánto costó.
 >
 > — 🍤 Mascota de ClawClip
 

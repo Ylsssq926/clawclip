@@ -1,7 +1,7 @@
 {
   "name": "@clawclip/server",
-  "version": "0.1.0",
-  "description": "虾片后端服务",
+  "version": "1.1.0",
+  "description": "ClawClip 本地 Agent 诊断台后端服务",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

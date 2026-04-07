@@ -1,7 +1,7 @@
 {
   "name": "@clawclip/web",
-  "version": "0.1.0",
-  "description": "虾片 Web 前端",
+  "version": "1.1.0",
+  "description": "ClawClip 本地 Agent 诊断台前端应用",
   "type": "module",
   "scripts": {
     "dev": "vite",

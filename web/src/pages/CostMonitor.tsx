@@ -890,6 +890,390 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             </GlowCard>
           </div>
 
+          {!loading && savings && savings.suggestions.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                <h3 className="text-lg font-semibold">{t('cost.savings.title')}</h3>
+                <div className="text-right">
+                  <span className="text-xs text-slate-500">{t('cost.savings.total')}</span>
+                  <span className="text-lg font-bold text-emerald-500 ml-2">${formatWasteCost(savings.totalPotentialSaving)}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {savings.suggestions.map((sug, i) => {
+                  const typeMeta = getSavingTypeMeta(sug.reasonType, isZh)
+                  const priorityMeta = getSavingPriorityMeta(sug.priority, t)
+                  const guardrailMeta = getSavingGuardrailMeta(sug.reasonType, t)
+                  const reasonText = getSavingReasonText(sug, isZh)
+                  const actionText = getSavingActionText(sug, isZh)
+                  const guardrailText = getSavingGuardrailText(sug, isZh)
+                  const replaySessionId = sug.sessionId?.trim()
+                  const isReplayLinkable = canOpenReplaySession(replaySessionId)
+                  const showModelRoute = Boolean(
+                    sug.currentModel
+                    && sug.alternativeModel
+                    && sug.currentModel !== sug.alternativeModel,
+                  )
+
+                  const content = (
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', typeMeta.className)}>
+                            {typeMeta.label}
+                          </span>
+                          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', priorityMeta.className)}>
+                            {priorityMeta.label}
+                          </span>
+                          {sug.sessionLabel && (
+                            <span className="truncate text-[11px] text-slate-500">
+                              {t('cost.savings.session')}: {sug.sessionLabel}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
+                        <div className="mt-3 grid grid-cols-1 xl:grid-cols-2 gap-3">
+                          <div className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5">
+                            <p className="text-[11px] font-medium text-slate-500">{t('cost.savings.next')}</p>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
+                          </div>
+                          <div className={cn('rounded-lg border px-3 py-2.5', guardrailMeta.className)}>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[11px] font-medium">{t('cost.savings.guardrail')}</p>
+                              <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold', guardrailMeta.badgeClassName)}>
+                                {guardrailMeta.label}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm leading-relaxed">{guardrailText}</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                          {showModelRoute ? (
+                            <p className="text-xs text-slate-500">
+                              {isZh ? '模型切换：' : 'Route: '}
+                              <span className="font-medium text-slate-700">{sug.currentModel}</span>
+                              <span className="mx-1">→</span>
+                              <span className="font-medium text-emerald-600">{sug.alternativeModel}</span>
+                            </p>
+                          ) : <span />}
+                          {isReplayLinkable && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
+                              {replayActionLabel}
+                              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs text-slate-500">{t('cost.savings.estSave')}</p>
+                        <p className="mt-1 text-lg font-semibold text-emerald-500">-${formatWasteCost(sug.saving)}</p>
+                      </div>
+                    </div>
+                  )
+
+                  if (isReplayLinkable) {
+                    return (
+                      <button
+                        key={`${sug.reasonType ?? 'suggestion'}-${replaySessionId ?? sug.currentModel ?? i}`}
+                        type="button"
+                        onClick={() => onOpenReplaySession(replaySessionId)}
+                        className={cn(
+                          'group w-full rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/35 hover:bg-white/95 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2',
+                          getSavingCardClass(sug.priority),
+                        )}
+                      >
+                        {content}
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <div
+                      key={`${sug.reasonType ?? 'suggestion'}-${sug.currentModel ?? i}`}
+                      className={cn('rounded-xl border p-4', getSavingCardClass(sug.priority))}
+                    >
+                      {content}
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mt-3 space-y-1">
+                {hasSwitchModelSuggestion && (
+                  <p className="text-xs text-amber-700">
+                    ⚠️ {isZh ? '换模型建议请先灰度验证质量，再逐步扩大路由范围' : 'Validate model-switch suggestions on a small slice first before expanding routing'}
+                  </p>
+                )}
+                <p className="text-xs text-slate-600">{t('cost.savings.disclaimer')}</p>
+              </div>
+            </div>
+          )}
+
+          {!loading && savings && savings.suggestions.length === 0 && summary && summary.totalCost > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6 text-center">
+              <p className="text-sm text-slate-500">✅ {t('cost.savings.empty')}</p>
+            </div>
+          )}
+
+          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h3 className="text-lg font-semibold">{isZh ? '🔥 Token 浪费诊断' : '🔥 Token Waste Diagnostics'}</h3>
+                <p className="mt-2 text-sm text-slate-700">{wasteSummaryText}</p>
+                <p className="mt-1 text-xs text-slate-500">{wasteMetaText}</p>
+              </div>
+            </div>
+
+            {wasteDiagnostics.length > 0 ? (
+              <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {wasteDiagnostics.map((diagnostic, index) => {
+                  const replaySessionId = diagnostic.sessionId?.trim()
+                  const isReplayLinkable = canOpenReplaySession(replaySessionId)
+
+                  const content = (
+                    <>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900">{isZh ? diagnostic.titleZh : diagnostic.titleEn}</p>
+                          {diagnostic.sessionLabel && (
+                            <p className="mt-1 truncate text-[11px] text-slate-500">{diagnostic.sessionLabel}</p>
+                          )}
+                        </div>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-full px-2 py-1 text-[11px] font-medium',
+                            diagnostic.severity === 'high'
+                              ? 'bg-red-500/10 text-red-600'
+                              : diagnostic.severity === 'medium'
+                                ? 'bg-amber-500/10 text-amber-700'
+                                : 'bg-blue-500/10 text-[#3b82c4]',
+                          )}
+                        >
+                          {diagnostic.severity === 'high'
+                            ? (isZh ? '高' : 'High')
+                            : diagnostic.severity === 'medium'
+                              ? (isZh ? '中' : 'Medium')
+                              : (isZh ? '低' : 'Low')}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm leading-relaxed text-slate-600">{isZh ? diagnostic.descZh : diagnostic.descEn}</p>
+                      <div className="mt-4 flex items-end justify-between gap-3">
+                        <p className="text-sm font-medium text-[#3b82c4]">
+                          {isZh ? '预计浪费' : 'Estimated waste'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
+                        </p>
+                        {isReplayLinkable && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
+                            {replayActionLabel}
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )
+
+                  if (isReplayLinkable) {
+                    return (
+                      <button
+                        key={`${diagnostic.type}-${replaySessionId ?? diagnostic.sessionLabel ?? index}`}
+                        type="button"
+                        onClick={() => onOpenReplaySession(replaySessionId)}
+                        className="group w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/35 hover:bg-white hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2"
+                      >
+                        {content}
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <div key={`${diagnostic.type}-${diagnostic.sessionLabel ?? index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      {content}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                {tokenWaste
+                  ? (isZh ? '当前时间范围内暂未发现明显的 Token 浪费信号。' : 'No obvious token waste signals were found in the selected time range.')
+                  : (isZh ? '诊断接口暂不可用，稍后会在这里显示浪费信号。' : 'The diagnostics API is unavailable right now. Waste signals will appear here once it recovers.')}
+              </div>
+            )}
+          </div>
+
+          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+            <h3 className="text-lg font-semibold mb-4">{t('cost.trend.title')}</h3>
+            {summary && summary.totalCost === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                <span className="text-4xl mb-3">📉</span>
+                <p className="text-lg mb-1">{t('cost.empty.title')}</p>
+                <p className="text-sm text-center max-w-md">{t('cost.empty.desc')}</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={daily}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
+                    <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
+                    <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      labelStyle={{ color: '#64748b' }}
+                      itemStyle={{ color: '#0f172a' }}
+                    />
+                    {averageDailyCost > 0 && (
+                      <ReferenceLine y={averageDailyCost} stroke="#94a3b8" strokeDasharray="6 6" />
+                    )}
+                    <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={t('cost.chart.series')} />
+                  </LineChart>
+                </ResponsiveContainer>
+                {averageDailyCost > 0 && (
+                  <p className="mt-3 text-xs text-slate-500">
+                    {isZh ? '虚线表示日均成本' : 'Dashed line shows average daily cost'} · ${averageDailyCost.toFixed(2)}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          {modelBreakdownRows.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                <h3 className="text-lg font-semibold">{isZh ? '模型成本占比' : 'Cost by model'}</h3>
+                <span className="text-xs text-slate-500">
+                  {isZh ? '显示各模型在当前周期内的成本占比' : 'Share of spend by model in the selected range'}
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={Math.max(220, modelBreakdownRows.length * 46)}>
+                <BarChart
+                  data={modelBreakdownRows}
+                  layout="vertical"
+                  margin={{ top: 4, right: 24, left: 12, bottom: 4 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.14)" />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    stroke="#64748b"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={value => `${value}%`}
+                  />
+                  <YAxis type="category" dataKey="model" stroke="#64748b" tick={{ fontSize: 12 }} width={140} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    labelStyle={{ color: '#64748b' }}
+                    itemStyle={{ color: '#0f172a' }}
+                  />
+                  <Bar dataKey="percentage" name={isZh ? '成本占比' : 'Cost share'} fill="#3b82c4" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {modelValueDisplayRows.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-lg font-semibold">{isZh ? '模型效果 / 成本矩阵' : 'Model value matrix'}</h3>
+                  <p className="mt-2 text-sm text-slate-600 max-w-3xl">
+                    {isZh
+                      ? '不是只看哪个便宜，还要看谁更适合便宜跑量、谁值得留给高价值任务。这里把成本、会话样本、output/input、工具使用率和稳定性放在一起看。'
+                      : 'Don’t just ask which model is cheaper. Ask which one deserves bulk traffic and which one should be saved for high-value work.'}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right">
+                  <p className="text-xs font-medium text-cyan-700">{isZh ? '看值不值' : 'Worth it > cheap'}</p>
+                  <p className="mt-1 text-xs text-cyan-700/80">
+                    {isZh ? '成本 × 稳定性 × 工具表现' : 'Cost × stability × tool behavior'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '模型' : 'Model'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '会话数' : 'Sessions'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '平均成本' : 'Avg cost'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '效果代理' : 'Proxy effect'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '稳定性' : 'Stability'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '角色标签' : 'Role label'}</th>
+                      <th className="pb-3 font-medium">{isZh ? '推荐用途' : 'Recommended use'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modelValueDisplayRows.map(row => {
+                      const stabilityMeta = getStabilityMeta(row.errorRate, isZh)
+                      return (
+                        <tr key={row.model} className="border-b border-slate-100 align-top last:border-0">
+                          <td className="py-4 pr-4 min-w-[180px]">
+                            <div className="font-medium text-slate-900">{row.model}</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              ${formatMatrixCost(row.totalCost)} · {formatCompactTokens(row.totalTokens, locale)} {isZh ? 'Token' : 'tokens'}
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className="font-semibold text-slate-900">{row.sessions}</div>
+                            <div className="mt-1 text-xs text-slate-500">{isZh ? '个会话样本' : 'session samples'}</div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className="font-semibold text-slate-900">${formatMatrixCost(row.avgCostPerSession)}</div>
+                            <div className="mt-1 text-xs text-slate-500">{isZh ? '每会话均值' : 'per session'}</div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className="font-semibold text-slate-900">{row.avgOutputInputRatio.toFixed(2)}×</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              {isZh ? '工具使用率' : 'Tool usage'} {formatRate(row.toolUsageRate)}
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <div className={cn('font-semibold', stabilityMeta.className)}>{formatRate(row.errorRate)}</div>
+                            <div className={cn('mt-1 text-xs', stabilityMeta.className)}>{stabilityMeta.label}</div>
+                          </td>
+                          <td className="py-4 pr-4 whitespace-nowrap">
+                            <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium', getModelValueBadgeClass(row.valueLabel))}>
+                              {isZh ? row.valueLabelZh : row.valueLabelEn}
+                            </span>
+                          </td>
+                          <td className="py-4 min-w-[240px] max-w-[360px] text-sm leading-6 text-slate-600">
+                            {isZh ? row.recommendationZh : row.recommendationEn}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="mt-4 text-xs leading-relaxed text-slate-500">
+                {isZh
+                  ? '注：output/input、工具使用率和错误率都只是轻量代理指标，不替代真实业务验收；这个矩阵主要帮你判断“谁更值得承担什么角色”。'
+                  : 'Note: output/input, tool usage, and error rate are lightweight proxy metrics, not substitutes for real task evaluation. The matrix is here to show which model is worth which role.'}
+              </p>
+            </div>
+          )}
+
+          {!loading && insights.length > 0 && (
+            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
+              <h3 className="text-lg font-semibold mb-4">{t('cost.insights.title')}</h3>
+              <div className="space-y-3">
+                {insights.map((ins, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      'flex items-start gap-3 px-4 py-3 rounded-xl text-sm',
+                      ins.type === 'warning' ? 'bg-amber-50 border border-amber-500/20 text-amber-700' :
+                      ins.type === 'tip' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600' :
+                      'bg-slate-50 border border-slate-200 text-slate-500',
+                    )}
+                  >
+                    <span className="text-lg shrink-0 mt-0.5">{ins.icon}</span>
+                    <span>{isZh ? ins.messageZh : ins.messageEn}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {referenceCompareRows.length > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
               <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -899,10 +1283,10 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     {referenceCompare && currentReferenceRow
                       ? (
                         isZh
-                          ? `同一批会话按 3 套参考价格重算，当前 ${currentReferenceRow.label} 总计 $${formatWasteCost(referenceCompare.currentTotalCost)}。`
-                          : `The same sessions repriced across 3 catalogs. Current ${currentReferenceRow.label} total: $${formatWasteCost(referenceCompare.currentTotalCost)}.`
+                          ? `同批会话按 3 套价格重算；当前 ${currentReferenceRow.label}：$${formatWasteCost(referenceCompare.currentTotalCost)}。`
+                          : `Same sessions, 3 catalogs. Current ${currentReferenceRow.label}: $${formatWasteCost(referenceCompare.currentTotalCost)}.`
                       )
-                      : (isZh ? '同一批会话按 3 套价格目录重新计算。' : 'The same sessions repriced across 3 catalogs.')}
+                      : (isZh ? '同批会话按 3 套价格重算。' : 'Same sessions repriced across 3 catalogs.')}
                   </p>
                 </div>
                 {referenceVsOfficialRows.length > 0 && (
@@ -993,8 +1377,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                   <h3 className="text-lg font-semibold">{isZh ? '成本对账' : 'Cost reconciliation'}</h3>
                   <p className="mt-1 text-sm text-slate-500">
                     {isZh
-                      ? `当前按 ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} 口径，与 ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'} 基线重算同一批会话。`
-                      : `The same sessions repriced with ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} versus the ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'} baseline.`}
+                      ? `同批会话：当前 ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}，基线 ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}。`
+                      : `Same sessions: current ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} vs ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}.`}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1221,395 +1605,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
               <p className="mt-4 text-xs leading-relaxed text-slate-500">
                 {isZh
-                  ? '说明：当前成本使用你当前选中的 pricing reference；基线默认 official-static。行内的 Estimated 表示该行至少包含静态目录、旧缓存或非 Replay 用量等估算因素。'
-                  : 'Note: current cost uses the selected pricing reference, while the baseline defaults to official-static. “Estimated” means the row depends on static catalogs, stale pricing, or non-replay usage.'}
+                  ? '说明：当前成本跟随你选中的 pricing reference；基线默认 official-static。Estimated 表示该行含估算因素。'
+                  : 'Note: current cost follows the selected pricing reference, baseline defaults to official-static, and “Estimated” means the row includes estimated inputs.'}
               </p>
             </div>
           )}
-
-          {modelBreakdownRows.length > 0 && (
-            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-                <h3 className="text-lg font-semibold">{isZh ? '模型成本占比' : 'Cost by model'}</h3>
-                <span className="text-xs text-slate-500">
-                  {isZh ? '显示各模型在当前周期内的成本占比' : 'Share of spend by model in the selected range'}
-                </span>
-              </div>
-              <ResponsiveContainer width="100%" height={Math.max(220, modelBreakdownRows.length * 46)}>
-                <BarChart
-                  data={modelBreakdownRows}
-                  layout="vertical"
-                  margin={{ top: 4, right: 24, left: 12, bottom: 4 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.14)" />
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    stroke="#64748b"
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={value => `${value}%`}
-                  />
-                  <YAxis type="category" dataKey="model" stroke="#64748b" tick={{ fontSize: 12 }} width={140} />
-                  <Tooltip
-                    contentStyle={chartTooltipStyle}
-                    labelStyle={{ color: '#64748b' }}
-                    itemStyle={{ color: '#0f172a' }}
-                  />
-                  <Bar dataKey="percentage" name={isZh ? '成本占比' : 'Cost share'} fill="#3b82c4" radius={[0, 8, 8, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {modelValueDisplayRows.length > 0 && (
-            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div>
-                  <h3 className="text-lg font-semibold">{isZh ? '模型效果 / 成本矩阵' : 'Model value matrix'}</h3>
-                  <p className="mt-2 text-sm text-slate-600 max-w-3xl">
-                    {isZh
-                      ? '不是只看哪个便宜，还要看谁更适合便宜跑量、谁值得留给高价值任务。这里把成本、会话样本、output/input、工具使用率和稳定性放在一起看。'
-                      : 'Don’t just ask which model is cheaper. Ask which one deserves bulk traffic and which one should be saved for high-value work.'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right">
-                  <p className="text-xs font-medium text-cyan-700">{isZh ? '看值不值' : 'Worth it > cheap'}</p>
-                  <p className="mt-1 text-xs text-cyan-700/80">
-                    {isZh ? '成本 × 稳定性 × 工具表现' : 'Cost × stability × tool behavior'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '模型' : 'Model'}</th>
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '会话数' : 'Sessions'}</th>
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '平均成本' : 'Avg cost'}</th>
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '效果代理' : 'Proxy effect'}</th>
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '稳定性' : 'Stability'}</th>
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '角色标签' : 'Role label'}</th>
-                      <th className="pb-3 font-medium">{isZh ? '推荐用途' : 'Recommended use'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modelValueDisplayRows.map(row => {
-                      const stabilityMeta = getStabilityMeta(row.errorRate, isZh)
-                      return (
-                        <tr key={row.model} className="border-b border-slate-100 align-top last:border-0">
-                          <td className="py-4 pr-4 min-w-[180px]">
-                            <div className="font-medium text-slate-900">{row.model}</div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              ${formatMatrixCost(row.totalCost)} · {formatCompactTokens(row.totalTokens, locale)} {isZh ? 'Token' : 'tokens'}
-                            </div>
-                          </td>
-                          <td className="py-4 pr-4 whitespace-nowrap">
-                            <div className="font-semibold text-slate-900">{row.sessions}</div>
-                            <div className="mt-1 text-xs text-slate-500">{isZh ? '个会话样本' : 'session samples'}</div>
-                          </td>
-                          <td className="py-4 pr-4 whitespace-nowrap">
-                            <div className="font-semibold text-slate-900">${formatMatrixCost(row.avgCostPerSession)}</div>
-                            <div className="mt-1 text-xs text-slate-500">{isZh ? '每会话均值' : 'per session'}</div>
-                          </td>
-                          <td className="py-4 pr-4 whitespace-nowrap">
-                            <div className="font-semibold text-slate-900">{row.avgOutputInputRatio.toFixed(2)}×</div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              {isZh ? '工具使用率' : 'Tool usage'} {formatRate(row.toolUsageRate)}
-                            </div>
-                          </td>
-                          <td className="py-4 pr-4 whitespace-nowrap">
-                            <div className={cn('font-semibold', stabilityMeta.className)}>{formatRate(row.errorRate)}</div>
-                            <div className={cn('mt-1 text-xs', stabilityMeta.className)}>{stabilityMeta.label}</div>
-                          </td>
-                          <td className="py-4 pr-4 whitespace-nowrap">
-                            <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium', getModelValueBadgeClass(row.valueLabel))}>
-                              {isZh ? row.valueLabelZh : row.valueLabelEn}
-                            </span>
-                          </td>
-                          <td className="py-4 min-w-[240px] max-w-[360px] text-sm leading-6 text-slate-600">
-                            {isZh ? row.recommendationZh : row.recommendationEn}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <p className="mt-4 text-xs leading-relaxed text-slate-500">
-                {isZh
-                  ? '注：output/input、工具使用率和错误率都只是轻量代理指标，不替代真实业务验收；这个矩阵主要帮你判断“谁更值得承担什么角色”。'
-                  : 'Note: output/input, tool usage, and error rate are lightweight proxy metrics, not substitutes for real task evaluation. The matrix is here to show which model is worth which role.'}
-              </p>
-            </div>
-          )}
-
-          {!loading && insights.length > 0 && (
-            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-              <h3 className="text-lg font-semibold mb-4">{t('cost.insights.title')}</h3>
-              <div className="space-y-3">
-                {insights.map((ins, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      'flex items-start gap-3 px-4 py-3 rounded-xl text-sm',
-                      ins.type === 'warning' ? 'bg-amber-50 border border-amber-500/20 text-amber-700' :
-                      ins.type === 'tip' ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600' :
-                      'bg-slate-50 border border-slate-200 text-slate-500',
-                    )}
-                  >
-                    <span className="text-lg shrink-0 mt-0.5">{ins.icon}</span>
-                    <span>{isZh ? ins.messageZh : ins.messageEn}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <h3 className="text-lg font-semibold">{isZh ? '🔥 Token 浪费诊断' : '🔥 Token Waste Diagnostics'}</h3>
-                <p className="mt-2 text-sm text-slate-700">{wasteSummaryText}</p>
-                <p className="mt-1 text-xs text-slate-500">{wasteMetaText}</p>
-              </div>
-            </div>
-
-            {wasteDiagnostics.length > 0 ? (
-              <div className="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
-                {wasteDiagnostics.map((diagnostic, index) => {
-                  const replaySessionId = diagnostic.sessionId?.trim()
-                  const isReplayLinkable = canOpenReplaySession(replaySessionId)
-
-                  const content = (
-                    <>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">{isZh ? diagnostic.titleZh : diagnostic.titleEn}</p>
-                          {diagnostic.sessionLabel && (
-                            <p className="mt-1 truncate text-[11px] text-slate-500">{diagnostic.sessionLabel}</p>
-                          )}
-                        </div>
-                        <span
-                          className={cn(
-                            'shrink-0 rounded-full px-2 py-1 text-[11px] font-medium',
-                            diagnostic.severity === 'high'
-                              ? 'bg-red-500/10 text-red-600'
-                              : diagnostic.severity === 'medium'
-                                ? 'bg-amber-500/10 text-amber-700'
-                                : 'bg-blue-500/10 text-[#3b82c4]',
-                          )}
-                        >
-                          {diagnostic.severity === 'high'
-                            ? (isZh ? '高' : 'High')
-                            : diagnostic.severity === 'medium'
-                              ? (isZh ? '中' : 'Medium')
-                              : (isZh ? '低' : 'Low')}
-                        </span>
-                      </div>
-                      <p className="mt-3 text-sm leading-relaxed text-slate-600">{isZh ? diagnostic.descZh : diagnostic.descEn}</p>
-                      <div className="mt-4 flex items-end justify-between gap-3">
-                        <p className="text-sm font-medium text-[#3b82c4]">
-                          {isZh ? '预计浪费' : 'Estimated waste'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
-                        </p>
-                        {isReplayLinkable && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
-                            {replayActionLabel}
-                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  )
-
-                  if (isReplayLinkable) {
-                    return (
-                      <button
-                        key={`${diagnostic.type}-${replaySessionId ?? diagnostic.sessionLabel ?? index}`}
-                        type="button"
-                        onClick={() => onOpenReplaySession(replaySessionId)}
-                        className="group w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/35 hover:bg-white hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2"
-                      >
-                        {content}
-                      </button>
-                    )
-                  }
-
-                  return (
-                    <div key={`${diagnostic.type}-${diagnostic.sessionLabel ?? index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      {content}
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-                {tokenWaste
-                  ? (isZh ? '当前时间范围内暂未发现明显的 Token 浪费信号。' : 'No obvious token waste signals were found in the selected time range.')
-                  : (isZh ? '诊断接口暂不可用，稍后会在这里显示浪费信号。' : 'The diagnostics API is unavailable right now. Waste signals will appear here once it recovers.')}
-              </div>
-            )}
-          </div>
-
-          {!loading && savings && savings.suggestions.length > 0 && (
-            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-                <h3 className="text-lg font-semibold">{t('cost.savings.title')}</h3>
-                <div className="text-right">
-                  <span className="text-xs text-slate-500">{t('cost.savings.total')}</span>
-                  <span className="text-lg font-bold text-emerald-500 ml-2">${formatWasteCost(savings.totalPotentialSaving)}</span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {savings.suggestions.map((sug, i) => {
-                  const typeMeta = getSavingTypeMeta(sug.reasonType, isZh)
-                  const priorityMeta = getSavingPriorityMeta(sug.priority, t)
-                  const guardrailMeta = getSavingGuardrailMeta(sug.reasonType, t)
-                  const reasonText = getSavingReasonText(sug, isZh)
-                  const actionText = getSavingActionText(sug, isZh)
-                  const guardrailText = getSavingGuardrailText(sug, isZh)
-                  const replaySessionId = sug.sessionId?.trim()
-                  const isReplayLinkable = canOpenReplaySession(replaySessionId)
-                  const showModelRoute = Boolean(
-                    sug.currentModel
-                    && sug.alternativeModel
-                    && sug.currentModel !== sug.alternativeModel,
-                  )
-
-                  const content = (
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', typeMeta.className)}>
-                            {typeMeta.label}
-                          </span>
-                          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', priorityMeta.className)}>
-                            {priorityMeta.label}
-                          </span>
-                          {sug.sessionLabel && (
-                            <span className="truncate text-[11px] text-slate-500">
-                              {t('cost.savings.session')}: {sug.sessionLabel}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
-                        <div className="mt-3 grid grid-cols-1 xl:grid-cols-2 gap-3">
-                          <div className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5">
-                            <p className="text-[11px] font-medium text-slate-500">{t('cost.savings.next')}</p>
-                            <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
-                          </div>
-                          <div className={cn('rounded-lg border px-3 py-2.5', guardrailMeta.className)}>
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-[11px] font-medium">{t('cost.savings.guardrail')}</p>
-                              <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold', guardrailMeta.badgeClassName)}>
-                                {guardrailMeta.label}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm leading-relaxed">{guardrailText}</p>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                          {showModelRoute ? (
-                            <p className="text-xs text-slate-500">
-                              {isZh ? '模型切换：' : 'Route: '}
-                              <span className="font-medium text-slate-700">{sug.currentModel}</span>
-                              <span className="mx-1">→</span>
-                              <span className="font-medium text-emerald-600">{sug.alternativeModel}</span>
-                            </p>
-                          ) : <span />}
-                          {isReplayLinkable && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
-                              {replayActionLabel}
-                              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-xs text-slate-500">{t('cost.savings.estSave')}</p>
-                        <p className="mt-1 text-lg font-semibold text-emerald-500">-${formatWasteCost(sug.saving)}</p>
-                      </div>
-                    </div>
-                  )
-
-                  if (isReplayLinkable) {
-                    return (
-                      <button
-                        key={`${sug.reasonType ?? 'suggestion'}-${replaySessionId ?? sug.currentModel ?? i}`}
-                        type="button"
-                        onClick={() => onOpenReplaySession(replaySessionId)}
-                        className={cn(
-                          'group w-full rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/35 hover:bg-white/95 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2',
-                          getSavingCardClass(sug.priority),
-                        )}
-                      >
-                        {content}
-                      </button>
-                    )
-                  }
-
-                  return (
-                    <div
-                      key={`${sug.reasonType ?? 'suggestion'}-${sug.currentModel ?? i}`}
-                      className={cn('rounded-xl border p-4', getSavingCardClass(sug.priority))}
-                    >
-                      {content}
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="mt-3 space-y-1">
-                {hasSwitchModelSuggestion && (
-                  <p className="text-xs text-amber-700">
-                    ⚠️ {isZh ? '换模型建议请先灰度验证质量，再逐步扩大路由范围' : 'Validate model-switch suggestions on a small slice first before expanding routing'}
-                  </p>
-                )}
-                <p className="text-xs text-slate-600">{t('cost.savings.disclaimer')}</p>
-              </div>
-            </div>
-          )}
-
-          {!loading && savings && savings.suggestions.length === 0 && summary && summary.totalCost > 0 && (
-            <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6 text-center">
-              <p className="text-sm text-slate-500">✅ {t('cost.savings.empty')}</p>
-            </div>
-          )}
-
-          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <h3 className="text-lg font-semibold mb-4">{t('cost.trend.title')}</h3>
-            {summary && summary.totalCost === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-                <span className="text-4xl mb-3">📉</span>
-                <p className="text-lg mb-1">{t('cost.empty.title')}</p>
-                <p className="text-sm text-center max-w-md">{t('cost.empty.desc')}</p>
-              </div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={daily}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
-                    <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
-                    <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={chartTooltipStyle}
-                      labelStyle={{ color: '#64748b' }}
-                      itemStyle={{ color: '#0f172a' }}
-                    />
-                    {averageDailyCost > 0 && (
-                      <ReferenceLine y={averageDailyCost} stroke="#94a3b8" strokeDasharray="6 6" />
-                    )}
-                    <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={t('cost.chart.series')} />
-                  </LineChart>
-                </ResponsiveContainer>
-                {averageDailyCost > 0 && (
-                  <p className="mt-3 text-xs text-slate-500">
-                    {isZh ? '虚线表示日均成本' : 'Dashed line shows average daily cost'} · ${averageDailyCost.toFixed(2)}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
 
           {summary?.topTasks && summary.topTasks.length > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border">

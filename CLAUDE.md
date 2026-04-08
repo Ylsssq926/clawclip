@@ -1,84 +1,13 @@
-# 虾片 (ClawClip) 项目规则
+# ClawClip 规则入口
 
-## 子代理使用规则（强制）
+> 这是项目级规则入口。
+> 项目局部 canonical 内容只维护在 `.claude/rules/project/`。
+> `.claude/rules/shared/`、`.cursor/`、`.kiro/`、`.codebuddy/`、`.trae/`、`.github/copilot-instructions.md` 都是由工作区脚本同步生成的共享或适配层。
+> 如需改公共规则，请回到工作区根 `/.claude/rules/shared/` 修改后重新同步。
 
-所有开发任务必须使用子代理执行，模型指定为 `quicklyapi:gpt-5.4`。
-无论任务大小，都走子代理，主代理（Claude）负责规划、拆分、监工和验收。
-
-```
-主代理职责：拆任务、写 prompt、验收结果、推进整体进度
-子代理职责：写代码、改文件、跑命令、做具体实现
-```
-
-## 监工规则（防止子代理陷入局部死循环）
-
-### 任务拆分原则
-
-1. 每个子代理任务必须有明确的「完成标准」，不能是开放式的"优化XX"
-2. 单个子代理任务的预期产出不超过 3-5 个文件的修改
-3. 如果一个功能涉及多个模块，拆成多个子代理任务串行执行，而不是一个大任务
-
-### 子代理 prompt 模板
-
-每次派发任务时，prompt 必须包含以下结构：
-
-```
-## 任务目标
-一句话说清楚要做什么
-
-## 具体要求
-- 要改哪些文件
-- 改成什么样
-- 不要做什么（明确边界）
-
-## 完成标准
-- [ ] 标准1
-- [ ] 标准2
-
-## 禁止事项
-- 不要重构不相关的代码
-- 不要添加任务范围外的功能
-- 不要反复修改同一个文件超过 3 次，如果 3 次改不对就停下来报告问题
-- 不要在没有明确要求的情况下写测试
-- 不要做"顺手优化"
-```
-
-### 超时与干预规则
-
-- 如果子代理在同一个文件上反复修改超过 3 轮，主代理应该介入判断是否方向有误
-- 如果子代理返回的结果中包含"我再试一次"、"让我重新来"等措辞，主代理应该重新评估任务拆分是否合理
-- 子代理完成后，主代理只做快速验收（构建是否通过、关键功能是否正常），不要求完美
-
-### 进度推进原则
-
-1. 「够用就行」—— 80% 完成度就推进到下一个任务，不在细节上死磕
-2. 「先骨架后血肉」—— 先让所有功能跑通，再回头打磨细节
-3. 「问题记录不阻塞」—— 发现非阻塞性问题记到 TODO，不当场修
-4. 「每完成 3 个子任务做一次整体检查」—— 防止方向偏移
-
-## 项目上下文
-
-- 项目名：虾片 (ClawClip)
-- 定位：AI Agent 回放可视化 + 能力评测 + 成本优化平台
-- 核心功能路线：会话回放 → 评测跑分 → 智能省钱
-- 技术栈：Express + TypeScript（后端）、React 18 + Vite + Tailwind（前端）
-- 结构：npm workspaces，server/ + web/
-- 目标用户：OpenClaw / ZeroClaw 等 AI Agent 框架的全球用户
-- 用户是产品经理，不是技术人员，不要让用户判断技术细节是否足够
-
-## 兼容与质量门禁
-
-- 发版或合并前执行：`npm run check`（双端 `tsc --noEmit`）
-- OpenClaw 目录/转写以官方为准；大改前对照 https://docs.openclaw.ai/llms.txt 中 session、environment 相关页
-
-## 部署
-
-- 域名：https://clawclip.luelan.online
-- 端口：8080
-- PM2：clawclip
-- 服务器：121.4.98.150（ssh ruxi-server）
-- 路径：/opt/apps/services/clawclip/
-- 测试服务器：43.133.60.168（ZeroClaw）
-- Playwright 公共目录：C:\Users\黑受\.playwright\
-- 品牌色 #3b82c4，署名"掠蓝 (Luolan)"
-- 全局端口表：writing-pro:3001, 2048maomao:3002, ai-love:3003, ruxi:3004, ruxi-admin:3005, resume:3006, ruxi-api:3007, clawclip:8080
+@./.claude/rules/shared/01-workspace-map.md
+@./.claude/rules/shared/02-runtime-and-operations.md
+@./.claude/rules/shared/03-subagents-and-quality.md
+@./.claude/rules/shared/04-brand-and-admin.md
+@./.claude/rules/shared/05-governance-and-exclusions.md
+@./.claude/rules/project/01-project-local.md

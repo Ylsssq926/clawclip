@@ -90,14 +90,14 @@ function formatStepOffset(stepTime: string, startTime: string): string {
   return `+${m}:${s.toString().padStart(2, '0')}`
 }
 
-const STEP_STYLES: Record<SessionStep['type'], { color: string; border: string; bg: string; emoji: string }> = {
-  user:        { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10',   emoji: '👤' },
-  thinking:    { color: 'text-purple-400', border: 'border-l-purple-500', bg: 'bg-purple-500/10', emoji: '🧠' },
-  tool_call:   { color: 'text-cyan-400',   border: 'border-l-cyan-500',   bg: 'bg-cyan-500/10',   emoji: '🔧' },
-  tool_result: { color: 'text-green-400',  border: 'border-l-green-500',  bg: 'bg-green-500/10',  emoji: '📋' },
-  response:    { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10',   emoji: '💬' },
-  system:      { color: 'text-slate-500',  border: 'border-l-slate-500',  bg: 'bg-slate-500/10',  emoji: '⚙️' },
-  error:       { color: 'text-red-500',    border: 'border-l-red-500',    bg: 'bg-red-500/10',    emoji: '❌' },
+const STEP_STYLES: Record<SessionStep['type'], { color: string; border: string; bg: string }> = {
+  user:        { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10' },
+  thinking:    { color: 'text-purple-400', border: 'border-l-purple-500', bg: 'bg-purple-500/10' },
+  tool_call:   { color: 'text-cyan-400',   border: 'border-l-cyan-500',   bg: 'bg-cyan-500/10' },
+  tool_result: { color: 'text-green-400',  border: 'border-l-green-500',  bg: 'bg-green-500/10' },
+  response:    { color: 'text-blue-400',   border: 'border-l-blue-500',   bg: 'bg-blue-500/10' },
+  system:      { color: 'text-slate-500',  border: 'border-l-slate-500',  bg: 'bg-slate-500/10' },
+  error:       { color: 'text-red-500',    border: 'border-l-red-500',    bg: 'bg-red-500/10' },
 }
 
 function CollapsibleText({
@@ -128,7 +128,9 @@ function CollapsibleText({
 }
 
 function ReasoningBlock({ reasoning }: { reasoning: string }) {
+  const { locale } = useI18n()
   const [expanded, setExpanded] = useState(false)
+  const label = locale.startsWith('zh') ? '思考过程' : 'Reasoning'
 
   return (
     <div className="mt-3">
@@ -138,7 +140,7 @@ function ReasoningBlock({ reasoning }: { reasoning: string }) {
         className="flex items-center gap-2 text-sm font-medium text-purple-700 hover:text-purple-800 transition-colors"
       >
         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        <span>🧠 思考过程</span>
+        <span>{label}</span>
       </button>
       {expanded && (
         <div className="mt-2 bg-purple-50 border-l-4 border-purple-300 p-3 rounded text-sm text-slate-700">
@@ -188,20 +190,17 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
         >
           <div className="flex items-center justify-between mb-2 gap-3">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
-              <div className={cn('p-1.5 rounded-lg text-base leading-none', config.bg)}>
-                <span aria-hidden="true">{config.emoji}</span>
-              </div>
               <span className={`text-sm font-medium ${config.color}`}>{stepLabel}</span>
               {step.toolName && <span className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{step.toolName}</span>}
               {step.model && <span className="text-xs text-slate-500">{step.model}</span>}
               {isHighCost && (
                 <span className="bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded">
-                  💰 {isZh ? '高成本' : 'High Cost'}
+                  {isZh ? '高成本' : 'High cost'}
                 </span>
               )}
               {isToolFailure && (
                 <span className="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-200">
-                  ❌ {isZh ? '调用失败' : 'Call Failed'}
+                  {isZh ? '调用失败' : 'Call failed'}
                 </span>
               )}
             </div>
@@ -212,11 +211,8 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
             )}
           </div>
           {primaryContent && (
-            <div className="flex items-start gap-2">
-              {hasError && <span className="shrink-0 mt-0.5 text-red-500">⚠️</span>}
-              <div className="min-w-0 flex-1">
-                <CollapsibleText text={primaryContent} expandLabel={t('replay.expand')} collapseLabel={t('replay.collapse')} />
-              </div>
+            <div className="min-w-0">
+              <CollapsibleText text={primaryContent} expandLabel={t('replay.expand')} collapseLabel={t('replay.collapse')} />
             </div>
           )}
           {step.reasoning && <ReasoningBlock reasoning={step.reasoning} />}
@@ -407,17 +403,21 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
 
   if (view === 'detail') {
     const totalSteps = replay?.steps.length ?? 0
+    const isZh = locale.startsWith('zh')
     const parseDiagnostics = replay?.meta.parseDiagnostics
     const parseDiagnosticsNotices = [
       (parseDiagnostics?.skippedLines ?? 0) > 0
-        ? `⚠️ 解析时跳过了 ${parseDiagnostics?.skippedLines ?? 0} 行`
+        ? (isZh
+          ? `解析时跳过了 ${parseDiagnostics?.skippedLines ?? 0} 行`
+          : `Skipped ${parseDiagnostics?.skippedLines ?? 0} lines while parsing`)
         : null,
       (parseDiagnostics?.multilineRecovered ?? 0) > 0
-        ? `🔧 恢复了 ${parseDiagnostics?.multilineRecovered ?? 0} 处多行 JSON`
+        ? (isZh
+          ? `恢复了 ${parseDiagnostics?.multilineRecovered ?? 0} 处多行 JSON`
+          : `Recovered ${parseDiagnostics?.multilineRecovered ?? 0} multiline JSON blocks`)
         : null,
     ].filter((notice): notice is string => Boolean(notice))
     const detailSections = getReplayDetailSections({ insightsLoading, insightCount: insights.length })
-    const isZh = locale.startsWith('zh')
 
     return (
       <div>
@@ -535,15 +535,15 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                   >
                     <Lightbulb className="w-4 h-4" />
                     {locale === 'zh'
-                      ? `智能诊断${insightsLoading ? '（整理中）' : insights.length > 0 ? `（${insights.length}）` : ''}`
-                      : `Smart Insights${insightsLoading ? ' (Loading)' : insights.length > 0 ? ` (${insights.length})` : ''}`}
+                      ? `运行分析${insightsLoading ? '（整理中）' : insights.length > 0 ? `（${insights.length}）` : ''}`
+                      : `Run Analysis${insightsLoading ? ' (Loading)' : insights.length > 0 ? ` (${insights.length})` : ''}`}
                     {insightsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   </button>
                   {insightsOpen && (
                     <div className="space-y-2">
                       {insightsLoading && (
                         <div className="rounded-xl border border-blue-200/70 bg-blue-50/70 p-4 text-sm text-blue-700">
-                          {locale === 'zh' ? '正在整理本次会话的诊断结论…' : 'Summarizing replay diagnostics…'}
+                          {locale === 'zh' ? '正在整理这次运行…' : 'Analyzing this run…'}
                         </div>
                       )}
 
@@ -620,7 +620,6 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
 
       {!loading && !error && sessions.length === 0 && (
         <div className="text-center py-12 text-slate-500">
-          <span className="text-4xl mb-3 block">🎬</span>
           <p className="text-lg mb-1">{t('replay.empty.title')}</p>
           <p className="text-sm">{t('replay.empty.hint')}</p>
         </div>

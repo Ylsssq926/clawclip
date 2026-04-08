@@ -215,24 +215,17 @@ function getDeltaState(value: number, prefersLower = false): 'positive' | 'negat
   return improved ? 'positive' : 'negative'
 }
 
-function BenchmarkScoringMethod({ isZh }: { isZh: boolean }) {
+function BenchmarkTips({ isZh }: { isZh: boolean }) {
   return (
-    <details className="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
-      <summary className="cursor-pointer font-medium text-slate-700">
-        {isZh ? '评分方法说明' : 'How scoring works'}
+    <details className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left">
+      <summary className="cursor-pointer text-[11px] font-medium text-slate-600">
+        {isZh ? '怎么看这页' : 'How to use this page'}
       </summary>
-      <div className="mt-3 space-y-2 text-xs leading-relaxed text-slate-500">
-        <p>
-          {isZh
-            ? 'Agent 成绩单基于启发式规则评分（Heuristic Scorecard），分析日志中的行为特征。'
-            : 'The Agent scorecard uses a heuristic scorecard to analyze behavior patterns in your logs.'}
-        </p>
-        <p>
-          {isZh
-            ? '它不是基于标准测试集的严格评测，而是运行质量的快速诊断信号。'
-            : 'It is not a strict benchmark on a standard test set, but a quick diagnostic signal for runtime quality.'}
-        </p>
-      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+        {isZh
+          ? '先看「优化前后证明」判断这次改动值不值，再用雷达和趋势图看是哪里变了、有没有稳住。'
+          : 'Start with “Optimization proof” to judge the latest change, then use the radar and trend charts to see what moved and whether it held.'}
+      </p>
     </details>
   )
 }
@@ -350,7 +343,7 @@ export default function Benchmark() {
       if (meta) setBenchmarkMeta(meta)
       setProof(proofBody)
       if (histBody) setHistory(Array.isArray(histBody.results) ? histBody.results : [])
-      setSuccessMessage(isZh ? `✅ 评测完成，综合分 ${data.overallScore} 分` : `✅ Benchmark complete, overall score ${data.overallScore}`)
+      setSuccessMessage(isZh ? `评测完成，综合分 ${data.overallScore} 分` : `Benchmark complete, overall score ${data.overallScore}`)
     } catch {
       setError(t('benchmark.error.run'))
     } finally {
@@ -431,10 +424,10 @@ export default function Benchmark() {
       <div>
         <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
         <p className="text-slate-500 text-sm mb-8">{t('benchmark.subtitle')}</p>
-        <BenchmarkScoringMethod isZh={isZh} />
-
         <FadeIn className="flex flex-col items-center justify-center py-16">
-          <div className="text-6xl mb-6">🩺</div>
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
+            <TrendingUp className="w-8 h-8 text-accent" />
+          </div>
           <h3 className="text-xl font-semibold mb-2">
             <GradientText animate={false}>{t('benchmark.empty.title')}</GradientText>
           </h3>
@@ -657,8 +650,6 @@ export default function Benchmark() {
             )}
           </div>
 
-          <BenchmarkScoringMethod isZh={isZh} />
-
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -880,20 +871,29 @@ export default function Benchmark() {
             )}
           </div>
 
-          <div className="glass-raised rounded-xl p-5 border border-surface-border text-center mb-4">
-            <Zap className="w-5 h-5 text-accent mx-auto mb-2" />
-            <p className="text-xs text-slate-500">
-              {t('benchmark.footer')}
-            </p>
+          <div className="glass-raised rounded-xl p-5 border border-surface-border mb-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                <Zap className="w-4 h-4 text-accent" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm leading-relaxed text-slate-700">
+                  {t('benchmark.footer')}
+                </p>
+                {result.runAt && (
+                  <p className="text-xs text-slate-500 mt-2">
+                    {t('benchmark.lastRun')}: {new Date(result.runAt).toLocaleString(dateLocale)}
+                  </p>
+                )}
+              </div>
+            </div>
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left">
               <p className="text-[11px] font-medium text-slate-500 mb-1">{t('savings.hint.title')}</p>
               <p className="text-[11px] text-slate-500 leading-relaxed">{t('savings.hint.body')}</p>
             </div>
-            {result.runAt && (
-              <p className="text-xs text-slate-600 mt-3">
-                {t('benchmark.lastRun')}: {new Date(result.runAt).toLocaleString(dateLocale)}
-              </p>
-            )}
+            <div className="mt-3">
+              <BenchmarkTips isZh={isZh} />
+            </div>
           </div>
         </>
       )}

@@ -76,9 +76,9 @@ const PRICING_REFERENCE_OPTIONS: Array<{
   labelZh: string
   labelEn: string
 }> = [
-  { value: 'pricetoken', labelZh: 'PriceToken', labelEn: 'PriceToken' },
-  { value: 'official-static', labelZh: 'Official', labelEn: 'Official' },
-  { value: 'openrouter', labelZh: 'OpenRouter', labelEn: 'OpenRouter' },
+  { value: 'pricetoken', labelZh: '联网公开价', labelEn: 'Online public prices' },
+  { value: 'official-static', labelZh: '官方公开价', labelEn: 'Official public prices' },
+  { value: 'openrouter', labelZh: 'OpenRouter 公开价', labelEn: 'OpenRouter public prices' },
 ]
 
 function isPricingReference(value: unknown): value is PricingReference {
@@ -89,11 +89,11 @@ function getPricingReferenceLabel(reference: PricingReference | undefined, isZh:
   if (!reference) return null
   switch (reference) {
     case 'official-static':
-      return isZh ? 'Official 静态表' : 'Official static table'
+      return isZh ? '官方公开价' : 'Official public prices'
     case 'pricetoken':
-      return 'PriceToken'
+      return isZh ? '联网公开价' : 'Online public prices'
     case 'openrouter':
-      return 'OpenRouter'
+      return isZh ? 'OpenRouter 公开价' : 'OpenRouter public prices'
     default:
       return null
   }
@@ -103,11 +103,11 @@ function getPricingSourceLabel(source: PricingSource | undefined, isZh: boolean)
   if (!source) return null
   switch (source) {
     case 'pricetoken':
-      return isZh ? 'PriceToken 动态价格' : 'Dynamic PriceToken pricing'
+      return isZh ? '联网公开价格' : 'Online public prices'
     case 'openrouter':
-      return isZh ? 'OpenRouter 官方 models 接口' : 'OpenRouter public models API'
+      return isZh ? 'OpenRouter 公开价格' : 'OpenRouter public prices'
     case 'static-default':
-      return isZh ? '内置静态默认表' : 'Built-in static defaults'
+      return isZh ? '内置公开价格' : 'Built-in public prices'
     default:
       return null
   }
@@ -630,7 +630,6 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   const selectedPricingReference = budgetConfig?.pricingReference ?? summary?.costMeta?.pricingReference ?? 'pricetoken'
   const pricingReferenceLabel = getPricingReferenceLabel(summary?.costMeta?.pricingReference ?? selectedPricingReference, isZh)
   const pricingSourceLabel = getPricingSourceLabel(summary?.pricingSource, isZh)
-  const pricingCatalogVersion = summary?.costMeta?.pricingCatalogVersion ?? summary?.pricingCatalogVersion ?? null
   const pricingUpdatedAtLabel = (() => {
     if (!summary?.pricingUpdatedAt) return null
     const timestamp = new Date(summary.pricingUpdatedAt)
@@ -644,6 +643,9 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   const dataCutoffLabel = formatFreshnessTime(summary?.dataCutoffAt, locale)
   const referenceCompareRows = referenceCompare?.rows ?? []
   const currentReferenceRow = referenceCompareRows.find(row => row.reference === referenceCompare?.currentReference) ?? null
+  const currentReferenceCompareLabel = currentReferenceRow
+    ? getPricingReferenceLabel(currentReferenceRow.reference, isZh) ?? currentReferenceRow.label
+    : null
   const officialReferenceRow = referenceCompareRows.find(row => row.reference === 'official-static') ?? null
   const referenceVsOfficialRows = officialReferenceRow
     ? referenceCompareRows
@@ -722,7 +724,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       await apiPost('/api/cost/budget', { monthly, alertThreshold })
       setBudgetModalOpen(false)
       await loadData()
-      setBudgetSuccessMessage(isZh ? '✅ 预算已保存' : '✅ Budget saved')
+      setBudgetSuccessMessage(isZh ? '预算已保存' : 'Budget saved')
     } catch (err) {
       setBudgetError(parseApiErrorMessage(err, isZh ? '保存预算设置失败' : 'Failed to save budget settings'))
     } finally {
@@ -745,7 +747,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
     try {
       await apiPost('/api/cost/budget', { pricingReference })
       await loadData()
-      setBudgetSuccessMessage(isZh ? '✅ 价格参考已更新' : '✅ Pricing reference updated')
+      setBudgetSuccessMessage(isZh ? '价格参考已更新' : 'Pricing reference updated')
     } catch (err) {
       setBudgetConfig(current => (
         current
@@ -1000,7 +1002,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
               <div className="mt-3 space-y-1">
                 {hasSwitchModelSuggestion && (
                   <p className="text-xs text-amber-700">
-                    ⚠️ {isZh ? '换模型建议请先灰度验证质量，再逐步扩大路由范围' : 'Validate model-switch suggestions on a small slice first before expanding routing'}
+                    {isZh ? '换模型建议请先小流量验证质量，再逐步扩大范围' : 'Validate model-switch suggestions on a small slice first before expanding the rollout'}
                   </p>
                 )}
                 <p className="text-xs text-slate-600">{t('cost.savings.disclaimer')}</p>
@@ -1010,14 +1012,14 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
           {!loading && savings && savings.suggestions.length === 0 && summary && summary.totalCost > 0 && (
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6 text-center">
-              <p className="text-sm text-slate-500">✅ {t('cost.savings.empty')}</p>
+              <p className="text-sm text-slate-500">{t('cost.savings.empty')}</p>
             </div>
           )}
 
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <h3 className="text-lg font-semibold">{isZh ? '🔥 Token 浪费诊断' : '🔥 Token Waste Diagnostics'}</h3>
+                <h3 className="text-lg font-semibold">{isZh ? 'Token 浪费定位' : 'Token waste hotspots'}</h3>
                 <p className="mt-2 text-sm text-slate-700">{wasteSummaryText}</p>
                 <p className="mt-1 text-xs text-slate-500">{wasteMetaText}</p>
               </div>
@@ -1266,7 +1268,6 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       'bg-slate-50 border border-slate-200 text-slate-500',
                     )}
                   >
-                    <span className="text-lg shrink-0 mt-0.5">{ins.icon}</span>
                     <span>{isZh ? ins.messageZh : ins.messageEn}</span>
                   </div>
                 ))}
@@ -1278,34 +1279,37 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h3 className="text-lg font-semibold">{isZh ? '参考价格对比' : 'Reference pricing comparison'}</h3>
+                  <h3 className="text-lg font-semibold">{isZh ? '先看哪套价格更省' : 'Which pricing path is cheaper'}</h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    {referenceCompare && currentReferenceRow
+                    {referenceCompare && currentReferenceCompareLabel
                       ? (
                         isZh
-                          ? `同批会话按 3 套价格重算；当前 ${currentReferenceRow.label}：$${formatWasteCost(referenceCompare.currentTotalCost)}。`
-                          : `Same sessions, 3 catalogs. Current ${currentReferenceRow.label}: $${formatWasteCost(referenceCompare.currentTotalCost)}.`
+                          ? `同批会话按 3 套公开价格重算；当前按 ${currentReferenceCompareLabel} 记为 $${formatWasteCost(referenceCompare.currentTotalCost)}，先看换哪套更省。`
+                          : `The same sessions are repriced across 3 public price views. Current ${currentReferenceCompareLabel}: $${formatWasteCost(referenceCompare.currentTotalCost)} — see which path gets cheaper first.`
                       )
-                      : (isZh ? '同批会话按 3 套价格重算。' : 'Same sessions repriced across 3 catalogs.')}
+                      : (isZh ? '同批会话按 3 套公开价格重算，先看哪套更省。' : 'The same sessions are repriced across 3 public price views so you can see which path is cheaper first.')}
                   </p>
                 </div>
                 {referenceVsOfficialRows.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {referenceVsOfficialRows.map(row => (
-                      <span
-                        key={`official-${row.reference}`}
-                        className={cn(
-                          'rounded-full px-3 py-1 text-xs font-medium',
-                          row.deltaVsOfficial > 0
-                            ? 'bg-red-50 text-red-600'
-                            : row.deltaVsOfficial < 0
-                              ? 'bg-emerald-50 text-emerald-600'
-                              : 'bg-slate-100 text-slate-500',
-                        )}
-                      >
-                        {row.label} {isZh ? '较 Official' : 'vs Official'} {formatSignedCostDelta(row.deltaVsOfficial)}
-                      </span>
-                    ))}
+                    {referenceVsOfficialRows.map(row => {
+                      const displayLabel = getPricingReferenceLabel(row.reference, isZh) ?? row.label
+                      return (
+                        <span
+                          key={`official-${row.reference}`}
+                          className={cn(
+                            'rounded-full px-3 py-1 text-xs font-medium',
+                            row.deltaVsOfficial > 0
+                              ? 'bg-red-50 text-red-600'
+                              : row.deltaVsOfficial < 0
+                                ? 'bg-emerald-50 text-emerald-600'
+                                : 'bg-slate-100 text-slate-500',
+                          )}
+                        >
+                          {displayLabel} {isZh ? '较官方公开价' : 'vs official public prices'} {formatSignedCostDelta(row.deltaVsOfficial)}
+                        </span>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -1313,6 +1317,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
               <div className="mt-5 grid grid-cols-1 xl:grid-cols-3 gap-4">
                 {referenceCompareRows.map(row => {
                   const isCurrentRow = row.reference === referenceCompare?.currentReference
+                  const displayLabel = getPricingReferenceLabel(row.reference, isZh) ?? row.label
                   const deltaTone = isCurrentRow
                     ? 'bg-[#3b82c4]/10 text-[#3b82c4]'
                     : row.deltaVsCurrent > 0
@@ -1321,12 +1326,12 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                         ? 'bg-emerald-50 text-emerald-600'
                         : 'bg-slate-100 text-slate-500'
                   const deltaDescription = isCurrentRow
-                    ? (isZh ? '当前模式基准' : 'Current baseline')
+                    ? (isZh ? '这是你当前在看的价格口径' : 'This is the pricing view you are using now')
                     : row.deltaVsCurrent > 0
-                      ? (isZh ? '比当前模式更贵' : 'More expensive than current')
+                      ? (isZh ? '比当前方案更贵' : 'More expensive than current')
                       : row.deltaVsCurrent < 0
-                        ? (isZh ? '比当前模式更便宜' : 'Cheaper than current')
-                        : (isZh ? '与当前模式持平' : 'Same as current')
+                        ? (isZh ? '比当前方案更便宜' : 'Cheaper than current')
+                        : (isZh ? '和当前方案差不多' : 'About the same as current')
 
                   return (
                     <div
@@ -1340,14 +1345,14 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">{row.label}</p>
+                          <p className="text-sm font-semibold text-slate-900">{displayLabel}</p>
                           <p className="mt-1 text-xs text-slate-500">
                             {getPricingSourceLabel(row.pricingSource, isZh) ?? row.pricingSource}
                           </p>
                         </div>
                         {isCurrentRow && (
                           <span className="rounded-full bg-[#3b82c4]/10 px-2.5 py-1 text-[11px] font-medium text-[#3b82c4]">
-                            {isZh ? '当前模式' : 'Current'}
+                            {isZh ? '当前方案' : 'Current'}
                           </span>
                         )}
                       </div>
@@ -1358,7 +1363,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
                       <div className={cn('mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-medium', deltaTone)}>
                         {isCurrentRow
-                          ? (isZh ? '基准 · $0.0000' : 'Baseline · $0.0000')
+                          ? (isZh ? '当前方案 · $0.0000' : 'Current · $0.0000')
                           : `${isZh ? '较当前' : 'vs current'} ${formatSignedCostDelta(row.deltaVsCurrent)}`}
                       </div>
 
@@ -1374,23 +1379,23 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h3 className="text-lg font-semibold">{isZh ? '成本对账' : 'Cost reconciliation'}</h3>
+                  <h3 className="text-lg font-semibold">{isZh ? '先砍哪批会话' : 'Which sessions to cut first'}</h3>
                   <p className="mt-1 text-sm text-slate-500">
                     {isZh
-                      ? `同批会话：当前 ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}，基线 ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}。`
-                      : `Same sessions: current ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} vs ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}.`}
+                      ? `同批会话逐条对比：当前 ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}，对照 ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}，差额大的优先看。`
+                      : `Compare the same sessions row by row: current ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} vs ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}, with the biggest gaps worth checking first.`}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full border border-[#3b82c4]/20 bg-[#3b82c4]/10 px-3 py-1 text-xs font-medium text-[#2f6fa8]">
-                    {isZh ? '当前口径' : 'Current'} · {reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}
+                    {isZh ? '当前方案' : 'Current'} · {reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                    {isZh ? '基线' : 'Baseline'} · {reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}
+                    {isZh ? '对照方案' : 'Comparison'} · {reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}
                   </span>
                   {(reconciliationMeta?.stale || reconciliationMeta?.baselineStale) && (
                     <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                      {isZh ? '价格缓存偏旧' : 'Pricing cache is stale'}
+                      {isZh ? '价格参考待更新' : 'Price reference needs refresh'}
                     </span>
                   )}
                 </div>
@@ -1398,12 +1403,12 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-[#3b82c4]/20 bg-[#3b82c4]/5 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '当前总账' : 'Current total'}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '当前总成本' : 'Current total'}</p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">${formatWasteCost(reconciliationSummary.currentCost)}</p>
                   <p className="mt-1 text-xs text-slate-500">{reconciliationCurrentSourceLabel ?? reconciliationMeta?.pricingSource ?? '--'}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '基线总账' : 'Baseline total'}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '对照总成本' : 'Comparison total'}</p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">${formatWasteCost(reconciliationSummary.baselineCost)}</p>
                   <p className="mt-1 text-xs text-slate-500">{reconciliationBaselineSourceLabel ?? reconciliationMeta?.baselinePricingSource ?? '--'}</p>
                 </div>
@@ -1421,10 +1426,10 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
                     {reconciliationSummary.delta > 0
-                      ? (isZh ? '当前口径高于基线' : 'Current is above baseline')
+                      ? (isZh ? '当前方案高于对照' : 'Current is above comparison')
                       : reconciliationSummary.delta < 0
-                        ? (isZh ? '当前口径低于基线' : 'Current is below baseline')
-                        : (isZh ? '当前口径与基线持平' : 'Current matches baseline')}
+                        ? (isZh ? '当前方案低于对照' : 'Current is below comparison')
+                        : (isZh ? '当前方案与对照持平' : 'Current matches comparison')}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -1449,16 +1454,6 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     </span>
                   )
                 })}
-                {reconciliationMeta?.pricingCatalogVersion && (
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
-                    {isZh ? '当前目录' : 'Current catalog'} · {reconciliationMeta.pricingCatalogVersion}
-                  </span>
-                )}
-                {reconciliationMeta?.baselinePricingCatalogVersion && (
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
-                    {isZh ? '基线目录' : 'Baseline catalog'} · {reconciliationMeta.baselinePricingCatalogVersion}
-                  </span>
-                )}
               </div>
 
               <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
@@ -1523,7 +1518,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       <th className="pb-3 pr-4 font-medium">{isZh ? '主模型' : 'Primary model'}</th>
                       <th className="pb-3 pr-4 font-medium">{isZh ? 'Token' : 'Tokens'}</th>
                       <th className="pb-3 pr-4 font-medium">{isZh ? '当前成本' : 'Current cost'}</th>
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '基线成本' : 'Baseline cost'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '对照成本' : 'Comparison cost'}</th>
                       <th className="pb-3 font-medium">{isZh ? '差额' : 'Delta'}</th>
                     </tr>
                   </thead>
@@ -1605,8 +1600,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
               <p className="mt-4 text-xs leading-relaxed text-slate-500">
                 {isZh
-                  ? '说明：当前成本跟随你选中的 pricing reference；基线默认 official-static。Estimated 表示该行含估算因素。'
-                  : 'Note: current cost follows the selected pricing reference, baseline defaults to official-static, and “Estimated” means the row includes estimated inputs.'}
+                  ? '说明：当前成本跟随你选中的价格口径；对照方案固定为官方公开价。Estimated 表示该行含估算输入。'
+                  : 'Note: current cost follows the pricing view you selected, comparison stays on official public prices, and “Estimated” means some inputs were inferred.'}
               </p>
             </div>
           )}
@@ -1705,43 +1700,44 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       )}
 
       {/* Pricing disclaimer */}
-      <div className="text-[11px] text-slate-600 leading-relaxed mt-4 px-1 space-y-1">
-        {pricingReferenceLabel && (
-          <p>
-            {isZh ? '当前参考模式：' : 'Current reference: '}
-            <span className="font-medium text-slate-700">{pricingReferenceLabel}</span>
-          </p>
-        )}
-        {pricingSourceLabel && (
-          <p>
-            {isZh ? '定价来源：' : 'Pricing source: '}
-            <span className="font-medium text-slate-700">{pricingSourceLabel}</span>
-            {pricingUpdatedAtLabel ? ` · ${isZh ? '更新时间' : 'Updated'} ${pricingUpdatedAtLabel}` : ''}
-          </p>
-        )}
-        {pricingCatalogVersion && (
-          <p>
-            {isZh ? '价格目录版本：' : 'Pricing catalog: '}
-            <span className="font-medium text-slate-700">{pricingCatalogVersion}</span>
-          </p>
-        )}
-        <p>
-          {isZh ? '数据截止到：' : 'Data cutoff: '}
-          <span className="font-medium text-slate-700">{dataCutoffLabel}</span>
-        </p>
-        <p>
-          {isZh ? '最近 usage：' : 'Latest usage: '}
-          <span className="font-medium text-slate-700">{latestUsageLabel}</span>
-        </p>
+      <div className="mt-4 px-1">
+        <p className="text-[11px] leading-relaxed text-slate-600">{t('cost.disclaimer.estimate')}</p>
         {summary?.costMeta?.stale && (
-          <p className="text-amber-700">
+          <p className="mt-1 text-[11px] text-amber-700">
             {isZh
-              ? '⚠️ 当前价格目录已过期，展示为最近一次成功刷新结果'
-              : '⚠️ Pricing catalog is stale; showing the last successful snapshot'}
+              ? '价格参考待更新，先按最近一次可用结果显示。'
+              : 'Price reference needs refresh; showing the latest available result.'}
           </p>
         )}
-        <p>{t('cost.disclaimer.estimate')}</p>
-        <p>{t('cost.disclaimer.source')}</p>
+        <details className="mt-2 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+          <summary className="cursor-pointer text-[11px] font-medium text-slate-600">
+            {isZh ? '价格说明' : 'Pricing details'}
+          </summary>
+          <div className="mt-2 space-y-1 text-[11px] leading-relaxed text-slate-600">
+            {pricingReferenceLabel && (
+              <p>
+                {isZh ? '当前价格口径：' : 'Current pricing view: '}
+                <span className="font-medium text-slate-700">{pricingReferenceLabel}</span>
+              </p>
+            )}
+            {pricingSourceLabel && (
+              <p>
+                {isZh ? '价格参考：' : 'Price reference: '}
+                <span className="font-medium text-slate-700">{pricingSourceLabel}</span>
+                {pricingUpdatedAtLabel ? ` · ${isZh ? '更新于' : 'Updated'} ${pricingUpdatedAtLabel}` : ''}
+              </p>
+            )}
+            <p>
+              {isZh ? '数据截止：' : 'Data cutoff: '}
+              <span className="font-medium text-slate-700">{dataCutoffLabel}</span>
+            </p>
+            <p>
+              {isZh ? '最近记录：' : 'Latest record: '}
+              <span className="font-medium text-slate-700">{latestUsageLabel}</span>
+            </p>
+            <p>{t('cost.disclaimer.source')}</p>
+          </div>
+        </details>
       </div>
     </div>
   )

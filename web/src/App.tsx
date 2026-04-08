@@ -4,6 +4,7 @@ import Landing from './pages/Landing'
 import ErrorBoundary from './components/ErrorBoundary'
 import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb, GitCompareArrows } from 'lucide-react'
 import { cn } from './lib/cn'
+import { buildAppNavigationGroups, ALL_NAV_TAB_IDS } from './lib/appNavigationGroups'
 import { useI18n, LanguageSwitcher } from './lib/i18n'
 import { apiGetSafe } from './lib/api'
 
@@ -21,30 +22,22 @@ const TemplateMarket = lazy(() => import('./pages/TemplateMarket'))
 const Knowledge = lazy(() => import('./pages/Knowledge'))
 const Leaderboard = lazy(() => import('./pages/Leaderboard'))
 
-export type Tab =
-  | 'dashboard'
-  | 'replay'
-  | 'benchmark'
-  | 'leaderboard'
-  | 'cost'
-  | 'prompt'
-  | 'compare'
-  | 'skills'
-  | 'templates'
-  | 'knowledge'
+export type Tab = (typeof ALL_NAV_TAB_IDS)[number]
 
 const tabs = [
   { id: 'dashboard' as const, nameKey: 'nav.dashboard', icon: LayoutDashboard },
   { id: 'replay' as const, nameKey: 'nav.replay', icon: Play },
+  { id: 'benchmark' as const, nameKey: 'nav.benchmark', icon: Trophy },
   { id: 'cost' as const, nameKey: 'nav.cost', icon: DollarSign },
   { id: 'prompt' as const, nameKey: 'nav.prompt', icon: Lightbulb },
-  { id: 'benchmark' as const, nameKey: 'nav.benchmark', icon: Trophy },
   { id: 'compare' as const, nameKey: 'nav.compare', icon: GitCompareArrows },
-  { id: 'leaderboard' as const, nameKey: 'nav.leaderboard', icon: Medal },
   { id: 'knowledge' as const, nameKey: 'nav.knowledge', icon: Database },
   { id: 'templates' as const, nameKey: 'nav.templates', icon: Store },
   { id: 'skills' as const, nameKey: 'nav.skills', icon: Puzzle },
+  { id: 'leaderboard' as const, nameKey: 'nav.leaderboard', icon: Medal },
 ] as const
+
+const navigationGroups = buildAppNavigationGroups(tabs)
 
 const TOUR_KEYS = ['app.tour.s1', 'app.tour.s2', 'app.tour.s3', 'app.tour.s4'] as const
 
@@ -326,25 +319,46 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
             sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           )}
         >
-          <ul className="space-y-0.5 flex-1">
-            {tabs.map(tab => (
-              <li key={tab.id}>
-                <button
-                  type="button"
-                  onClick={() => navigateTab(tab.id)}
+          <div className="flex-1 space-y-4">
+            {navigationGroups.map(group => (
+              <section key={group.id} className="space-y-1">
+                <p
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
-                    activeTab === tab.id
-                      ? 'bg-blue-50 text-[#3b82c4] shadow-sm'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
+                    'px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.24em]',
+                    group.id === 'core' ? 'text-[#3b82c4]' : 'text-slate-400',
                   )}
                 >
-                  <tab.icon className={cn('w-[18px] h-[18px]', activeTab === tab.id && 'text-[#3b82c4]')} />
-                  {t(tab.nameKey)}
-                </button>
-              </li>
+                  {t(group.titleKey)}
+                </p>
+                <ul className="space-y-0.5">
+                  {group.items.map(tab => {
+                    const isActive = activeTab === tab.id
+                    const isCoreGroup = group.id === 'core'
+
+                    return (
+                      <li key={tab.id}>
+                        <button
+                          type="button"
+                          onClick={() => navigateTab(tab.id)}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
+                            isActive
+                              ? 'bg-blue-50 text-[#3b82c4] shadow-sm'
+                              : isCoreGroup
+                                ? 'text-slate-700 hover:text-slate-900 hover:bg-white'
+                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
+                          )}
+                        >
+                          <tab.icon className={cn('w-[18px] h-[18px]', isActive && 'text-[#3b82c4]')} />
+                          {t(tab.nameKey)}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
           <div className="pt-4 border-t border-slate-200">
             <p className="text-[11px] text-slate-600 px-3">{t('app.lobster')}</p>
           </div>

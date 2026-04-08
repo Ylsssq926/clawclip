@@ -6,11 +6,11 @@
 
 **Local Agent Diagnostic Console · v1.1.0**
 
-See what your agent actually did.  
-Score whether it held up.  
-Prove whether the optimization was worth it.
+See what your agent did.  
+Check whether the run held up.  
+Compare the result with the cost.
 
-Run Insights · Agent Scorecard · Cost Report — for OpenClaw, ZeroClaw, and practical local JSONL workflows that need evidence, not vibes.
+Run Insights · Agent Scorecard · Cost Report — for OpenClaw, ZeroClaw, and local JSONL session review.
 
 <p>
   <a href="https://clawclip.luelan.online">Live Demo</a> ·
@@ -36,16 +36,15 @@ Run Insights · Agent Scorecard · Cost Report — for OpenClaw, ZeroClaw, and p
 
 </div>
 
-> ClawClip turns raw agent sessions into a review desk you can trust.  
-> It shows the full run as evidence, scores whether the agent held up, and connects quality back to spend so you can tell whether “better” was actually worth paying for.
->
-> **Boundary, stated plainly:** session analysis happens locally, agent run data is not uploaded, and price refresh is optional when you want current public pricing references.
+> Open a session and see what happened.  
+> Check whether the run held up.  
+> Compare the result with the cost before you keep the change.
 
 <a id="visual-proof"></a>
 
-## See the proof in 15 seconds
+## See it in 15 seconds
 
-One run turns into three decisions at a glance: what happened, whether it held, and whether the gain was worth the spend.
+Load one run and answer three questions quickly: what happened, did it hold up, and was it worth the spend.
 
 <p align="center">
   <img src="./docs/radar-animation-en.gif" alt="ClawClip turns one agent run into Run Insights, Agent Scorecard, and Cost Report" />
@@ -53,12 +52,12 @@ One run turns into three decisions at a glance: what happened, whether it held, 
 
 <a id="core-capabilities"></a>
 
-## The three questions ClawClip settles
+## Three questions you can answer fast
 
 | The question you actually have | What ClawClip gives you |
 | --- | --- |
-| **What did the agent really do?** | **Run Insights** reconstructs reasoning steps, tool calls, retries, errors, and outcomes as one reviewable evidence trail |
-| **Did the run actually hold up?** | **Agent Scorecard** gives a practical heuristic read across writing, coding, tool use, retrieval, safety, and cost-performance |
+| **What did the agent really do?** | **Run Insights** lays the run out step by step, so you can review it without digging through raw logs |
+| **Did the run actually hold up?** | **Agent Scorecard** gives a quick six-part diagnosis across writing, coding, tool use, retrieval, safety, and cost-performance |
 | **Was the optimization worth it?** | **Cost Report** breaks spend down by model and usage so you can see whether the gain justified the bill |
 
 ## What ships in v1.1.0
@@ -66,16 +65,16 @@ One run turns into three decisions at a glance: what happened, whether it held, 
 | Included in this release | Why it matters |
 | --- | --- |
 | **Prompt Efficiency** | Check whether extra tokens and prompt complexity are buying enough output quality to justify themselves |
-| **Version Compare** | Compare models, prompts, configs, or runs side by side to spot real gains and real regressions |
-| **Template Library + Knowledge Base** | Reuse working patterns, search local history, and turn scattered session logs into an iteration memory |
+| **Version Compare** | Compare models, prompts, configs, or runs side by side to spot gains and regressions |
+| **Template Library + Knowledge Base** | Reuse working patterns, search local history, and keep session learnings in one place |
 | **Built-in demo sessions** | Explore the full workflow before touching real project data |
 
-## Local-first, without fuzzy claims
+## What stays local
 
 - Session discovery, parsing, and analysis happen on your machine.
 - ClawClip does **not** upload agent run data.
-- Public pricing refresh is **optional** and only used to update cost references.
-- That pricing step does **not** require sending your session contents anywhere.
+- Public pricing refresh is **optional** if you want updated reference prices.
+- That refresh step does **not** send your session contents anywhere.
 
 <a id="quick-start"></a>
 
@@ -92,11 +91,11 @@ Open `http://localhost:8080` to inspect bundled demo sessions locally, then poin
 ## Compatibility
 
 ClawClip currently prioritizes the official session structures used by **OpenClaw** and **ZeroClaw**.  
-Support for other local JSONL-based agent runtimes expands based on real parser coverage — not blanket “supports everything” promises.
+Support for other local JSONL runtimes expands as parser coverage grows.
 
 ## How to read the scorecard
 
-> The Agent Scorecard is a **heuristic diagnostic**, not a benchmark leaderboard. It reads behavioral signals from real sessions — such as response quality, tool usage, safety hints, and cost structure — to help you review faster and compare iteration direction with more confidence.
+> The Agent Scorecard is a **heuristic read**, not a benchmark leaderboard. It looks at session signals such as response quality, tool use, safety hints, and cost structure so you can compare iterations faster.
 
 ## Session Sources
 
@@ -108,15 +107,13 @@ Support for other local JSONL-based agent runtimes expands based on real parser 
 | Built-in demo sessions | Explore Run Insights, Agent Scorecard, and Cost Report without importing real data |
 | ZeroClaw exports / additional JSONL folders | Supported progressively as format coverage expands |
 
-## The Shrimp Story
+## Why the mascot is a shrimp
 
-> I was a shrimp pulled out of the OpenClaw tide pool by my owner.
+> The mascot is a shrimp because ClawClip started around OpenClaw runs.
 >
-> My owner said, “You run all day, but nobody can tell whether you are getting better or just getting more expensive.”
+> Then the real question showed up: “Did this agent actually get better, or did it just get more expensive?”
 >
-> I said, “Then stop worshipping raw logs. Turn the run into evidence, give me a scorecard, and put the bill on the table.”
->
-> So ClawClip became a local console for seeing what an agent did, how well it held up, and whether the spend paid off.
+> That question still defines the product: replay the run, check whether it held up, and compare the result with the cost.
 >
 > — 🍤 ClawClip Mascot
 
@@ -126,7 +123,7 @@ Support for other local JSONL-based agent runtimes expands based on real parser 
 
 - Make before-and-after validation clearer for prompt, model, and config changes
 - Deepen OpenClaw / ZeroClaw coverage and broaden support for adjacent local JSONL runtimes
-- Add more shareable review outputs for team workflows without breaking the local-first core
+- Add more shareable review outputs for team workflows while keeping sessions local
 
 ## Community
 

@@ -335,46 +335,106 @@ function getSavingReasonText(suggestion: SavingSuggestion, isZh: boolean): strin
   if (isZh) {
     if (suggestion.reasonZh) return suggestion.reasonZh
     if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-      return `${suggestion.currentModel} 的这部分成本偏高，可以优先尝试切到 ${suggestion.alternativeModel}。`
+      return `${suggestion.currentModel} 在这类任务上的单次成本偏高，换成 ${suggestion.alternativeModel} 预计能少花 $${formatWasteCost(suggestion.saving)}。`
     }
-    return '这类任务有明确的降本空间，适合优先处理。'
+
+    switch (suggestion.reasonType) {
+      case 'reduce-retries':
+        return '这类会话的钱主要白花在反复重试上，先把失败最多的那一步修掉。'
+      case 'trim-prompt':
+        return '这类会话的输入 Token 偏长，先删掉重复说明和长背景，省钱最直接。'
+      case 'trim-output':
+        return '这类会话主要花在输出上，先收紧答案长度或格式最容易见效。'
+      default:
+        return '这类会话最近花钱偏多，先从这里下手更容易看到变化。'
+    }
   }
 
   if (suggestion.reasonEn) return suggestion.reasonEn
   if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-    return `${suggestion.currentModel} is expensive for this slice of work, so ${suggestion.alternativeModel} is worth trying first.`
+    return `${suggestion.currentModel} is costing too much on this task type, and switching to ${suggestion.alternativeModel} could save about $${formatWasteCost(suggestion.saving)}.`
   }
-  return 'This workload has a clear cost-saving opportunity and is worth tackling first.'
+
+  switch (suggestion.reasonType) {
+    case 'reduce-retries':
+      return 'Most of the spend here is going into repeated retries, so the first fix is the step that keeps failing.'
+    case 'trim-prompt':
+      return 'Input tokens are doing most of the damage here, so cutting repeated instructions and long setup text is the fastest win.'
+    case 'trim-output':
+      return 'Most of the money here is in the response itself, so tighter length or format limits should pay off first.'
+    default:
+      return 'This task type has been one of the pricier ones lately, so changes here should show up quickly.'
+  }
 }
 
 function getSavingActionText(suggestion: SavingSuggestion, isZh: boolean): string {
   if (isZh) {
     if (suggestion.actionZh) return suggestion.actionZh
     if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-      return `先把这类任务灰度到 ${suggestion.alternativeModel}，确认质量稳定后再逐步扩大。`
+      return `先把最近这类任务切到 ${suggestion.alternativeModel}，连看几次成本、成功率和重试次数。`
     }
-    return '先从一个稳定、低风险的任务入口试改，再观察成本变化。'
+
+    switch (suggestion.reasonType) {
+      case 'reduce-retries':
+        return '先回看重试最多的几条会话，找出哪一步反复失败，再改那一步。'
+      case 'trim-prompt':
+        return '先删掉提示词里重复出现的规则、背景和示例，再看输入 Token 有没有下来。'
+      case 'trim-output':
+        return '先收紧输出格式或长度，再看单次输出 Token 有没有明显变短。'
+      default:
+        return '先挑最近最花钱的几条同类会话，照着这张卡里的问题去改。'
+    }
   }
 
   if (suggestion.actionEn) return suggestion.actionEn
   if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-    return `Pilot ${suggestion.alternativeModel} on this task type first, then expand gradually once quality stays stable.`
+    return `Switch a few recent runs of this task type to ${suggestion.alternativeModel}, then watch cost, success rate, and retry count side by side.`
   }
-  return 'Start with one stable, low-risk task entry point and watch how the cost changes.'
+
+  switch (suggestion.reasonType) {
+    case 'reduce-retries':
+      return 'Start with the runs that retry the most, find the step that keeps failing, and fix that step first.'
+    case 'trim-prompt':
+      return 'Cut repeated rules, background, and examples from the prompt, then check whether input tokens actually drop.'
+    case 'trim-output':
+      return 'Tighten the response format or length, then check whether output tokens get shorter.'
+    default:
+      return 'Pick a few of the most expensive recent runs in this category and change the thing this card is pointing at.'
+  }
 }
 
 function getSavingGuardrailText(suggestion: SavingSuggestion, isZh: boolean): string {
   if (isZh) {
     if (suggestion.qualityGuardrailZh) return suggestion.qualityGuardrailZh
-    return suggestion.reasonType === 'switch-model'
-      ? '建议先在低风险任务灰度切换，确认质量稳定后再扩大范围。'
-      : '这类优化通常不直接牺牲模型能力，适合优先尝试。'
+
+    switch (suggestion.reasonType) {
+      case 'switch-model':
+        return `换到 ${suggestion.alternativeModel || '新模型'} 后，重点看回复质量、成功率和重试次数。`
+      case 'trim-prompt':
+        return '改完后重点看输入 Token 有没有降下来，同时确认回复没有漏掉关键要求。'
+      case 'trim-output':
+        return '改完后重点看输出 Token 有没有变短，同时确认结果没有少关键步骤。'
+      case 'reduce-retries':
+        return '改完后重点看同类会话的重试次数和报错有没有真的降下来。'
+      default:
+        return '改完后盯住这类会话的成本和成功率，确认钱是真的少花了。'
+    }
   }
 
   if (suggestion.qualityGuardrailEn) return suggestion.qualityGuardrailEn
-  return suggestion.reasonType === 'switch-model'
-    ? 'Roll this out on lower-risk tasks first, then expand once quality stays stable.'
-    : 'This kind of optimization usually reduces waste without directly sacrificing model capability.'
+
+  switch (suggestion.reasonType) {
+    case 'switch-model':
+      return `After switching to ${suggestion.alternativeModel || 'the new model'}, watch reply quality, success rate, and retry count first.`
+    case 'trim-prompt':
+      return 'After the edit, check whether input tokens dropped and whether the reply still covers the key requirements.'
+    case 'trim-output':
+      return 'After the edit, check whether output tokens got shorter without dropping important steps.'
+    case 'reduce-retries':
+      return 'After the fix, check whether retry count and errors really went down on similar runs.'
+    default:
+      return 'Watch cost and success rate on similar runs after the change to confirm the savings are real.'
+  }
 }
 
 interface BudgetConfig {
@@ -674,11 +734,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
     : 'Connect local JSONL logs, run a few real tasks, then come back to review trends, model breakdown, and budget alerts.'
   const wasteDiagnostics = tokenWaste?.diagnostics.slice(0, 4) ?? []
   const wasteSummaryText = tokenWaste
-    ? `${isZh ? '预计浪费' : 'Estimated waste'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
+    ? `${isZh ? '可能白花' : 'Likely wasted'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
     : (isZh ? '诊断数据暂不可用' : 'Diagnostics unavailable right now')
   const wasteMetaText = tokenWaste
-    ? `${isZh ? `${tokenWaste.summary.signals} 个信号` : `${tokenWaste.summary.signals} signal${tokenWaste.summary.signals === 1 ? '' : 's'}`}${tokenWaste.summary.usingDemo ? (isZh ? ' · 当前为 Demo 诊断' : ' · Demo diagnostics') : ''}`
-    : (isZh ? '会在这里汇总重试、长 Prompt、冗长输出等浪费信号' : 'Retry loops, long prompts, verbose output, and other waste signals will be summarized here')
+    ? `${isZh ? `${tokenWaste.summary.signals} 处值得先看` : `${tokenWaste.summary.signals} places worth checking`}${tokenWaste.summary.usingDemo ? (isZh ? ' · 当前为 Demo 诊断' : ' · Demo diagnostics') : ''}`
+    : (isZh ? '这里会汇总重试、长 Prompt、冗长输出这些最容易白花钱的问题。' : 'This is where retry loops, long prompts, and overly long replies show up first.')
   const hasSwitchModelSuggestion = Boolean(
     savings?.suggestions.some(suggestion => (
       suggestion.reasonType === 'switch-model'
@@ -1002,7 +1062,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
               <div className="mt-3 space-y-1">
                 {hasSwitchModelSuggestion && (
                   <p className="text-xs text-amber-700">
-                    {isZh ? '换模型建议请先小流量验证质量，再逐步扩大范围' : 'Validate model-switch suggestions on a small slice first before expanding the rollout'}
+                    {isZh ? '换模型后，连续看几次同类会话的成功率、重试次数和输出长度。' : 'After switching models, watch a few similar runs for success rate, retries, and response length.'}
                   </p>
                 )}
                 <p className="text-xs text-slate-600">{t('cost.savings.disclaimer')}</p>
@@ -1019,7 +1079,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <h3 className="text-lg font-semibold">{isZh ? 'Token 浪费定位' : 'Token waste hotspots'}</h3>
+                <h3 className="text-lg font-semibold">{isZh ? '钱最容易白花在哪' : 'Where money is getting wasted'}</h3>
                 <p className="mt-2 text-sm text-slate-700">{wasteSummaryText}</p>
                 <p className="mt-1 text-xs text-slate-500">{wasteMetaText}</p>
               </div>
@@ -1060,7 +1120,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       <p className="mt-3 text-sm leading-relaxed text-slate-600">{isZh ? diagnostic.descZh : diagnostic.descEn}</p>
                       <div className="mt-4 flex items-end justify-between gap-3">
                         <p className="text-sm font-medium text-[#3b82c4]">
-                          {isZh ? '预计浪费' : 'Estimated waste'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
+                          {isZh ? '可能白花' : 'Likely wasted'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
                         </p>
                         {isReplayLinkable && (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
@@ -1095,8 +1155,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             ) : (
               <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
                 {tokenWaste
-                  ? (isZh ? '当前时间范围内暂未发现明显的 Token 浪费信号。' : 'No obvious token waste signals were found in the selected time range.')
-                  : (isZh ? '诊断接口暂不可用，稍后会在这里显示浪费信号。' : 'The diagnostics API is unavailable right now. Waste signals will appear here once it recovers.')}
+                  ? (isZh ? '当前时间范围内暂未看到明显白花 Token 的地方。' : 'No obvious places are wasting tokens in the selected time range.')
+                  : (isZh ? '诊断接口暂不可用，稍后会在这里显示最费钱的问题。' : 'The diagnostics API is unavailable right now. The costliest problems will show up here once it recovers.')}
               </div>
             )}
           </div>
@@ -1174,17 +1234,17 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h3 className="text-lg font-semibold">{isZh ? '模型效果 / 成本矩阵' : 'Model value matrix'}</h3>
+                  <h3 className="text-lg font-semibold">{isZh ? '模型该放到哪类任务里' : 'Which jobs each model should handle'}</h3>
                   <p className="mt-2 text-sm text-slate-600 max-w-3xl">
                     {isZh
-                      ? '不是只看哪个便宜，还要看谁更适合便宜跑量、谁值得留给高价值任务。这里把成本、会话样本、output/input、工具使用率和稳定性放在一起看。'
-                      : 'Don’t just ask which model is cheaper. Ask which one deserves bulk traffic and which one should be saved for high-value work.'}
+                      ? '别只看谁便宜，也看谁适合高频任务、谁更适合留给复杂任务。这里把单次成本、回复长度、工具使用和报错放在一起看。'
+                      : 'Don’t just ask which model is cheaper. Look at which one is steady for repeat work and which one should stay on harder jobs. This table puts cost per session, response size, tool use, and errors together.'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right">
-                  <p className="text-xs font-medium text-cyan-700">{isZh ? '看值不值' : 'Worth it > cheap'}</p>
+                  <p className="text-xs font-medium text-cyan-700">{isZh ? '省钱，也要稳' : 'Cheap only matters if it holds'}</p>
                   <p className="mt-1 text-xs text-cyan-700/80">
-                    {isZh ? '成本 × 稳定性 × 工具表现' : 'Cost × stability × tool behavior'}
+                    {isZh ? '成本 × 回复长度 × 报错' : 'Cost × response size × errors'}
                   </p>
                 </div>
               </div>
@@ -1196,7 +1256,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       <th className="pb-3 pr-4 font-medium">{isZh ? '模型' : 'Model'}</th>
                       <th className="pb-3 pr-4 font-medium">{isZh ? '会话数' : 'Sessions'}</th>
                       <th className="pb-3 pr-4 font-medium">{isZh ? '平均成本' : 'Avg cost'}</th>
-                      <th className="pb-3 pr-4 font-medium">{isZh ? '效果代理' : 'Proxy effect'}</th>
+                      <th className="pb-3 pr-4 font-medium">{isZh ? '回复 / 工具' : 'Output / tools'}</th>
                       <th className="pb-3 pr-4 font-medium">{isZh ? '稳定性' : 'Stability'}</th>
                       <th className="pb-3 pr-4 font-medium">{isZh ? '角色标签' : 'Role label'}</th>
                       <th className="pb-3 font-medium">{isZh ? '推荐用途' : 'Recommended use'}</th>
@@ -1248,8 +1308,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
               <p className="mt-4 text-xs leading-relaxed text-slate-500">
                 {isZh
-                  ? '注：output/input、工具使用率和错误率都只是轻量代理指标，不替代真实业务验收；这个矩阵主要帮你判断“谁更值得承担什么角色”。'
-                  : 'Note: output/input, tool usage, and error rate are lightweight proxy metrics, not substitutes for real task evaluation. The matrix is here to show which model is worth which role.'}
+                  ? 'output/input 看回复大概有多长，工具使用率看它常不常调工具，错误率看它稳不稳；放在一起更容易判断这个模型该去做哪类活。'
+                  : 'Output/input shows how long replies tend to be, tool usage shows how often the model reaches for tools, and error rate shows how steady it is. Together they help you decide which jobs fit this model best.'}
               </p>
             </div>
           )}

@@ -223,8 +223,8 @@ function BenchmarkTips({ isZh }: { isZh: boolean }) {
       </summary>
       <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
         {isZh
-          ? '先看「优化前后证明」判断这次改动值不值，再用雷达和趋势图看是哪里变了、有没有稳住。'
-          : 'Start with “Optimization proof” to judge the latest change, then use the radar and trend charts to see what moved and whether it held.'}
+          ? '先看「这次改动有没有变好」判断值不值，再用雷达和趋势图看是哪里变了、稳不稳。'
+          : 'Start with “Did this change make things better” to judge the latest update, then use the radar and trend charts to see what moved and whether it held.'}
       </p>
     </details>
   )
@@ -568,12 +568,12 @@ export default function Benchmark() {
               <div>
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Zap className="w-5 h-5 text-accent" />
-                  <GradientText animate={false}>{isZh ? '优化前后证明' : 'Optimization proof'}</GradientText>
+                  <GradientText animate={false}>{isZh ? '这次改动有没有变好' : 'Did this change make things better'}</GradientText>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   {isZh
-                    ? '直接比较最近两次 benchmark，看看这次调整到底是提质、省钱，还是两头都没赚到。'
-                    : 'Compare the last two benchmark runs to see whether this change improved quality, reduced spend, or missed on both.'}
+                    ? '直接比较最近两次成绩单，看看这次调整是分数更好、花费更少，还是两边都没变化。'
+                    : 'Compare the latest two scorecards to see whether this change raised scores, cut spend, or barely moved anything.'}
                 </p>
               </div>
             </div>
@@ -637,7 +637,7 @@ export default function Benchmark() {
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-6 text-center">
                 <p className="text-sm font-medium text-slate-700">
-                  {isZh ? '至少再跑一次 benchmark，才能看到优化前后变化。' : 'Run benchmark at least one more time to unlock before/after proof.'}
+                  {isZh ? '至少再跑一次，才能看到前后变化。' : 'Run it one more time to see the before-and-after change.'}
                 </p>
                 <p className="text-xs text-slate-500 mt-2">
                   {proofLatest
@@ -744,7 +744,7 @@ export default function Benchmark() {
                     </div>
                     <ScoreBar score={dim.score} color={color} />
                     <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2">
-                      <p className="text-[11px] font-medium text-blue-700 mb-1">{isZh ? '评分证据' : 'Evidence'}</p>
+                      <p className="text-[11px] font-medium text-blue-700 mb-1">{isZh ? '打分说明' : 'Why this score'}</p>
                       <p className="text-xs text-blue-900/80 leading-relaxed">{evidenceText}</p>
                     </div>
                     <p className="text-xs text-slate-500 mt-1.5">{isZh ? dim.details : (dim.detailsEn || dim.details)}</p>

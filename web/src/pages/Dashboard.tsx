@@ -208,21 +208,21 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
     ? t('dashboard.connection.processingHint')
     : t('dashboard.connection.demoHint')
   const tokenWasteSummaryText = tokenWaste
-    ? `${locale === 'en' ? 'Estimated recoverable waste:' : '最近 30 天可回收浪费：'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
+    ? `${locale === 'en' ? 'Money likely wasted in last 30 days:' : '最近 30 天可能白花的钱：'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
     : (locale === 'en' ? 'Analyzing last 30 days…' : '正在分析最近 30 天…')
   const tokenWasteSubText = tokenWaste
     ? tokenWaste.summary.signals > 0
-      ? `${locale === 'en' ? 'Top leak:' : '最主要漏洞：'} ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
-      : `${locale === 'en' ? 'No major recoverable waste detected' : '暂未发现明显可回收浪费'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
-    : (locale === 'en' ? 'Scanning retry loops, prompt overhead, and model waste' : '正在扫描重试循环、Prompt 冗余和模型浪费')
+      ? `${locale === 'en' ? 'Worth checking first:' : '最值得先看的问题：'} ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
+      : `${locale === 'en' ? 'No obvious wasted spend found' : '暂未发现明显白花的钱'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo data' : ' · Demo 数据') : ''}`
+    : (locale === 'en' ? 'Checking retries, prompt bloat, and model mismatch' : '正在找重试循环、Prompt 冗余和模型错配')
   const tokenWasteCardValue = tokenWaste
     ? `$${formatWasteCost(tokenWaste.summary.estimatedWasteCost)}`
     : (locale === 'en' ? 'Analyzing…' : '分析中…')
   const tokenWasteCardSub = tokenWaste
     ? tokenWaste.summary.signals > 0
       ? `${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens · ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo' : ' · Demo') : ''}`
-      : `${locale === 'en' ? 'No major recoverable waste yet' : '暂未发现明显可回收浪费'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo' : ' · Demo') : ''}`
-    : (locale === 'en' ? 'Potentially recoverable part of spend' : '本月成本里可能可回收的部分')
+      : `${locale === 'en' ? 'No obvious wasted spend yet' : '暂未发现明显白花的钱'}${tokenWaste.summary.usingDemo ? (locale === 'en' ? ' · Demo' : ' · Demo') : ''}`
+    : (locale === 'en' ? 'Spend most likely being wasted this month' : '本月最可能白花的那部分')
 
   const hour = new Date().getHours()
   const greetingKey =
@@ -268,7 +268,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
       iconColor: 'text-cyan-400',
     },
     {
-      label: locale === 'en' ? 'Token waste' : 'Token 浪费',
+      label: locale === 'en' ? 'Likely wasted spend' : '白花的钱',
       value: tokenWasteCardValue,
       sub: tokenWasteCardSub,
       icon: AlertTriangle,
@@ -449,13 +449,13 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
-              {locale === 'en' ? 'Token waste' : 'Token 浪费'}
+              {locale === 'en' ? 'Likely wasted spend' : '白花的钱'}
             </p>
             <p className="mt-2 text-xl font-semibold text-slate-900 sm:text-2xl">{tokenWasteSummaryText}</p>
             <p className="mt-1 text-sm text-slate-600">{tokenWasteSubText}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-sm font-medium text-[#3b82c4]">
-            {locale === 'en' ? 'Open savings analysis' : '查看省钱诊断'}
+            {locale === 'en' ? 'See where to cut spend' : '看看哪里还能省'}
             <ArrowRight className="h-4 w-4" />
           </span>
         </div>

@@ -235,7 +235,9 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
             >
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <span className="shrink-0 text-xl">🍤</span>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/80 p-1.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
+              <img src="/luelan-logo.png" alt="" className="h-full w-full object-contain" />
+            </div>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">{t('app.name')}</h1>
               <div className="flex min-w-0 items-center gap-1.5 text-[10px] leading-none text-slate-500">
@@ -359,7 +361,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
             ))}
           </div>
           <div className="border-t border-slate-200 pt-4">
-            <p className="px-3 text-[10px] text-slate-500">{t('app.lobster')}</p>
+            <p className="px-3 text-[10px] font-medium tracking-[0.08em] text-slate-400">{t('app.lobster')}</p>
           </div>
         </nav>
 

@@ -61,4 +61,32 @@ describe('orderCostMonitorSections', () => {
       'top-tasks',
     ])
   })
+
+  it('把 secondary 区块完整留给进一步分析容器', () => {
+    const { primary, secondary } = splitCostMonitorSections(makeSections([
+      'top-tasks',
+      'reference-compare',
+      'trend',
+      'model-value',
+      'token-waste',
+      'reconciliation',
+      'insights',
+      'model-breakdown',
+      'savings',
+    ]))
+
+    expect(primary.map(section => section.id)).toEqual([
+      'savings',
+      'token-waste',
+      'trend',
+    ])
+    expect(secondary.map(section => section.id)).toEqual([
+      'model-breakdown',
+      'model-value',
+      'insights',
+      'reference-compare',
+      'reconciliation',
+      'top-tasks',
+    ])
+  })
 })

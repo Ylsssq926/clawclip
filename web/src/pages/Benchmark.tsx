@@ -4,8 +4,6 @@ import { Trophy, Zap, Play, RefreshCw, Shield, Search, Code, Pen, Wrench, Coins,
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
-import GradientText from '../components/ui/GradientText'
-import ShimmerButton from '../components/ui/ShimmerButton'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { apiGet, apiPost, apiGetSafe, ApiError } from '../lib/api'
@@ -115,6 +113,8 @@ const RANK_STYLES: Record<string, { bg: string; text: string; glow: string }> = 
 
 const PRIMARY_SERIES_COLOR = '#3b82c4'
 const COMPARE_SERIES_COLOR = '#06b6d4'
+const BENCHMARK_PRIMARY_BUTTON_CLASS = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[#3b82c4] px-8 py-3 text-base font-medium text-white shadow-sm transition-colors hover:bg-[#2f6fa8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none'
+const BENCHMARK_SECONDARY_BUTTON_CLASS = 'inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400'
 
 const chartTooltipProps = {
   contentStyle: {
@@ -430,13 +430,11 @@ export default function Benchmark() {
           <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
             <TrendingUp className="w-8 h-8 text-accent" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">
-            <GradientText animate={false}>{t('benchmark.empty.title')}</GradientText>
-          </h3>
+          <h3 className="mb-2 text-xl font-semibold text-slate-900">{t('benchmark.empty.title')}</h3>
           <p className="text-slate-500 text-sm mb-6 text-center max-w-md">
             {t('benchmark.empty.desc')}
           </p>
-          <ShimmerButton variant="primary" onClick={runBenchmark} disabled={running} className="px-8 py-3 rounded-xl text-base">
+          <button type="button" onClick={runBenchmark} disabled={running} className={BENCHMARK_PRIMARY_BUTTON_CLASS}>
             {running ? (
               <>
                 <RefreshCw className="w-5 h-5 animate-spin" /> {t('benchmark.running')}
@@ -446,7 +444,7 @@ export default function Benchmark() {
                 <Play className="w-5 h-5" /> {t('benchmark.runStart')}
               </>
             )}
-          </ShimmerButton>
+          </button>
         </FadeIn>
       </div>
     )
@@ -479,11 +477,11 @@ export default function Benchmark() {
               )}
             </div>
           )}
-          <ShimmerButton
-            variant="secondary"
+          <button
+            type="button"
             onClick={runBenchmark}
             disabled={running}
-            className="px-4 py-2 rounded-lg text-sm"
+            className={BENCHMARK_SECONDARY_BUTTON_CLASS}
           >
             {running ? (
               <>
@@ -494,7 +492,7 @@ export default function Benchmark() {
                 <RefreshCw className="w-4 h-4" /> {t('benchmark.rerun')}
               </>
             )}
-          </ShimmerButton>
+          </button>
         </div>
       </div>
 
@@ -574,9 +572,9 @@ export default function Benchmark() {
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
               <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
                   <Zap className="w-5 h-5 text-accent" />
-                  <GradientText animate={false}>{isZh ? '这次改动有没有变好' : 'Did this change make things better'}</GradientText>
+                  <span>{isZh ? '这次改动有没有变好' : 'Did this change make things better'}</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   {isZh
@@ -660,10 +658,20 @@ export default function Benchmark() {
 
           <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-accent" />
-                <GradientText animate={false}>{t('benchmark.radar.title')}</GradientText>
-              </h3>
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                  <TrendingUp className="w-5 h-5 text-accent" />
+                  <span>{t('benchmark.radar.title')}</span>
+                </h3>
+                {compareResult && (
+                  <span className="mt-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
+                    {isZh ? '当前对比：' : 'Comparing against: '}
+                    <span className="font-medium text-slate-700">
+                      {formatRunDate(compareResult.runAt)} · {compareResult.rank}{t('benchmark.rankSuffix')} · {compareResult.overallScore}{t('benchmark.scoreUnit')}
+                    </span>
+                  </span>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowRadarHelp(v => !v)}

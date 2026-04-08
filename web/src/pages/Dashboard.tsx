@@ -7,6 +7,7 @@ import { cn } from '../lib/cn'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
 import { useI18n, type Locale } from '../lib/i18n'
 import { apiGetSafe } from '../lib/api'
+import { readDashboardDiagnosticsDismissed, writeDashboardDiagnosticsDismissed } from '../lib/dashboardDiagnosticsPreference'
 import type { SessionMeta } from '../types/session'
 
 interface LobsterDataRootStatus {
@@ -134,7 +135,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [diagnostics, setDiagnostics] = useState<ReplayDiagnosticsData | null>(null)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
-  const [diagnosticsDismissed, setDiagnosticsDismissed] = useState(false)
+  const [diagnosticsDismissed, setDiagnosticsDismissed] = useState(() => readDashboardDiagnosticsDismissed())
 
   useEffect(() => {
     Promise.all([apiGetSafe('/api/status'), apiGetSafe('/api/cost/summary?days=30')])
@@ -209,16 +210,6 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const connectionBody = hasJsonlButUnparsed
     ? t('dashboard.connection.processingHint')
     : t('dashboard.connection.demoHint')
-
-  const hour = new Date().getHours()
-  const greetingKey =
-    hour < 6
-      ? 'dashboard.greeting.night'
-      : hour < 12
-        ? 'dashboard.greeting.morning'
-        : hour < 18
-          ? 'dashboard.greeting.afternoon'
-          : 'dashboard.greeting.evening'
 
   const decisionBodyKey = hasConnectedSessions
     ? 'dashboard.entry.body.connected'
@@ -365,7 +356,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
     <div className="space-y-8">
       <div className="animate-fade-in space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
-          {t('dashboard.entry.eyebrow')} · {t(greetingKey)}
+          {t('dashboard.entry.eyebrow')}
         </p>
         <div className="space-y-2">
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">{t('dashboard.entry.title')}</h2>
@@ -670,6 +661,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                     onClick={() => {
                       setDiagnosticsOpen(false)
                       setDiagnosticsDismissed(true)
+                      writeDashboardDiagnosticsDismissed(true)
                     }}
                     className="rounded-lg p-1 text-amber-700/80 transition-colors hover:bg-amber-400/10 hover:text-amber-800"
                     aria-label={isEnglish ? 'Dismiss diagnostics' : '关闭诊断提示'}

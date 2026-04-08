@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode, useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar } from 'recharts'
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight, ChevronRight } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
@@ -1770,25 +1770,19 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             )}
 
             {furtherAnalysisSections.length > 0 && (
-              <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-6">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">{isZh ? '进一步分析' : 'Further analysis'}</h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {isZh
-                        ? '上面的第一刀先落地，再回来细看模型分工、价格口径和会话清单。'
-                        : 'Once the first cut above is in place, come back here for model mix, pricing views, and session-by-session details.'}
-                    </p>
-                  </div>
-                  {pricingReferenceControl}
-                </div>
+              <details className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-700 [&::-webkit-details-marker]:hidden">
+                  <span>{isZh ? '进一步分析' : 'Advanced breakdown'}</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" />
+                </summary>
 
-                <div className="mt-5 space-y-4">
+                <div className="mt-4 space-y-4 border-t border-slate-200 pt-4">
+                  <div className="flex justify-end">{pricingReferenceControl}</div>
                   {furtherAnalysisSections.map(section => (
                     <Fragment key={section.id}>{section.content}</Fragment>
                   ))}
                 </div>
-              </section>
+              </details>
             )}
           </div>
         </FadeIn>

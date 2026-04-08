@@ -174,7 +174,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
   }, [showTour, finishTour])
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 bg-dots bg-ambient">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800">
       <AnimatePresence>
         {showTour && (
         <motion.div

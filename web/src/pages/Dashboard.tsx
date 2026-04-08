@@ -251,9 +251,9 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
             .filter(Boolean)
             .join(' · ') || null,
       icon: status?.running ? Wifi : WifiOff,
-      variant: status?.running ? 'card-green' : 'card',
-      color: status?.running ? 'text-emerald-400' : 'text-slate-500',
-      iconColor: status?.running ? 'text-emerald-400' : 'text-slate-500',
+      variant: 'card',
+      color: 'text-slate-900',
+      iconColor: 'text-slate-400',
     },
     {
       label: t('dashboard.stat.monthCost'),
@@ -263,18 +263,18 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
       numDecimals: 2,
       sub: cost ? `${cost.totalTokens.toLocaleString()} ${t('replay.list.tokensUnit')}` : null,
       icon: DollarSign,
-      variant: 'card-cyan',
-      color: 'text-cyan-400',
-      iconColor: 'text-cyan-400',
+      variant: 'card',
+      color: 'text-[#3b82c4]',
+      iconColor: 'text-slate-400',
     },
     {
       label: locale === 'en' ? 'Likely wasted spend' : '白花的钱',
       value: tokenWasteCardValue,
       sub: tokenWasteCardSub,
       icon: AlertTriangle,
-      variant: 'card-blue',
-      color: 'text-blue-400',
-      iconColor: 'text-blue-400',
+      variant: 'card',
+      color: 'text-[#3b82c4]',
+      iconColor: 'text-slate-400',
     },
     {
       label: t('dashboard.stat.sessionsLabel'),
@@ -288,9 +288,9 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
             ? t('dashboard.stat.sessions.processingSub')
             : t('dashboard.stat.sessions.demoSub'),
       icon: Activity,
-      variant: 'card-purple',
-      color: 'text-violet-400',
-      iconColor: 'text-violet-400',
+      variant: 'card',
+      color: 'text-slate-900',
+      iconColor: 'text-slate-400',
     },
   ]
 

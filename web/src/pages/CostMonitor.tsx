@@ -285,33 +285,11 @@ function getSavingTypeMeta(reasonType: SavingReasonType | undefined, isZh: boole
 function getSavingCardClass(priority: SavingPriority | undefined): string {
   switch (priority) {
     case 'high':
-      return 'border-[#3b82c4]/25 bg-[#3b82c4]/5'
+      return 'border-[#3b82c4]/18 bg-[#3b82c4]/[0.03]'
     case 'medium':
-      return 'border-cyan-200 bg-cyan-50/60'
     case 'low':
     default:
-      return 'border-slate-200 bg-slate-50'
-  }
-}
-
-function getSavingPriorityMeta(priority: SavingPriority | undefined, t: (key: string) => string) {
-  switch (priority) {
-    case 'high':
-      return {
-        label: t('cost.savings.priority.high'),
-        className: 'border-[#3b82c4]/20 bg-[#3b82c4]/10 text-[#2f6fa8]',
-      }
-    case 'low':
-      return {
-        label: t('cost.savings.priority.low'),
-        className: 'border-slate-200 bg-slate-100 text-slate-600',
-      }
-    case 'medium':
-    default:
-      return {
-        label: t('cost.savings.priority.medium'),
-        className: 'border-amber-200 bg-amber-50 text-amber-700',
-      }
+      return 'border-slate-200 bg-white'
   }
 }
 
@@ -319,15 +297,13 @@ function getSavingGuardrailMeta(reasonType: SavingReasonType | undefined, t: (ke
   if (reasonType === 'switch-model') {
     return {
       label: t('cost.savings.guardrail.cautious'),
-      className: 'border-amber-200 bg-amber-50 text-amber-800',
-      badgeClassName: 'bg-amber-100 text-amber-700',
+      className: 'border-slate-200 bg-slate-50/80 text-slate-700',
     }
   }
 
   return {
     label: t('cost.savings.guardrail.lowRisk'),
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-    badgeClassName: 'bg-emerald-100 text-emerald-700',
+    className: 'border-slate-200 bg-slate-50/80 text-slate-700',
   }
 }
 
@@ -964,7 +940,6 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
               <div className="space-y-3">
                 {savings.suggestions.map((sug, i) => {
                   const typeMeta = getSavingTypeMeta(sug.reasonType, isZh)
-                  const priorityMeta = getSavingPriorityMeta(sug.priority, t)
                   const guardrailMeta = getSavingGuardrailMeta(sug.reasonType, t)
                   const reasonText = getSavingReasonText(sug, isZh)
                   const actionText = getSavingActionText(sug, isZh)
@@ -984,9 +959,6 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                           <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', typeMeta.className)}>
                             {typeMeta.label}
                           </span>
-                          <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', priorityMeta.className)}>
-                            {priorityMeta.label}
-                          </span>
                           {sug.sessionLabel && (
                             <span className="truncate text-[11px] text-slate-500">
                               {t('cost.savings.session')}: {sug.sessionLabel}
@@ -995,17 +967,14 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                         </div>
                         <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
                         <div className="mt-3 grid grid-cols-1 xl:grid-cols-2 gap-3">
-                          <div className="rounded-lg border border-slate-200 bg-white/80 px-3 py-2.5">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5">
                             <p className="text-[11px] font-medium text-slate-500">{t('cost.savings.next')}</p>
                             <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
                           </div>
                           <div className={cn('rounded-lg border px-3 py-2.5', guardrailMeta.className)}>
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-[11px] font-medium">{t('cost.savings.guardrail')}</p>
-                              <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold', guardrailMeta.badgeClassName)}>
-                                {guardrailMeta.label}
-                              </span>
-                            </div>
+                            <p className="text-[11px] font-medium text-slate-500">
+                              {t('cost.savings.guardrail')} · {guardrailMeta.label}
+                            </p>
                             <p className="mt-1 text-sm leading-relaxed">{guardrailText}</p>
                           </div>
                         </div>
@@ -1015,11 +984,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                               {isZh ? '模型切换：' : 'Route: '}
                               <span className="font-medium text-slate-700">{sug.currentModel}</span>
                               <span className="mx-1">→</span>
-                              <span className="font-medium text-emerald-600">{sug.alternativeModel}</span>
+                              <span className="font-medium text-slate-700">{sug.alternativeModel}</span>
                             </p>
                           ) : <span />}
                           {isReplayLinkable && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 transition-all group-hover:gap-1.5 group-hover:text-slate-900">
                               {replayActionLabel}
                               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                             </span>

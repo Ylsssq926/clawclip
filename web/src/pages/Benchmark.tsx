@@ -710,20 +710,20 @@ export default function Benchmark() {
                   const label = `${dimLabel(d, isZh)} ${diff > 0 ? '+' : ''}${diff}`
                   if (diff > 0) {
                     return (
-                      <span key={d.dimension} className="text-xs px-2.5 py-1 rounded-lg bg-green-500/15 text-green-400 border border-green-500/30">
+                      <span key={d.dimension} className="text-[11px] px-2.5 py-1 rounded-full border border-green-500/20 text-green-600/90">
                         {label} ↑
                       </span>
                     )
                   }
                   if (diff < 0) {
                     return (
-                      <span key={d.dimension} className="text-xs px-2.5 py-1 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30">
+                      <span key={d.dimension} className="text-[11px] px-2.5 py-1 rounded-full border border-red-500/20 text-red-500/80">
                         {label} ↓
                       </span>
                     )
                   }
                   return (
-                    <span key={d.dimension} className="text-xs px-2.5 py-1 rounded-lg bg-slate-500/10 text-slate-500 border border-surface-border">
+                    <span key={d.dimension} className="text-[11px] px-2.5 py-1 rounded-full border border-surface-border text-slate-500/80">
                       {dimLabel(d, isZh)} 0 —
                     </span>
                   )
@@ -743,9 +743,9 @@ export default function Benchmark() {
                       <span className="text-sm font-medium text-slate-500">{dimLabel(dim, isZh)}</span>
                     </div>
                     <ScoreBar score={dim.score} color={color} />
-                    <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2">
-                      <p className="text-[11px] font-medium text-blue-700 mb-1">{isZh ? '打分说明' : 'Why this score'}</p>
-                      <p className="text-xs text-blue-900/80 leading-relaxed">{evidenceText}</p>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{isZh ? '打分说明' : 'Why this score'}</p>
+                      <p className="text-xs leading-relaxed text-slate-500">{evidenceText}</p>
                     </div>
                     <p className="text-xs text-slate-500 mt-1.5">{isZh ? dim.details : (dim.detailsEn || dim.details)}</p>
                   </div>

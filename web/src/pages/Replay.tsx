@@ -656,8 +656,8 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/15 text-[#3b82c4] border border-blue-500/20 font-medium">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] font-medium text-slate-400">
                         {dataSourceBadge(session.dataSource)}
                       </span>
                       <span className="text-xs text-slate-500">{formatRelativeTime(session.startTime, locale)}</span>
@@ -670,9 +670,11 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                   </div>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex flex-wrap gap-1.5 items-center">
-                      {(session.modelUsed ?? []).slice(0, 3).map(m => (
-                        <span key={m} className="text-xs px-2 py-0.5 bg-surface-overlay rounded-full text-slate-500 border border-surface-border">{m}</span>
-                      ))}
+                      {Boolean(session.modelUsed?.length) && (
+                        <span className="text-xs text-slate-400">
+                          {(session.modelUsed ?? []).slice(0, 3).join(' / ')}
+                        </span>
+                      )}
                       {(sessionTags[session.id] ?? []).map(tag => {
                         const tagColor = tagColorByTag.get(tag) ?? '#94a3b8'
                         return (
@@ -687,10 +689,10 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                       })}
                     </div>
                     <div className="flex items-center gap-3 text-xs shrink-0">
-                      <span className="text-blue-400">
+                      <span className="text-slate-500">
                         {session.totalTokens.toLocaleString()} {t('replay.list.tokensUnit')}
                       </span>
-                      <span className="text-accent font-medium">${session.totalCost.toFixed(4)}</span>
+                      <span className="font-medium text-slate-700">${session.totalCost.toFixed(4)}</span>
                     </div>
                   </div>
                 </button>

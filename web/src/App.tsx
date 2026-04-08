@@ -56,36 +56,20 @@ function TabFallback() {
 }
 
 function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding: () => void; initialTab?: Tab }) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>(initialTab)
   const [knowledgeInitialQuery, setKnowledgeInitialQuery] = useState('')
   const [replayInitialSessionId, setReplayInitialSessionId] = useState('')
   const [dataBannerMode, setDataBannerMode] = useState<DataBannerMode>('loading')
-  const [showRealDataBanner, setShowRealDataBanner] = useState(false)
 
   useEffect(() => {
-    let hideTimer: number | null = null
-
     apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
       .then(status => {
-        if (status?.hasRealSessionData) {
-          setDataBannerMode('real')
-          setShowRealDataBanner(true)
-          hideTimer = window.setTimeout(() => setShowRealDataBanner(false), 3000)
-          return
-        }
-
-        setDataBannerMode('demo')
+        setDataBannerMode(status?.hasRealSessionData ? 'real' : 'demo')
       })
       .catch(() => {
         setDataBannerMode('demo')
       })
-
-    return () => {
-      if (hideTimer != null) {
-        window.clearTimeout(hideTimer)
-      }
-    }
   }, [])
 
   const [showTour, setShowTour] = useState(() => {
@@ -101,18 +85,9 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
   })
   const [tourStep, setTourStep] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const isEnglish = locale === 'en'
   const isDemo = dataBannerMode === 'demo'
-  const showStatusBanner = isDemo || (dataBannerMode === 'real' && showRealDataBanner)
-  const statusBannerText = isDemo
-    ? (isEnglish
-        ? '📋 Demo data · connect logs to switch'
-        : '📋 演示数据 · 接入日志后自动切换')
-    : dataBannerMode === 'real'
-      ? (isEnglish ? '✅ Real data connected' : '✅ 已连接真实数据')
-      : ''
-  const sidebarDesktopHeightClass = showStatusBanner ? 'lg:h-[calc(100vh-49px-33px)]' : 'lg:h-[calc(100vh-49px)]'
-  const contentMinHeightClass = showStatusBanner ? 'min-h-[calc(100vh-49px-33px)]' : 'min-h-[calc(100vh-49px)]'
+  const showStatusBadge = dataBannerMode !== 'loading'
+  const statusBadgeText = isDemo ? t('app.demo') : t('app.realData')
 
   const navigateTab = useCallback((tab: Tab) => {
     setActiveTab(tab)
@@ -175,7 +150,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/22 p-4 backdrop-blur-[1px]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="clawclip-tour-title"
@@ -185,9 +160,9 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.32, ease: [0.25, 0.4, 0.25, 1] }}
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/60"
+            className="w-full max-w-sm rounded-2xl border border-slate-200/90 bg-white/95 p-5 shadow-xl shadow-slate-900/8"
           >
-            <h2 id="clawclip-tour-title" className="text-lg font-semibold text-slate-900 mb-4">
+            <h2 id="clawclip-tour-title" className="mb-4 text-base font-semibold text-slate-900">
               {t('app.tour.title')}
             </h2>
             <div className="flex items-center gap-3 mb-4">
@@ -204,14 +179,14 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                     key={i}
                     className={cn(
                       'h-1 flex-1 rounded-full transition-colors duration-200',
-                      i < tourStep && 'bg-cyan-500/50',
-                      i === tourStep && 'bg-gradient-to-r from-blue-500 to-cyan-500',
+                      i < tourStep && 'bg-slate-300',
+                      i === tourStep && 'bg-slate-500',
                       i > tourStep && 'bg-slate-200',
                     )}
                   />
                 ))}
               </div>
-              <span className="text-[10px] text-slate-500 tabular-nums shrink-0" aria-live="polite">
+              <span className="shrink-0 text-[10px] tabular-nums text-slate-400" aria-live="polite">
                 {tourStep + 1}/{TOUR_KEYS.length}
               </span>
             </div>
@@ -222,7 +197,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -6 }}
                 transition={{ duration: 0.22, ease: [0.25, 0.4, 0.25, 1] }}
-                className="text-sm text-slate-500 leading-relaxed mb-6 min-h-[4.5rem]"
+                className="mb-5 min-h-[4.25rem] text-[13px] leading-relaxed text-slate-500"
               >
                 {t(TOUR_KEYS[tourStep])}
               </motion.p>
@@ -231,14 +206,14 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
               <button
                 type="button"
                 onClick={finishTour}
-                className="text-xs text-slate-500 hover:text-slate-900 transition-colors rounded-lg px-1 py-0.5 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                className="-ml-1 rounded-lg px-1 py-0.5 text-[11px] text-slate-400 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
                 {t('app.tour.skip')}
               </button>
               <button
                 type="button"
                 onClick={onTourNext}
-                className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-[box-shadow,opacity] duration-200 hover:opacity-95 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                className="rounded-lg border border-slate-200 bg-slate-900/90 px-3.5 py-2 text-xs font-medium text-white shadow-sm shadow-slate-900/10 transition-colors duration-200 hover:bg-slate-900 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
                 {tourStep >= TOUR_KEYS.length - 1 ? t('app.tour.done') : t('app.tour.next')}
               </button>
@@ -248,56 +223,56 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
       )}
       </AnimatePresence>
 
-      <AnimatePresence initial={false}>
-        {showStatusBanner && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.24, ease: [0.25, 0.4, 0.25, 1] }}
-            className={cn(
-              'overflow-hidden border-b',
-              isDemo ? 'bg-blue-50 border-blue-200' : 'bg-emerald-50 border-emerald-200',
-            )}
-          >
-            <div className="px-6 py-2">
-              <span className={cn('text-xs font-medium', isDemo ? 'text-[#3b82c4]' : 'text-emerald-700')}>
-                {statusBannerText}
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#f8fafc]/80 backdrop-blur-xl border-b border-slate-200 px-4 sm:px-6 py-3">
-        <div className="flex items-center justify-between max-w-screen-2xl mx-auto gap-3">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-[#f8fafc]/80 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setSidebarOpen(v => !v)}
-              className="lg:hidden p-1.5 -ml-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="-ml-1 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden"
               aria-label="Toggle sidebar"
             >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <span className="text-xl shrink-0">🍤</span>
+            <span className="shrink-0 text-xl">🍤</span>
             <div className="min-w-0">
-              <h1 className="text-base font-semibold tracking-tight text-slate-900 truncate">{t('app.name')}</h1>
-              <p className="text-[10px] text-slate-500 leading-none truncate">{t('app.subtitle')}{isDemo ? ' Demo' : ''}</p>
+              <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">{t('app.name')}</h1>
+              <div className="flex min-w-0 items-center gap-1.5 text-[10px] leading-none text-slate-500">
+                <p className="truncate">{t('app.subtitle')}</p>
+                {showStatusBadge && (
+                  <span
+                    className={cn(
+                      'inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                      isDemo
+                        ? 'border-blue-200/70 bg-blue-50/60 text-blue-700/75'
+                        : 'border-emerald-200/70 bg-emerald-50/60 text-emerald-700/75',
+                    )}
+                  >
+                    <span className={cn('h-1.5 w-1.5 rounded-full', isDemo ? 'bg-blue-400/80' : 'bg-emerald-400/80')} />
+                    <span className="truncate">{statusBadgeText}</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={onBackToLanding}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/80 px-2.5 py-1.5 text-xs text-slate-600 hover:text-[#3b82c4] transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t('app.back')}</span>
-            </button>
-            <LanguageSwitcher />
-            <span className="text-[10px] text-slate-600 font-mono">v{APP_VERSION}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-1 rounded-full border border-slate-200/80 bg-white/70 px-1.5 py-1 shadow-sm shadow-slate-200/40">
+              <button
+                type="button"
+                onClick={onBackToLanding}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] text-slate-500 transition-colors hover:bg-slate-100/80 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8fafc]"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                <span className="hidden md:inline">{t('app.back')}</span>
+              </button>
+              <span className="h-3.5 w-px bg-slate-200/80" />
+              <div className="[&_select]:border-transparent [&_select]:bg-transparent [&_select]:py-1 [&_select]:pl-5 [&_select]:pr-1 [&_select]:text-[11px] [&_select]:text-slate-500 [&_select]:shadow-none [&_select]:transition-colors [&_select]:hover:text-slate-700 [&_select]:focus-visible:ring-1 [&_select]:focus-visible:ring-slate-300/80 [&_select]:focus-visible:ring-offset-0 [&_span]:text-[10px] [&_span]:text-slate-400">
+                <LanguageSwitcher />
+              </div>
+              <span className="hidden h-3.5 w-px bg-slate-200/80 sm:block" />
+              <span className="hidden px-1 font-mono text-[10px] text-slate-400 sm:inline">v{APP_VERSION}</span>
+            </div>
           </div>
         </div>
       </header>
@@ -313,19 +288,26 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
       <div className="flex max-w-screen-2xl mx-auto relative">
         <nav
           className={cn(
-            'w-56 shrink-0 border-r border-slate-200 py-4 px-3 flex flex-col bg-[#f8fafc] z-40 transition-transform duration-200 overflow-y-auto',
-            'fixed top-[49px] h-[calc(100vh-49px)] lg:sticky lg:top-[49px] lg:translate-x-0',
-            sidebarDesktopHeightClass,
+            'fixed top-[49px] z-40 flex h-[calc(100vh-49px)] w-56 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-[#f8fafc] px-3 py-4 transition-transform duration-200 lg:sticky lg:top-[49px] lg:translate-x-0',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           )}
         >
           <div className="flex-1 space-y-4">
             {navigationGroups.map(group => (
-              <section key={group.id} className="space-y-1">
+              <section
+                key={group.id}
+                className={cn(
+                  'space-y-1',
+                  group.tone === 'overview' && 'rounded-2xl bg-white/55 p-1.5',
+                  group.tone === 'secondary' && 'rounded-2xl border border-slate-200/70 bg-white/40 p-2',
+                )}
+              >
                 <p
                   className={cn(
-                    'px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.24em]',
-                    group.id === 'core' ? 'text-[#3b82c4]' : 'text-slate-400',
+                    'px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em]',
+                    group.tone === 'primary' && 'text-[#3b82c4]',
+                    group.tone === 'overview' && 'text-slate-400',
+                    group.tone === 'secondary' && 'text-slate-400/90',
                   )}
                 >
                   {t(group.titleKey)}
@@ -333,7 +315,8 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                 <ul className="space-y-0.5">
                   {group.items.map(tab => {
                     const isActive = activeTab === tab.id
-                    const isCoreGroup = group.id === 'core'
+                    const isPrimaryGroup = group.tone === 'primary'
+                    const isToolGroup = group.tone === 'secondary'
 
                     return (
                       <li key={tab.id}>
@@ -341,15 +324,31 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                           type="button"
                           onClick={() => navigateTab(tab.id)}
                           className={cn(
-                            'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150',
+                            'flex w-full items-center gap-3 rounded-xl px-3 font-medium transition-all duration-150',
+                            isToolGroup ? 'py-2 text-[12px]' : 'py-2.5 text-[13px]',
                             isActive
-                              ? 'bg-blue-50 text-[#3b82c4] shadow-sm'
-                              : isCoreGroup
-                                ? 'text-slate-700 hover:text-slate-900 hover:bg-white'
-                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
+                              ? isPrimaryGroup
+                                ? 'bg-blue-50 text-[#3b82c4] shadow-sm'
+                                : 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/80'
+                              : isPrimaryGroup
+                                ? 'text-slate-700 hover:bg-white hover:text-slate-900'
+                                : isToolGroup
+                                  ? 'text-slate-500 hover:bg-white/80 hover:text-slate-800'
+                                  : 'text-slate-600 hover:bg-white hover:text-slate-900',
                           )}
                         >
-                          <tab.icon className={cn('w-[18px] h-[18px]', isActive && 'text-[#3b82c4]')} />
+                          <tab.icon
+                            className={cn(
+                              'h-[18px] w-[18px]',
+                              isActive
+                                ? isPrimaryGroup
+                                  ? 'text-[#3b82c4]'
+                                  : 'text-slate-500'
+                                : isToolGroup
+                                  ? 'text-slate-400'
+                                  : 'text-slate-500',
+                            )}
+                          />
                           {t(tab.nameKey)}
                         </button>
                       </li>
@@ -359,12 +358,12 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
               </section>
             ))}
           </div>
-          <div className="pt-4 border-t border-slate-200">
-            <p className="text-[11px] text-slate-600 px-3">{t('app.lobster')}</p>
+          <div className="border-t border-slate-200 pt-4">
+            <p className="px-3 text-[10px] text-slate-500">{t('app.lobster')}</p>
           </div>
         </nav>
 
-        <main className={cn('flex-1 p-4 sm:p-8 overflow-auto w-0', contentMinHeightClass)}>
+        <main className="min-h-[calc(100vh-49px)] w-0 flex-1 overflow-auto p-4 sm:p-8">
           <ErrorBoundary>
             <Suspense fallback={<TabFallback />}>
               <AnimatePresence mode="wait">

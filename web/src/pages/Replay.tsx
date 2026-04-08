@@ -7,6 +7,7 @@ import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
 import { getReplayDetailSections } from './replayDetailSections'
+import { getSupportingElementPriority } from './supportingElementPriority'
 import type { SessionMeta } from '../types/session'
 import { apiGet, apiGetSafe } from '../lib/api'
 
@@ -461,7 +462,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
             <div className="glass-raised rounded-2xl p-5 mb-6 border border-surface-border border-accent/15">
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <h2 className="text-lg font-bold text-slate-900 truncate min-w-0 flex-1">{replaySessionTitle(replay.meta, t('replay.untitled'))}</h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-700 border border-cyan-500/20 font-medium shrink-0">
+                <span className={cn(getSupportingElementPriority('replayMetaBadge').className, 'shrink-0')}>
                   {dataSourceBadge(replay.meta.dataSource)}
                 </span>
               </div>
@@ -486,18 +487,18 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
               </div>
 
               {(replaySessionSummary(replay.meta) || replay.meta.sessionKey || Boolean(replay.meta.modelUsed?.length) || parseDiagnosticsNotices.length > 0) && (
-                <div className="mt-3 space-y-1 text-[11px] text-slate-400">
+                <div className={cn('mt-3 border-t border-dashed border-slate-200/80 pt-3 space-y-1.5', getSupportingElementPriority('replayDetailMeta').className)}>
                   {replaySessionSummary(replay.meta) && (
-                    <p className="line-clamp-1 text-slate-500">{replaySessionSummary(replay.meta)}</p>
+                    <p className="line-clamp-1 text-slate-500/90">{replaySessionSummary(replay.meta)}</p>
                   )}
                   {Boolean(replay.meta.modelUsed?.length) && (
                     <p className="line-clamp-1">{isZh ? '模型' : 'Models'} · {(replay.meta.modelUsed ?? []).join(' / ')}</p>
                   )}
                   {replay.meta.sessionKey && (
-                    <p className="font-mono truncate" title={replay.meta.sessionKey}>{replay.meta.sessionKey}</p>
+                    <p className="font-mono truncate opacity-80" title={replay.meta.sessionKey}>{replay.meta.sessionKey}</p>
                   )}
                   {parseDiagnosticsNotices.length > 0 && (
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-slate-500">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-slate-500/90">
                       {parseDiagnosticsNotices.map(notice => (
                         <span key={notice}>{notice}</span>
                       ))}
@@ -531,9 +532,9 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                   <button
                     type="button"
                     onClick={() => setInsightsOpen(v => !v)}
-                    className="flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-600 transition-colors mb-3"
+                    className={cn('flex items-center gap-2 font-medium transition-colors mb-3', getSupportingElementPriority('replayInsightToggle').className)}
                   >
-                    <Lightbulb className="w-4 h-4" />
+                    <Lightbulb className="w-3.5 h-3.5" />
                     {locale === 'zh'
                       ? `运行分析${insightsLoading ? '（整理中）' : insights.length > 0 ? `（${insights.length}）` : ''}`
                       : `Run Analysis${insightsLoading ? ' (Loading)' : insights.length > 0 ? ` (${insights.length})` : ''}`}
@@ -542,26 +543,28 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                   {insightsOpen && (
                     <div className="space-y-2">
                       {insightsLoading && (
-                        <div className="rounded-xl border border-blue-200/70 bg-blue-50/70 p-4 text-sm text-blue-700">
+                        <div className={cn('rounded-xl border p-4 text-sm', getSupportingElementPriority('replayInsightCard').className)}>
                           {locale === 'zh' ? '正在整理这次运行…' : 'Analyzing this run…'}
                         </div>
                       )}
 
                       {!insightsLoading && insights.map((ins, i) => {
                         const Icon = ins.type === 'good' ? ThumbsUp : ins.type === 'warning' ? AlertTriangle : Lightbulb
-                        const color = ins.type === 'good' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                          : ins.type === 'warning' ? 'text-amber-400 bg-amber-50 border-amber-500/20'
-                          : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+                        const accentClass = ins.type === 'good'
+                          ? 'border-l-emerald-300 text-emerald-700'
+                          : ins.type === 'warning'
+                            ? 'border-l-amber-300 text-amber-700'
+                            : 'border-l-blue-300 text-blue-700'
                         return (
-                          <div key={i} className={`rounded-xl border p-4 ${color}`}>
+                          <div key={i} className={cn('rounded-xl border border-l-4 p-4', getSupportingElementPriority('replayInsightCard').className, accentClass)}>
                             <div className="flex items-center gap-2 mb-1">
                               <Icon className="w-4 h-4 shrink-0" />
-                              <span className="text-sm font-medium">{locale === 'zh' ? ins.titleZh : ins.titleEn}</span>
+                              <span className="text-sm font-medium text-slate-700">{locale === 'zh' ? ins.titleZh : ins.titleEn}</span>
                               {ins.stepIndex != null && (
-                                <span className="text-[10px] opacity-60 ml-auto">Step {ins.stepIndex + 1}</span>
+                                <span className="text-[10px] text-slate-400 ml-auto">Step {ins.stepIndex + 1}</span>
                               )}
                             </div>
-                            <p className="text-xs opacity-80 leading-relaxed ml-6">{locale === 'zh' ? ins.descZh : ins.descEn}</p>
+                            <p className="text-xs text-slate-500 leading-relaxed ml-6">{locale === 'zh' ? ins.descZh : ins.descEn}</p>
                           </div>
                         )
                       })}
@@ -648,7 +651,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                         {replaySessionTitle(session, t('replay.untitled'))}
                       </h3>
                       {lineSub && (
-                        <p className="text-[10px] text-slate-600 truncate mt-0.5">{lineSub}</p>
+                        <p className={cn('truncate mt-0.5', getSupportingElementPriority('replayListMeta').className)}>{lineSub}</p>
                       )}
                       {summaryPreview && (
                         <p className="text-sm text-slate-500 mt-2 line-clamp-2 leading-relaxed">
@@ -656,22 +659,20 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[11px] font-medium text-slate-400">
-                        {dataSourceBadge(session.dataSource)}
-                      </span>
-                      <span className="text-xs text-slate-500">{formatRelativeTime(session.startTime, locale)}</span>
+                    <div className={cn('flex items-center gap-1.5 shrink-0', getSupportingElementPriority('replayListMeta').className)}>
+                      <span>{dataSourceBadge(session.dataSource)}</span>
+                      <span>{formatRelativeTime(session.startTime, locale)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
+                  <div className={cn('flex items-center gap-4 mb-3', getSupportingElementPriority('replayListMeta').className)}>
                     <span className="flex items-center gap-1"><Bot className="w-3 h-3" />{session.agentName}</span>
                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(session.durationMs, locale)}</span>
                     <span className="flex items-center gap-1"><Play className="w-3 h-3" />{session.stepCount} {t('replay.list.steps')}</span>
                   </div>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex flex-wrap gap-1.5 items-center">
+                  <div className={cn('flex items-center justify-between flex-wrap gap-2 border-t border-dashed border-slate-200/80 pt-3', getSupportingElementPriority('replayListMeta').className)}>
+                    <div className="flex flex-wrap gap-1.5 items-center min-w-0">
                       {Boolean(session.modelUsed?.length) && (
-                        <span className="text-xs text-slate-400">
+                        <span className="truncate max-w-full">
                           {(session.modelUsed ?? []).slice(0, 3).join(' / ')}
                         </span>
                       )}
@@ -680,19 +681,19 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                         return (
                           <span
                             key={tag}
-                            className="text-xs px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: `${tagColor}20`, color: tagColor }}
+                            className="px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: `${tagColor}16`, color: tagColor }}
                           >
                             {tag}
                           </span>
                         )
                       })}
                     </div>
-                    <div className="flex items-center gap-3 text-xs shrink-0">
-                      <span className="text-slate-500">
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span>
                         {session.totalTokens.toLocaleString()} {t('replay.list.tokensUnit')}
                       </span>
-                      <span className="font-medium text-slate-700">${session.totalCost.toFixed(4)}</span>
+                      <span>${session.totalCost.toFixed(4)}</span>
                     </div>
                   </div>
                 </button>

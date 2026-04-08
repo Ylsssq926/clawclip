@@ -6,6 +6,7 @@ describe('APP_NAVIGATION_GROUPS', () => {
     const coreGroup = APP_NAVIGATION_GROUPS.find(group => group.id === 'core')
 
     expect(coreGroup?.tabIds).toEqual(['replay', 'benchmark', 'cost'])
+    expect(coreGroup?.tone).toBe('primary')
   })
 
   it('把 dashboard 单独作为总览入口，其余辅助页归到工具层', () => {
@@ -13,6 +14,7 @@ describe('APP_NAVIGATION_GROUPS', () => {
     const toolsGroup = APP_NAVIGATION_GROUPS.find(group => group.id === 'tools')
 
     expect(overviewGroup?.tabIds).toEqual(['dashboard'])
+    expect(overviewGroup?.tone).toBe('overview')
     expect(toolsGroup?.tabIds).toEqual([
       'prompt',
       'compare',
@@ -21,6 +23,7 @@ describe('APP_NAVIGATION_GROUPS', () => {
       'skills',
       'leaderboard',
     ])
+    expect(toolsGroup?.tone).toBe('secondary')
   })
 
   it('确保每个顶层 tab 只出现一次', () => {

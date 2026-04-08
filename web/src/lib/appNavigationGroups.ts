@@ -10,10 +10,13 @@ export const ALL_NAV_TAB_IDS = [
 
 export type AppNavigationTabId = (typeof ALL_NAV_TAB_IDS)[number]
 
+export type AppNavigationGroupTone = 'overview' | 'primary' | 'secondary'
+
 export interface AppNavigationGroupDefinition {
   id: 'overview' | 'core' | 'tools'
   titleKey: string
   tabIds: readonly AppNavigationTabId[]
+  tone: AppNavigationGroupTone
 }
 
 export const APP_NAVIGATION_GROUPS = [
@@ -21,16 +24,19 @@ export const APP_NAVIGATION_GROUPS = [
     id: 'overview',
     titleKey: 'nav.group.overview',
     tabIds: OVERVIEW_NAV_TAB_IDS,
+    tone: 'overview',
   },
   {
     id: 'core',
     titleKey: 'nav.group.core',
     tabIds: CORE_FLOW_NAV_TAB_IDS,
+    tone: 'primary',
   },
   {
     id: 'tools',
     titleKey: 'nav.group.tools',
     tabIds: TOOL_NAV_TAB_IDS,
+    tone: 'secondary',
   },
 ] as const satisfies readonly AppNavigationGroupDefinition[]
 

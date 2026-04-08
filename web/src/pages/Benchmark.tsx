@@ -6,8 +6,10 @@ import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import GradientText from '../components/ui/GradientText'
 import ShimmerButton from '../components/ui/ShimmerButton'
+import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { apiGet, apiPost, apiGetSafe, ApiError } from '../lib/api'
+import { getSupportingElementPriority } from './supportingElementPriority'
 import {
   RadarChart,
   PolarGrid,
@@ -217,11 +219,11 @@ function getDeltaState(value: number, prefersLower = false): 'positive' | 'negat
 
 function BenchmarkTips({ isZh }: { isZh: boolean }) {
   return (
-    <details className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left">
-      <summary className="cursor-pointer text-[11px] font-medium text-slate-600">
+    <details className={cn('px-3 py-2 text-left', getSupportingElementPriority('benchmarkSupportCard').className)}>
+      <summary className={cn('cursor-pointer font-medium', getSupportingElementPriority('benchmarkHelpAction').className)}>
         {isZh ? '怎么看这页' : 'How to use this page'}
       </summary>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+      <p className={cn('mt-2', getSupportingElementPriority('benchmarkSupportNote').className)}>
         {isZh
           ? '先看「这次改动有没有变好」判断值不值，再用雷达和趋势图看是哪里变了、稳不稳。'
           : 'Start with “Did this change make things better” to judge the latest update, then use the radar and trend charts to see what moved and whether it held.'}
@@ -456,24 +458,24 @@ export default function Benchmark() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold mb-1">{t('nav.benchmark')}</h2>
           <p className="text-slate-500 text-sm">{t('benchmark.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {result && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <a
                 href={`/share/benchmark/${encodeURIComponent(result.id)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 bg-accent hover:opacity-90 rounded-lg text-sm font-medium transition-opacity text-white flex items-center gap-2"
+                className={cn('px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-2', getSupportingElementPriority('benchmarkShareAction').className)}
               >
-                <Share2 className="w-4 h-4" /> {t('benchmark.share')}
+                <Share2 className="w-3.5 h-3.5" /> {t('benchmark.share')}
               </a>
               {dataSource === 'demo' && (
-                <span className="text-xs text-slate-500">{isZh ? '(演示数据)' : '(Demo data)'}</span>
+                <span className={getSupportingElementPriority('benchmarkSupportNote').className}>{isZh ? '(演示数据)' : '(Demo data)'}</span>
               )}
             </div>
           )}
@@ -499,17 +501,23 @@ export default function Benchmark() {
       {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-600 text-sm">{error}</div>}
 
       {dataSource === 'demo' && (
-        <div className="mb-4 rounded-xl border border-cyan-300 bg-cyan-50 px-4 py-3 text-sm text-cyan-900 shadow-sm">
-          {t('demo.hint.benchmark')}
+        <div className={cn('mb-4 px-4 py-3', getSupportingElementPriority('benchmarkSupportCard').className)}>
+          <p className={getSupportingElementPriority('benchmarkSupportNote').className}>{t('demo.hint.benchmark')}</p>
         </div>
       )}
 
       {result && (
         <>
-          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600">
-            <p>{isZh ? `基于最近 ${result.totalSessions} 条会话` : `Based on the latest ${result.totalSessions} sessions`}</p>
-            <p>{isZh ? '数据截止到：' : 'Data cutoff: '}<span className="font-medium text-slate-700">{benchmarkCutoffLabel}</span></p>
-            <p>{isZh ? '置信度：' : 'Confidence: '}<span className="font-medium text-slate-700">{benchmarkConfidenceLabel}</span></p>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
+              {isZh ? `最近 ${result.totalSessions} 条会话` : `Latest ${result.totalSessions} sessions`}
+            </span>
+            <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
+              {isZh ? '数据截止到：' : 'Data cutoff: '}<span className="font-medium text-slate-700">{benchmarkCutoffLabel}</span>
+            </span>
+            <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
+              {isZh ? '置信度：' : 'Confidence: '}<span className="font-medium text-slate-700">{benchmarkConfidenceLabel}</span>
+            </span>
           </div>
           {successMessage && (
             <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
@@ -659,15 +667,15 @@ export default function Benchmark() {
               <button
                 type="button"
                 onClick={() => setShowRadarHelp(v => !v)}
-                className="text-xs text-accent hover:opacity-80 shrink-0 flex items-center gap-1"
+                className={cn('shrink-0 flex items-center gap-1 transition-colors', getSupportingElementPriority('benchmarkHelpAction').className)}
               >
                 {showRadarHelp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 {t('benchmark.radar.toggle')}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mb-4">{t('benchmark.radar.short')}</p>
+            <p className={cn('mb-4', getSupportingElementPriority('benchmarkSupportNote').className)}>{t('benchmark.radar.short')}</p>
             {showRadarHelp && (
-              <p className="text-xs text-slate-500 mb-4 leading-relaxed border border-slate-200 rounded-lg p-3 bg-slate-50">
+              <p className={cn('mb-4 p-3', getSupportingElementPriority('benchmarkSupportCard').className, getSupportingElementPriority('benchmarkSupportNote').className)}>
                 {t('benchmark.radar.long')}
               </p>
             )}
@@ -760,25 +768,25 @@ export default function Benchmark() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-lg font-semibold">{t('benchmark.curve.title')}</h3>
                   {overallTrendData.length > 0 && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
                       {isZh ? `${overallTrendData.length} 个数据点` : `${overallTrendData.length} points`}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 mt-1">{t('benchmark.curve.oneLiner')}</p>
+                <p className={cn('mt-1', getSupportingElementPriority('benchmarkSupportNote').className)}>{t('benchmark.curve.oneLiner')}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCurveHelp(v => !v)}
-                className="text-xs text-accent hover:opacity-80 shrink-0 flex items-center gap-1 self-start"
+                className={cn('shrink-0 flex items-center gap-1 self-start transition-colors', getSupportingElementPriority('benchmarkHelpAction').className)}
               >
                 {showCurveHelp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 {t('benchmark.curve.toggle')}
               </button>
             </div>
-            {curveNote && <p className="text-xs text-blue-600 mb-3">{curveNote}</p>}
+            {curveNote && <p className={cn('mb-3', getSupportingElementPriority('benchmarkSupportNote').className)}>{curveNote}</p>}
             {showCurveHelp && (
-              <p className="text-xs text-slate-500 mb-4 leading-relaxed border border-slate-200 rounded-lg p-3 bg-slate-50">
+              <p className={cn('mb-4 p-3', getSupportingElementPriority('benchmarkSupportCard').className, getSupportingElementPriority('benchmarkSupportNote').className)}>
                 {t('benchmark.curve.long')}
               </p>
             )}
@@ -824,11 +832,11 @@ export default function Benchmark() {
               </div>
             )}
 
-            <p className="text-xs text-slate-500 mb-2">{t('benchmark.dimTrend.hint')}</p>
+            <p className={cn('mb-2', getSupportingElementPriority('benchmarkSupportNote').className)}>{t('benchmark.dimTrend.hint')}</p>
             <button
               type="button"
               onClick={() => setShowDimTrend(v => !v)}
-              className="flex items-center gap-2 text-sm text-accent hover:opacity-80 mt-2 mb-2 transition-opacity"
+              className={cn('flex items-center gap-2 mt-2 mb-2 transition-colors', getSupportingElementPriority('benchmarkHelpAction').className)}
             >
               {showDimTrend ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               {t('benchmark.dimTrend')}
@@ -873,23 +881,23 @@ export default function Benchmark() {
 
           <div className="glass-raised rounded-xl p-5 border border-surface-border mb-4">
             <div className="flex items-start gap-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                <Zap className="w-4 h-4 text-accent" />
+              <div className={cn('p-2', getSupportingElementPriority('benchmarkSupportCard').className)}>
+                <Zap className="w-4 h-4 text-slate-500" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm leading-relaxed text-slate-700">
                   {t('benchmark.footer')}
                 </p>
                 {result.runAt && (
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className={cn('mt-2', getSupportingElementPriority('benchmarkSupportNote').className)}>
                     {t('benchmark.lastRun')}: {new Date(result.runAt).toLocaleString(dateLocale)}
                   </p>
                 )}
               </div>
             </div>
-            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left">
+            <div className={cn('mt-3 px-3 py-2 text-left', getSupportingElementPriority('benchmarkSupportCard').className)}>
               <p className="text-[11px] font-medium text-slate-500 mb-1">{t('savings.hint.title')}</p>
-              <p className="text-[11px] text-slate-500 leading-relaxed">{t('savings.hint.body')}</p>
+              <p className={getSupportingElementPriority('benchmarkSupportNote').className}>{t('savings.hint.body')}</p>
             </div>
             <div className="mt-3">
               <BenchmarkTips isZh={isZh} />

@@ -5,7 +5,7 @@ import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import { cn } from '../lib/cn'
-import { useI18n } from '../lib/i18n'
+import { useI18n, formatI18n, localizeBenchmarkDimensionDetail } from '../lib/i18n'
 import { apiGet, apiPost, apiGetSafe, ApiError } from '../lib/api'
 import { getSupportingElementPriority } from './supportingElementPriority'
 import {
@@ -153,8 +153,23 @@ function mergeTimelineHistory(history: BenchmarkResult[], latest: BenchmarkResul
   return Array.from(byId.values()).sort((a, b) => new Date(a.runAt).getTime() - new Date(b.runAt).getTime())
 }
 
-function dimLabel(d: { label: string; labelEn?: string }, zh: boolean): string {
-  return zh ? d.label : (d.labelEn || d.label)
+function toIntlLocale(locale: string): string {
+  if (locale === 'zh') return 'zh-CN'
+  if (locale === 'ja') return 'ja-JP'
+  if (locale === 'ko') return 'ko-KR'
+  if (locale === 'es') return 'es-ES'
+  if (locale === 'fr') return 'fr-FR'
+  if (locale === 'de') return 'de-DE'
+  return 'en-US'
+}
+
+function dimLabel(
+  d: { dimension: string; label: string; labelEn?: string },
+  t: (key: string) => string,
+): string {
+  const key = `benchmark.dimension.${d.dimension}`
+  const translated = t(key)
+  return translated !== key ? translated : (d.labelEn || d.label)
 }
 
 function dimEvidence(d: { evidence?: string; evidenceEn?: string }, zh: boolean): string {
@@ -162,8 +177,11 @@ function dimEvidence(d: { evidence?: string; evidenceEn?: string }, zh: boolean)
   return raw.trim()
 }
 
-function dimEvidenceFallback(d: { score: number; maxScore: number }, zh: boolean): string {
-  return zh ? `当前分数 ${d.score}/${d.maxScore}` : `Current score ${d.score}/${d.maxScore}`
+function dimEvidenceFallback(
+  d: { score: number; maxScore: number },
+  t: (key: string) => string,
+): string {
+  return formatI18n(t('benchmark.dimension.currentScore'), { score: d.score, maxScore: d.maxScore })
 }
 
 function formatFreshnessTime(value: string | undefined, locale: string): string {
@@ -171,27 +189,81 @@ function formatFreshnessTime(value: string | undefined, locale: string): string 
   const timestamp = new Date(value)
   if (Number.isNaN(timestamp.getTime())) return '--'
 
-  return new Intl.DateTimeFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+  return new Intl.DateTimeFormat(toIntlLocale(locale), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(timestamp)
 }
 
-function formatConfidenceLabel(value: 'low' | 'medium' | 'high' | undefined, isZh: boolean): string {
-  if (value === 'low') return isZh ? '低' : 'Low'
-  if (value === 'medium') return isZh ? '中' : 'Medium'
-  if (value === 'high') return isZh ? '高' : 'High'
-  return '--'
+function formatConfidenceLabel(
+  value: 'low' | 'medium' | 'high' | undefined,
+  t: (key: string) => string,
+): string {
+  if (!value) return '--'
+  return t(`benchmark.confidence.${value}`)
 }
 
 function formatProofTime(value: string, locale: string): string {
   const timestamp = new Date(value)
   if (Number.isNaN(timestamp.getTime())) return '--'
 
-  return new Intl.DateTimeFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+  return new Intl.DateTimeFormat(toIntlLocale(locale), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(timestamp)
+}
+
+function localizeBenchmarkSummary(
+  summary: string,
+  summaryEn: string | undefined,
+  t: (key: string) => string,
+): string {
+  const source = summaryEn || summary
+  const key = {
+    'First contact — the Agent doesn\'t quite know what to do yet.': 'benchmark.summary.firstContact',
+    'Starting to take shape, but still weak across all dimensions.': 'benchmark.summary.takingShape',
+    'Broke through D-rank into C-rank — starting to find the groove.': 'benchmark.summary.enteredC',
+    'Just getting started — still adapting, rough around the edges in every dimension.': 'benchmark.summary.justStarted',
+    'Progress! Tool use and safety improved noticeably, but writing and coding still need work.': 'benchmark.summary.progress',
+    'Things are getting steadier — tool flow and safety feel more natural, while writing and retrieval are catching up.': 'benchmark.summary.gettingSteadier',
+    'It keeps getting smoother — tool use is already quite mature, and the overall profile is nearing the upper tier.': 'benchmark.summary.nearingUpperTier',
+    'Only a final push away from the upper tier — tool use is strong, and coding plus retrieval have improved noticeably.': 'benchmark.summary.finalPush',
+    '初次接触，Agent 还不知道该干什么。': 'benchmark.summary.firstContact',
+    '开始有模有样了，但各维度都还很弱。': 'benchmark.summary.takingShape',
+    '突破 D 段进入 C 段，开始找到感觉。': 'benchmark.summary.enteredC',
+    '刚开始跑，还在适应中，各方面都比较生疏。': 'benchmark.summary.justStarted',
+    '有进步了！工具调用和安全性提升明显，但写作和代码还需要练。': 'benchmark.summary.progress',
+    '开始稳起来了！工具链和安全性更顺手，写作与检索也在追赶。': 'benchmark.summary.gettingSteadier',
+    '越跑越顺了！工具调用已经很成熟，整体表现逼近高段位。': 'benchmark.summary.nearingUpperTier',
+    '离高段位只差一口气了！工具调用很强，代码和检索也明显长进。': 'benchmark.summary.finalPush',
+  }[source]
+
+  return key ? t(key) : source
+}
+
+function resolveProofVerdictKey(scoreDelta: number, costDelta: number): string {
+  if (scoreDelta >= 0 && costDelta < 0) return 'benchmark.proof.verdict.keepLowerCost'
+  if (scoreDelta > 0 && costDelta > 0) return 'benchmark.proof.verdict.qualityUpCostUp'
+  if (scoreDelta < 0 && costDelta < 0) return 'benchmark.proof.verdict.costDownQualityDown'
+  if (scoreDelta < 0 && costDelta >= 0) return 'benchmark.proof.verdict.neither'
+  if (scoreDelta > 0 && costDelta === 0) return 'benchmark.proof.verdict.qualityUpFlatCost'
+  if (scoreDelta === 0 && costDelta > 0) return 'benchmark.proof.verdict.flatQualityCostUp'
+  return 'benchmark.proof.verdict.smallChange'
+}
+
+function BenchmarkTips() {
+  const { t } = useI18n()
+
+  return (
+    <details className={cn('px-3 py-2 text-left', getSupportingElementPriority('benchmarkSupportCard').className)}>
+      <summary className={cn('cursor-pointer font-medium', getSupportingElementPriority('benchmarkHelpAction').className)}>
+        {t('benchmark.help.title')}
+      </summary>
+      <p className={cn('mt-2', getSupportingElementPriority('benchmarkSupportNote').className)}>
+        {t('benchmark.help.body')}
+      </p>
+    </details>
+  )
 }
 
 function formatSignedInteger(value: number): string {
@@ -215,21 +287,6 @@ function getDeltaState(value: number, prefersLower = false): 'positive' | 'negat
   if (value === 0) return 'neutral'
   const improved = prefersLower ? value < 0 : value > 0
   return improved ? 'positive' : 'negative'
-}
-
-function BenchmarkTips({ isZh }: { isZh: boolean }) {
-  return (
-    <details className={cn('px-3 py-2 text-left', getSupportingElementPriority('benchmarkSupportCard').className)}>
-      <summary className={cn('cursor-pointer font-medium', getSupportingElementPriority('benchmarkHelpAction').className)}>
-        {isZh ? '怎么看这页' : 'How to use this page'}
-      </summary>
-      <p className={cn('mt-2', getSupportingElementPriority('benchmarkSupportNote').className)}>
-        {isZh
-          ? '先看「这次改动有没有变好」判断值不值，再用雷达和趋势图看是哪里变了、稳不稳。'
-          : 'Start with “Did this change make things better” to judge the latest update, then use the radar and trend charts to see what moved and whether it held.'}
-      </p>
-    </details>
-  )
 }
 
 export default function Benchmark() {
@@ -321,13 +378,13 @@ export default function Benchmark() {
     return (result.dimensions ?? []).map(d => {
       const other = compareResult?.dimensions?.find(x => x.dimension === d.dimension)
       return {
-        subject: dimLabel(d, isZh),
+        subject: dimLabel(d, t),
         score: d.score,
         compareScore: other?.score,
         fullMark: 100,
       }
     })
-  }, [result, compareResult, isZh])
+  }, [result, compareResult, t])
 
   const runBenchmark = async () => {
     setRunning(true)
@@ -345,7 +402,7 @@ export default function Benchmark() {
       if (meta) setBenchmarkMeta(meta)
       setProof(proofBody)
       if (histBody) setHistory(Array.isArray(histBody.results) ? histBody.results : [])
-      setSuccessMessage(isZh ? `评测完成，综合分 ${data.overallScore} 分` : `Benchmark complete, overall score ${data.overallScore}`)
+      setSuccessMessage(formatI18n(t('benchmark.success.complete'), { score: data.overallScore }))
     } catch {
       setError(t('benchmark.error.run'))
     } finally {
@@ -357,37 +414,30 @@ export default function Benchmark() {
     if (result && compareId === result.id) setCompareId(null)
   }, [result, compareId])
 
-  const dateLocale =
-    locale === 'zh' ? 'zh-CN'
-    : locale === 'en' ? 'en-US'
-    : locale === 'ja' ? 'ja-JP'
-    : locale === 'ko' ? 'ko-KR'
-    : locale === 'de' ? 'de-DE'
-    : locale === 'fr' ? 'fr-FR'
-    : 'es-ES'
+  const dateLocale = toIntlLocale(locale)
   const dataSource = benchmarkMeta?.dataSource === 'real' ? 'real' : benchmarkMeta?.dataSource === 'demo' ? 'demo' : null
   const benchmarkCutoffLabel = formatFreshnessTime(result?.dataCutoffAt ?? benchmarkMeta?.dataCutoffAt, locale)
-  const benchmarkConfidenceLabel = formatConfidenceLabel(result?.sampleCountConfidence ?? benchmarkMeta?.sampleCountConfidence, isZh)
+  const benchmarkConfidenceLabel = formatConfidenceLabel(result?.sampleCountConfidence ?? benchmarkMeta?.sampleCountConfidence, t)
   const proofLatest = proof?.latest ?? result
   const proofPrevious = proof?.previous ?? null
   const proofDeltas = proof?.deltas ?? null
-  const proofVerdict = (isZh ? proof?.verdictZh : (proof?.verdictEn || proof?.verdictZh))
-    ?? (isZh ? '这次调整变化不大，建议继续观察。' : 'The change is small so far — keep observing.')
+  const proofVerdict = proofDeltas ? t(resolveProofVerdictKey(proofDeltas.score, proofDeltas.cost)) : t('benchmark.proof.verdict.smallChange')
+  const summaryText = result ? localizeBenchmarkSummary(result.summary, result.summaryEn, t) : ''
   const proofMetricCards = proofLatest && proofPrevious && proofDeltas
     ? [
         {
           key: 'score',
-          label: isZh ? '分数' : 'Score',
-          latestValue: `${proofLatest.overallScore}${isZh ? ' 分' : ''}`,
-          previousValue: `${proofPrevious.overallScore}${isZh ? ' 分' : ''}`,
+          label: t('benchmark.proof.score'),
+          latestValue: `${proofLatest.overallScore}${t('benchmark.scoreUnit')}`,
+          previousValue: `${proofPrevious.overallScore}${t('benchmark.scoreUnit')}`,
           deltaValue: proofDeltas.score,
-          deltaLabel: `${proofDeltas.score > 0 ? '+' : ''}${proofDeltas.score}${isZh ? ' 分' : ''}`,
+          deltaLabel: `${proofDeltas.score > 0 ? '+' : ''}${proofDeltas.score}${t('benchmark.scoreUnit')}`,
           pctLabel: null,
           prefersLower: false,
         },
         {
           key: 'tokens',
-          label: 'Token',
+          label: t('benchmark.proof.tokens'),
           latestValue: proofLatest.totalTokens.toLocaleString(),
           previousValue: proofPrevious.totalTokens.toLocaleString(),
           deltaValue: proofDeltas.tokens,
@@ -397,7 +447,7 @@ export default function Benchmark() {
         },
         {
           key: 'cost',
-          label: isZh ? '成本' : 'Cost',
+          label: t('benchmark.proof.cost'),
           latestValue: `$${proofLatest.totalCost.toFixed(2)}`,
           previousValue: `$${proofPrevious.totalCost.toFixed(2)}`,
           deltaValue: proofDeltas.cost,
@@ -473,7 +523,7 @@ export default function Benchmark() {
                 <Share2 className="w-3.5 h-3.5" /> {t('benchmark.share')}
               </a>
               {dataSource === 'demo' && (
-                <span className={getSupportingElementPriority('benchmarkSupportNote').className}>{isZh ? '(演示数据)' : '(Demo data)'}</span>
+                <span className={getSupportingElementPriority('benchmarkSupportNote').className}>({t('benchmark.demoBadge')})</span>
               )}
             </div>
           )}
@@ -508,13 +558,13 @@ export default function Benchmark() {
         <>
           <div className="mb-4 flex flex-wrap gap-2">
             <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
-              {isZh ? `最近 ${result.totalSessions} 条会话` : `Latest ${result.totalSessions} sessions`}
+              {formatI18n(t('benchmark.meta.latestSessions'), { count: result.totalSessions })}
             </span>
             <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
-              {isZh ? '数据截止到：' : 'Data cutoff: '}<span className="font-medium text-slate-700">{benchmarkCutoffLabel}</span>
+              {t('benchmark.meta.dataCutoff')} <span className="font-medium text-slate-700">{benchmarkCutoffLabel}</span>
             </span>
             <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
-              {isZh ? '置信度：' : 'Confidence: '}<span className="font-medium text-slate-700">{benchmarkConfidenceLabel}</span>
+              {t('benchmark.meta.confidence')} <span className="font-medium text-slate-700">{benchmarkConfidenceLabel}</span>
             </span>
           </div>
           {successMessage && (
@@ -544,7 +594,7 @@ export default function Benchmark() {
                   <span className="text-slate-500">/ 100</span>
                   <Trophy className="w-5 h-5 text-accent ml-1" />
                 </div>
-                <p className="text-sm text-slate-500 leading-relaxed">{isZh ? result.summary : (result.summaryEn || result.summary)}</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{summaryText}</p>
               </div>
             </div>
 
@@ -574,12 +624,10 @@ export default function Benchmark() {
               <div>
                 <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
                   <Zap className="w-5 h-5 text-accent" />
-                  <span>{isZh ? '这次改动有没有变好' : 'Did this change make things better'}</span>
+                  <span>{t('benchmark.proof.section.title')}</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  {isZh
-                    ? '直接比较最近两次成绩单，看看这次调整是分数更好、花费更少，还是两边都没变化。'
-                    : 'Compare the latest two scorecards to see whether this change raised scores, cut spend, or barely moved anything.'}
+                  {t('benchmark.proof.section.body')}
                 </p>
               </div>
             </div>
@@ -588,10 +636,10 @@ export default function Benchmark() {
               <>
                 <div className="flex flex-wrap gap-2 mb-4">
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-600">
-                    {isZh ? '最新一次' : 'Latest'} · {formatProofTime(proofLatest.runAt, locale)}
+                    {t('benchmark.proof.latest')} · {formatProofTime(proofLatest.runAt, locale)}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-600">
-                    {isZh ? '上一次' : 'Previous'} · {formatProofTime(proofPrevious.runAt, locale)}
+                    {t('benchmark.proof.previous')} · {formatProofTime(proofPrevious.runAt, locale)}
                   </span>
                 </div>
 
@@ -616,7 +664,9 @@ export default function Benchmark() {
                         <div className="mt-3 flex items-start justify-between gap-3">
                           <div>
                             <p className="text-2xl font-semibold text-slate-900 tabular-nums">{card.latestValue}</p>
-                            <p className="text-xs text-slate-500 mt-1">{isZh ? `上次 ${card.previousValue}` : `Prev ${card.previousValue}`}</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {formatI18n(t('benchmark.proof.prevShort'), { value: card.previousValue })}
+                            </p>
                           </div>
                           <div className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>
                             <DeltaIcon className="w-3.5 h-3.5" />
@@ -625,10 +675,10 @@ export default function Benchmark() {
                         </div>
                         <p className="mt-3 text-[11px] text-slate-500">
                           {card.pctLabel
-                            ? (isZh ? `相对上次 ${card.pctLabel}` : `${card.pctLabel} vs previous`)
+                            ? formatI18n(t('benchmark.proof.vsPrevious'), { value: card.pctLabel })
                             : (card.key === 'score'
-                                ? (isZh ? '越高越好' : 'Higher is better')
-                                : (isZh ? '越低越好' : 'Lower is better'))}
+                                ? t('benchmark.proof.higherBetter')
+                                : t('benchmark.proof.lowerBetter'))}
                         </p>
                       </div>
                     )
@@ -636,21 +686,19 @@ export default function Benchmark() {
                 </div>
 
                 <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-blue-700">{isZh ? '结论' : 'Verdict'}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-blue-700">{t('benchmark.proof.verdictLabel')}</p>
                   <p className="mt-1 text-sm leading-relaxed text-blue-900">{proofVerdict}</p>
                 </div>
               </>
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-6 text-center">
                 <p className="text-sm font-medium text-slate-700">
-                  {isZh ? '至少再跑一次，才能看到前后变化。' : 'Run it one more time to see the before-and-after change.'}
+                  {t('benchmark.proof.runAgainTitle')}
                 </p>
                 <p className="text-xs text-slate-500 mt-2">
                   {proofLatest
-                    ? (isZh
-                        ? `当前只有最新一次结果（${formatProofTime(proofLatest.runAt, locale)}），还没法判断这次调整到底值不值。`
-                        : `You only have the latest run (${formatProofTime(proofLatest.runAt, locale)}), so there isn't enough history to judge the change yet.`)
-                    : (isZh ? '当前还没有 benchmark 结果。' : 'No benchmark result yet.')}
+                    ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
+                    : t('benchmark.proof.runAgainBodyEmpty')}
                 </p>
               </div>
             )}
@@ -665,7 +713,7 @@ export default function Benchmark() {
                 </h3>
                 {compareResult && (
                   <span className="mt-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
-                    {isZh ? '当前对比：' : 'Comparing against: '}
+                    {t('benchmark.compare.against')}
                     <span className="font-medium text-slate-700">
                       {formatRunDate(compareResult.runAt)} · {compareResult.rank}{t('benchmark.rankSuffix')} · {compareResult.overallScore}{t('benchmark.scoreUnit')}
                     </span>
@@ -723,7 +771,7 @@ export default function Benchmark() {
                   const other = (compareResult.dimensions ?? []).find(x => x.dimension === d.dimension)
                   const prev = other?.score ?? d.score
                   const diff = d.score - prev
-                  const label = `${dimLabel(d, isZh)} ${diff > 0 ? '+' : ''}${diff}`
+                  const label = `${dimLabel(d, t)} ${diff > 0 ? '+' : ''}${diff}`
                   if (diff > 0) {
                     return (
                       <span key={d.dimension} className="text-[11px] px-2.5 py-1 rounded-full border border-green-500/20 text-green-600/90">
@@ -740,7 +788,7 @@ export default function Benchmark() {
                   }
                   return (
                     <span key={d.dimension} className="text-[11px] px-2.5 py-1 rounded-full border border-surface-border text-slate-500/80">
-                      {dimLabel(d, isZh)} 0 —
+                      {dimLabel(d, t)} 0 —
                     </span>
                   )
                 })}
@@ -751,19 +799,19 @@ export default function Benchmark() {
               {(result.dimensions ?? []).map(dim => {
                 const Icon = DIMENSION_ICONS[dim.dimension] || Zap
                 const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-500'
-                const evidenceText = dimEvidence(dim, isZh) || dimEvidenceFallback(dim, isZh)
+                const evidenceText = dimEvidence(dim, isZh) || dimEvidenceFallback(dim, t)
                 return (
                   <div key={dim.dimension}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <Icon className={`w-4 h-4 ${color}`} />
-                      <span className="text-sm font-medium text-slate-500">{dimLabel(dim, isZh)}</span>
+                      <span className="text-sm font-medium text-slate-500">{dimLabel(dim, t)}</span>
                     </div>
                     <ScoreBar score={dim.score} color={color} />
                     <div className="mt-2 space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{isZh ? '打分说明' : 'Why this score'}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{t('benchmark.dimension.whyThisScore')}</p>
                       <p className="text-xs leading-relaxed text-slate-500">{evidenceText}</p>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1.5">{isZh ? dim.details : (dim.detailsEn || dim.details)}</p>
+                    <p className="text-xs text-slate-500 mt-1.5">{localizeBenchmarkDimensionDetail(dim, locale, t)}</p>
                   </div>
                 )
               })}
@@ -777,7 +825,7 @@ export default function Benchmark() {
                   <h3 className="text-lg font-semibold">{t('benchmark.curve.title')}</h3>
                   {overallTrendData.length > 0 && (
                     <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
-                      {isZh ? `${overallTrendData.length} 个数据点` : `${overallTrendData.length} points`}
+                      {formatI18n(t('benchmark.curve.points'), { count: overallTrendData.length })}
                     </span>
                   )}
                 </div>
@@ -863,7 +911,7 @@ export default function Benchmark() {
                       formatter={(value, entry) => {
                         const key = String((entry as { dataKey?: string }).dataKey ?? value)
                         const dim = result.dimensions.find(d => d.dimension === key)
-                        return dim?.label ?? String(value)
+                        return dim ? dimLabel(dim, t) : String(value)
                       }}
                     />
                     {dimKeys.map(key => {
@@ -877,7 +925,7 @@ export default function Benchmark() {
                           stroke={stroke}
                           strokeWidth={2}
                           dot={{ r: 3 }}
-                          name={dim?.label ?? key}
+                          name={dim ? dimLabel(dim, t) : key}
                         />
                       )
                     })}
@@ -908,7 +956,7 @@ export default function Benchmark() {
               <p className={getSupportingElementPriority('benchmarkSupportNote').className}>{t('savings.hint.body')}</p>
             </div>
             <div className="mt-3">
-              <BenchmarkTips isZh={isZh} />
+              <BenchmarkTips />
             </div>
           </div>
         </>

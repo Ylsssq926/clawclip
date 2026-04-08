@@ -4,7 +4,7 @@ import { ArrowLeft, Play, Bot, Clock, ChevronDown, ChevronUp, Share2, Download, 
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import { cn } from '../lib/cn'
-import { useI18n } from '../lib/i18n'
+import { useI18n, formatI18n } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
 import { getReplayDetailSections } from './replayDetailSections'
 import { getSupportingElementPriority } from './supportingElementPriority'
@@ -129,9 +129,9 @@ function CollapsibleText({
 }
 
 function ReasoningBlock({ reasoning }: { reasoning: string }) {
-  const { locale } = useI18n()
+  const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
-  const label = locale.startsWith('zh') ? '思考过程' : 'Reasoning'
+  const label = t('replay.reasoning')
 
   return (
     <div className="mt-3">
@@ -153,11 +153,10 @@ function ReasoningBlock({ reasoning }: { reasoning: string }) {
 }
 
 function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; startTime: string; totalCost?: number }) {
-  const { t, locale } = useI18n()
-  const isZh = locale.startsWith('zh')
+  const { t } = useI18n()
   const tokens = step.inputTokens + step.outputTokens
   const typeKey = `replay.step.${step.type}`
-  const defaultLabel = step.type === 'error' ? (isZh ? '错误' : 'Error') : t('replay.step.system')
+  const defaultLabel = step.type === 'error' ? t('replay.step.error') : t('replay.step.system')
   const stepLabel = t(typeKey) !== typeKey ? t(typeKey) : defaultLabel
   const isHighCost = totalCost > 0 && step.cost / totalCost > 0.3
   const toolFailurePattern = /error|failed|failure|失败|异常/i
@@ -196,12 +195,12 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
               {step.model && <span className="text-xs text-slate-500">{step.model}</span>}
               {isHighCost && (
                 <span className="bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded">
-                  {isZh ? '高成本' : 'High cost'}
+                  {t('replay.badge.highCost')}
                 </span>
               )}
               {isToolFailure && (
                 <span className="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-200">
-                  {isZh ? '调用失败' : 'Call failed'}
+                  {t('replay.badge.callFailed')}
                 </span>
               )}
             </div>
@@ -404,18 +403,13 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
 
   if (view === 'detail') {
     const totalSteps = replay?.steps.length ?? 0
-    const isZh = locale.startsWith('zh')
     const parseDiagnostics = replay?.meta.parseDiagnostics
     const parseDiagnosticsNotices = [
       (parseDiagnostics?.skippedLines ?? 0) > 0
-        ? (isZh
-          ? `解析时跳过了 ${parseDiagnostics?.skippedLines ?? 0} 行`
-          : `Skipped ${parseDiagnostics?.skippedLines ?? 0} lines while parsing`)
+        ? formatI18n(t('replay.parse.skipped'), { count: parseDiagnostics?.skippedLines ?? 0 })
         : null,
       (parseDiagnostics?.multilineRecovered ?? 0) > 0
-        ? (isZh
-          ? `恢复了 ${parseDiagnostics?.multilineRecovered ?? 0} 处多行 JSON`
-          : `Recovered ${parseDiagnostics?.multilineRecovered ?? 0} multiline JSON blocks`)
+        ? formatI18n(t('replay.parse.multilineRecovered'), { count: parseDiagnostics?.multilineRecovered ?? 0 })
         : null,
     ].filter((notice): notice is string => Boolean(notice))
     const detailSections = getReplayDetailSections({ insightsLoading, insightCount: insights.length })
@@ -492,7 +486,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                     <p className="line-clamp-1 text-slate-500/90">{replaySessionSummary(replay.meta)}</p>
                   )}
                   {Boolean(replay.meta.modelUsed?.length) && (
-                    <p className="line-clamp-1">{isZh ? '模型' : 'Models'} · {(replay.meta.modelUsed ?? []).join(' / ')}</p>
+                    <p className="line-clamp-1">{t('replay.meta.models')} · {(replay.meta.modelUsed ?? []).join(' / ')}</p>
                   )}
                   {replay.meta.sessionKey && (
                     <p className="font-mono truncate opacity-80" title={replay.meta.sessionKey}>{replay.meta.sessionKey}</p>
@@ -535,16 +529,16 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                     className={cn('flex items-center gap-2 font-medium transition-colors mb-3', getSupportingElementPriority('replayInsightToggle').className)}
                   >
                     <Lightbulb className="w-3.5 h-3.5" />
-                    {locale === 'zh'
-                      ? `运行分析${insightsLoading ? '（整理中）' : insights.length > 0 ? `（${insights.length}）` : ''}`
-                      : `Run Analysis${insightsLoading ? ' (Loading)' : insights.length > 0 ? ` (${insights.length})` : ''}`}
+                    {t('replay.insights.title')}
+                    {insightsLoading && ` (${t('replay.insights.loadingShort')})`}
+                    {!insightsLoading && insights.length > 0 && ` (${insights.length})`}
                     {insightsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   </button>
                   {insightsOpen && (
                     <div className="space-y-2">
                       {insightsLoading && (
                         <div className={cn('rounded-xl border p-4 text-sm', getSupportingElementPriority('replayInsightCard').className)}>
-                          {locale === 'zh' ? '正在整理这次运行…' : 'Analyzing this run…'}
+                          {t('replay.insights.loading')}
                         </div>
                       )}
 
@@ -561,7 +555,9 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                               <Icon className="w-4 h-4 shrink-0" />
                               <span className="text-sm font-medium text-slate-700">{locale === 'zh' ? ins.titleZh : ins.titleEn}</span>
                               {ins.stepIndex != null && (
-                                <span className="text-[10px] text-slate-400 ml-auto">Step {ins.stepIndex + 1}</span>
+                                <span className="text-[10px] text-slate-400 ml-auto">
+                                  {formatI18n(t('replay.insights.stepLabel'), { index: ins.stepIndex + 1 })}
+                                </span>
                               )}
                             </div>
                             <p className="text-xs text-slate-500 leading-relaxed ml-6">{locale === 'zh' ? ins.descZh : ins.descEn}</p>

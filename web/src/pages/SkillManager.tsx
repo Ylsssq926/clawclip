@@ -28,7 +28,7 @@ const SUGGESTED_SKILLS = ['web-search', 'browser-use', 'filesystem']
 const VALID_SKILL_NAME = /^[a-zA-Z0-9_-]+$/
 
 export default function SkillManager() {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [skills, setSkills] = useState<Skill[]>([])
   const [search, setSearch] = useState('')
   const [installing, setInstalling] = useState<string | null>(null)
@@ -38,16 +38,10 @@ export default function SkillManager() {
   const [loading, setLoading] = useState(true)
   const normalizedSearch = search.trim()
   const hasInvalidInstallName = normalizedSearch.length > 0 && !VALID_SKILL_NAME.test(normalizedSearch)
-  const installInputHint = locale === 'en'
-    ? 'Use letters, numbers, hyphens, or underscores.'
-    : '支持字母、数字、连字符和下划线。'
-  const invalidInstallHint = locale === 'en'
-    ? 'Skill names can only contain letters, numbers, hyphens, and underscores.'
-    : 'Skill 名称只能包含字母、数字、连字符和下划线。'
-  const suggestedSkillsTitle = locale === 'en' ? 'Popular picks' : '常用推荐'
-  const emptySkillsHint = locale === 'en'
-    ? 'Type a skill name above and click Install to add your first skill.'
-    : '在上方输入技能名称并点击安装，就能添加第一个技能。'
+  const installInputHint = t('skills.install.hint')
+  const invalidInstallHint = t('skills.install.invalid')
+  const suggestedSkillsTitle = t('skills.suggested')
+  const emptySkillsHint = t('skills.empty.hint')
 
   useEffect(() => {
     apiGet<Skill[]>('/api/skills')
@@ -79,7 +73,7 @@ export default function SkillManager() {
         setSearch('')
         const list = await apiGet<Skill[]>('/api/skills')
         setSkills(Array.isArray(list) ? list : [])
-        setSuccessMessage(locale === 'en' ? `✅ Skill ${skillName} installed` : `✅ 技能 ${skillName} 已安装`)
+        setSuccessMessage(t('skills.success.install', { name: skillName }))
       } else {
         setError(result.message || t('skills.error.install'))
       }
@@ -97,7 +91,7 @@ export default function SkillManager() {
       const result = await apiPost<{ success: boolean; message?: string }>('/api/skills/uninstall', { name })
       if (result.success) {
         setSkills(prev => prev.filter(s => s.name !== name))
-        setSuccessMessage(locale === 'en' ? `✅ Skill ${name} uninstalled` : `✅ 技能 ${name} 已卸载`)
+        setSuccessMessage(t('skills.success.uninstall', { name }))
       } else {
         setError(result.message ?? t('skills.error.network'))
       }

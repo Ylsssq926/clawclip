@@ -39,8 +39,6 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-const RECOMMENDED_SEARCHES = ['React', '小红书', 'Notion', 'Python', 'Kubernetes']
-
 interface Props {
   initialQuery?: string
   navigateTab: (tab: 'replay') => void
@@ -48,7 +46,7 @@ interface Props {
 }
 
 export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySession }: Props) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [sessionCount, setSessionCount] = useState<number | null>(null)
   const [sessionCountError, setSessionCountError] = useState<string | null>(null)
   const [qInput, setQInput] = useState('')
@@ -73,9 +71,9 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
       })
       .catch(() => {
         setSessionCount(null)
-        setSessionCountError(locale === 'en' ? '⚠️ Failed to load stats' : '⚠️ 统计失败')
+        setSessionCountError(t('knowledge.stats.error'))
       })
-  }, [locale])
+  }, [t])
 
   useEffect(() => {
     void loadSessionCount()
@@ -154,9 +152,10 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
           refreshedCount = true
         }
         if (j && typeof j.imported === 'number') {
-          msg = locale === 'en'
-            ? `Imported ${j.imported} session(s), ${j.total ?? '?'} total in library.`
-            : `已导入 ${j.imported} 条会话，知识库共 ${j.total ?? '?'} 条。`
+          msg = t('knowledge.import.successDetail', {
+            imported: j.imported,
+            total: j.total ?? '?',
+          })
         }
       } catch {
         /* ignore */
@@ -201,22 +200,15 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
   const showSearchEmpty =
     Boolean(activeQuery) && !searchLoading && !searchError && searchResults !== null && searchResults.length === 0
   const sessionCountText = sessionCount === null
-    ? locale === 'en'
-      ? 'Counting knowledge base sessions...'
-      : '正在统计知识库会话...'
-    : locale === 'en'
-      ? `Knowledge base currently contains ${sessionCount} session(s)`
-      : `当前知识库共 ${sessionCount} 条会话`
-  const retrySessionCountLabel = locale === 'en' ? 'Retry' : '重试'
-  const recommendedSearchTitle = locale === 'en' ? 'Recommended searches' : '推荐搜索'
-  const emptySearchTitle = locale === 'en' ? 'No matching sessions found' : '没找到相关会话'
-  const emptySearchDescription = locale === 'en'
-    ? `No sessions matched “${activeQuery}”. Try adjusting the keyword or switching to a broader topic.`
-    : `没有找到和“${activeQuery}”相关的会话，可以换个关键词，或试试更宽泛的话题。`
-  const emptySearchHint = locale === 'en'
-    ? 'You can click the recommended searches above, or import more sessions to enrich the knowledge base first.'
-    : '你可以点上方推荐搜索词，或先导入更多会话，让知识库更容易搜到内容。'
-  const replayActionLabel = locale.startsWith('zh') ? '查看回放' : 'Open replay'
+    ? t('knowledge.stats.loading')
+    : t('knowledge.stats.count', { count: sessionCount })
+  const retrySessionCountLabel = t('knowledge.stats.retry')
+  const recommendedSearchTitle = t('knowledge.search.recommended')
+  const recommendedSearches = ['React', t('knowledge.search.rednote'), 'Notion', 'Python', 'Kubernetes']
+  const emptySearchTitle = t('knowledge.search.emptyTitle')
+  const emptySearchDescription = t('knowledge.search.emptyDesc', { query: activeQuery })
+  const emptySearchHint = t('knowledge.search.emptyHint')
+  const replayActionLabel = t('knowledge.search.openReplay')
   const openReplayFromSearch = (sessionId: string) => {
     onSelectReplaySession(sessionId)
     navigateTab('replay')
@@ -279,7 +271,7 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-sm text-slate-500">{recommendedSearchTitle}</span>
-          {RECOMMENDED_SEARCHES.map(keyword => (
+          {recommendedSearches.map(keyword => (
             <button
               key={keyword}
               type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -72,12 +72,8 @@ function formatSessionOptionLabel(session: SessionMeta) {
   return `${agentName} - ${formatSessionSummary(session.summary)}`
 }
 
-function sessionAlias(index: number, isZh: boolean) {
-  const letter = String.fromCharCode(65 + index)
-  return {
-    short: letter,
-    full: isZh ? `会话 ${letter}` : `Session ${letter}`,
-  }
+function sessionAliasLetter(index: number) {
+  return String.fromCharCode(65 + index)
 }
 
 function MetricBar({
@@ -102,7 +98,6 @@ function MetricBar({
 
 export default function Compare() {
   const { t, locale } = useI18n()
-  const isZh = locale.startsWith('zh')
   const [slots, setSlots] = useState<string[]>(['', ''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -113,27 +108,23 @@ export default function Compare() {
   const [availableSessionsError, setAvailableSessionsError] = useState<string | null>(null)
   const [toolCallCounts, setToolCallCounts] = useState<Record<string, number | null>>({})
 
-  const selectPlaceholder = isZh ? '请选择会话' : 'Please select a session'
-  const compareHint = isZh
-    ? '从最近 50 个会话中选择 2–5 个进行对比'
-    : 'Select 2–5 sessions from the latest 50 to compare'
-  const sessionsLoadErrorText = isZh ? '会话列表加载失败' : 'Failed to load sessions'
-  const costChartTitle = isZh ? '成本对比' : 'Cost comparison'
-  const costChartSeries = isZh ? '总成本' : 'Total cost'
-  const costChartEmpty = isZh ? '暂无可展示的成本数据' : 'No cost data to display'
-  const conclusionTitle = isZh ? '自动结论' : 'Auto conclusion'
-  const conclusionEmpty = isZh ? '完成对比后会自动生成结论。' : 'Conclusions will appear after comparison.'
-  const noSelectionTitle = isZh ? '先选 2–5 个会话开始对比' : 'Pick 2–5 sessions to start comparing'
-  const noSelectionHint = isZh
-    ? '如何开始：从上方下拉中选择两个以上会话，然后点击「对比」。'
-    : 'How to start: choose at least two sessions from the dropdowns above, then click Compare.'
-  const noAvailableSessionsTitle = isZh ? '还没有可对比的会话' : 'No sessions to compare yet'
-  const noAvailableSessionsDesc = isZh
-    ? '当前还没有可选会话，版本对比需要先有运行记录。'
-    : 'There are no selectable sessions yet. Version comparison needs a few recorded runs first.'
-  const noAvailableSessionsHint = isZh
-    ? '如何开始：先去「运行洞察」接入或生成几条会话，再回来做版本对比。'
-    : 'How to start: add or generate a few sessions in Replay first, then come back for version comparison.'
+  const sessionAlias = useCallback(
+    (index: number) => t('compare.sessionAlias', { letter: sessionAliasLetter(index) }),
+    [t],
+  )
+  const selectPlaceholder = t('compare.selectPlaceholder')
+  const compareHint = t('compare.hint')
+  const sessionsLoadErrorText = t('compare.sessionsLoadError')
+  const costChartTitle = t('compare.costChart.title')
+  const costChartSeries = t('compare.costChart.series')
+  const costChartEmpty = t('compare.costChart.empty')
+  const conclusionTitle = t('compare.conclusion.title')
+  const conclusionEmpty = t('compare.conclusion.empty')
+  const noSelectionTitle = t('compare.empty.noSelectionTitle')
+  const noSelectionHint = t('compare.empty.noSelectionHint')
+  const noAvailableSessionsTitle = t('compare.empty.noSessionsTitle')
+  const noAvailableSessionsDesc = t('compare.empty.noSessionsDesc')
+  const noAvailableSessionsHint = t('compare.empty.noSessionsHint')
 
   useEffect(() => {
     let cancelled = false
@@ -219,18 +210,15 @@ export default function Compare() {
 
   const costChartData = useMemo(
     () =>
-      (sessions ?? []).map((session, index) => {
-        const alias = sessionAlias(index, isZh)
-        return {
-          id: session.id,
-          shortName: alias.short,
-          alias: alias.full,
-          label: session.label || session.agentName || session.id,
-          totalCost: session.totalCost,
-          color: COST_CHART_COLORS[index % COST_CHART_COLORS.length],
-        }
-      }),
-    [sessions, isZh],
+      (sessions ?? []).map((session, index) => ({
+        id: session.id,
+        shortName: sessionAliasLetter(index),
+        alias: sessionAlias(index),
+        label: session.label || session.agentName || session.id,
+        totalCost: session.totalCost,
+        color: COST_CHART_COLORS[index % COST_CHART_COLORS.length],
+      })),
+    [sessions, sessionAlias],
   )
 
   const toolCallStatus = useMemo(() => {
@@ -241,12 +229,19 @@ export default function Compare() {
     return 'loading' as const
   }, [sessions, toolCallCounts])
 
+  const toolCallStatusLabel =
+    toolCallStatus === 'ready'
+      ? t('compare.toolStatus.ready')
+      : toolCallStatus === 'partial'
+        ? t('compare.toolStatus.partial')
+        : t('compare.toolStatus.loading')
+
   const conclusions = useMemo(() => {
     if (!sessions || sessions.length < 2) return [] as string[]
 
     const sessionEntries = sessions.map((session, index) => ({
       ...session,
-      alias: sessionAlias(index, isZh).full,
+      alias: sessionAlias(index),
     }))
 
     const cheapest = sessionEntries.reduce((best, current) =>
@@ -260,24 +255,26 @@ export default function Compare() {
 
     if (cheapest.totalCost === mostExpensive.totalCost) {
       messages.push(
-        isZh
-          ? `各会话成本接近，当前最低与最高均为 $${cheapest.totalCost.toFixed(4)}；可更多关注步数和工具使用差异。`
-          : `Session costs are currently very close at $${cheapest.totalCost.toFixed(4)}. Focus on steps and tool usage for the next comparison.`,
+        t('compare.conclusion.costClose', {
+          cost: cheapest.totalCost.toFixed(4),
+        }),
       )
     } else {
-      const stepPhrase =
+      const stepPhrase = t(
         cheapest.stepCount <= mostExpensive.stepCount
-          ? isZh
-            ? '步数更少'
-            : 'and also uses fewer steps'
-          : isZh
-            ? '但步数更多'
-            : 'but uses more steps'
+          ? 'compare.conclusion.stepPhrase.fewer'
+          : 'compare.conclusion.stepPhrase.more',
+      )
 
       messages.push(
-        isZh
-          ? `${cheapest.alias} 成本更低（$${cheapest.totalCost.toFixed(4)} vs $${mostExpensive.totalCost.toFixed(4)}），${stepPhrase}（${cheapest.stepCount} vs ${mostExpensive.stepCount}）。`
-          : `${cheapest.alias} has the lower cost ($${cheapest.totalCost.toFixed(4)} vs $${mostExpensive.totalCost.toFixed(4)}), ${stepPhrase} (${cheapest.stepCount} vs ${mostExpensive.stepCount}).`,
+        t('compare.conclusion.cheaper', {
+          alias: cheapest.alias,
+          lowCost: cheapest.totalCost.toFixed(4),
+          highCost: mostExpensive.totalCost.toFixed(4),
+          stepPhrase,
+          lowSteps: cheapest.stepCount,
+          highSteps: mostExpensive.stepCount,
+        }),
       )
     }
 
@@ -290,15 +287,19 @@ export default function Compare() {
 
     if (bestCostPerStep.id === fastest.id) {
       messages.push(
-        isZh
-          ? `${bestCostPerStep.alias} 的每步成本最低（$${bestCostPerStep.costPerStep.toFixed(6)}），同时完成速度也最快，更适合作为当前基线。`
-          : `${bestCostPerStep.alias} has the lowest cost per step ($${bestCostPerStep.costPerStep.toFixed(6)}) and is also the fastest to finish, making it the best current baseline.`,
+        t('compare.conclusion.bestCostAndFastest', {
+          alias: bestCostPerStep.alias,
+          costPerStep: bestCostPerStep.costPerStep.toFixed(6),
+        }),
       )
     } else {
       messages.push(
-        isZh
-          ? `${bestCostPerStep.alias} 的每步成本最低（$${bestCostPerStep.costPerStep.toFixed(6)}），而 ${fastest.alias} 总耗时最短（${formatDuration(fastest.durationMs, locale)}），可按“省钱”或“速度”选择侧重点。`
-          : `${bestCostPerStep.alias} has the lowest cost per step ($${bestCostPerStep.costPerStep.toFixed(6)}), while ${fastest.alias} finishes fastest (${formatDuration(fastest.durationMs, locale)}). Choose based on whether cost or speed matters more.`,
+        t('compare.conclusion.bestCostVsFastest', {
+          bestAlias: bestCostPerStep.alias,
+          costPerStep: bestCostPerStep.costPerStep.toFixed(6),
+          fastestAlias: fastest.alias,
+          duration: formatDuration(fastest.durationMs, locale),
+        }),
       )
     }
 
@@ -316,21 +317,23 @@ export default function Compare() {
 
       if (mostTools.toolCalls === fewestTools.toolCalls) {
         messages.push(
-          isZh
-            ? `各会话工具调用次数接近，当前都是 ${mostTools.toolCalls} 次。`
-            : `Tool-call counts are currently aligned at ${mostTools.toolCalls} for each session.`,
+          t('compare.conclusion.toolsSame', {
+            count: mostTools.toolCalls,
+          }),
         )
       } else {
         messages.push(
-          isZh
-            ? `${mostTools.alias} 使用了更多工具调用（${mostTools.toolCalls} 次 vs ${fewestTools.toolCalls} 次）。`
-            : `${mostTools.alias} used more tool calls (${mostTools.toolCalls} vs ${fewestTools.toolCalls}).`,
+          t('compare.conclusion.toolsMore', {
+            mostAlias: mostTools.alias,
+            mostCount: mostTools.toolCalls,
+            fewestCount: fewestTools.toolCalls,
+          }),
         )
       }
     }
 
     return messages
-  }, [sessions, toolCallCounts, toolCallStatus, isZh, locale])
+  }, [sessions, toolCallCounts, toolCallStatus, sessionAlias, t, locale])
 
   const addSlot = () => {
     setSlots(s => (s.length < 5 ? [...s, ''] : s))
@@ -629,19 +632,7 @@ export default function Compare() {
             <div className="card p-5">
               <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
                 <h3 className="text-lg font-semibold text-slate-900">{conclusionTitle}</h3>
-                <span className="text-xs text-slate-500">
-                  {toolCallStatus === 'ready'
-                    ? isZh
-                      ? '已包含工具调用统计'
-                      : 'Tool calls included'
-                    : toolCallStatus === 'partial'
-                      ? isZh
-                        ? '部分工具调用统计不可用'
-                        : 'Some tool-call stats unavailable'
-                      : isZh
-                        ? '正在统计工具调用'
-                        : 'Counting tool calls'}
-                </span>
+                <span className="text-xs text-slate-500">{toolCallStatusLabel}</span>
               </div>
               <div className="space-y-3">
                 {conclusions.length === 0 ? (

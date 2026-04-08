@@ -172,7 +172,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                 aria-valuemin={1}
                 aria-valuemax={TOUR_KEYS.length}
                 aria-valuenow={tourStep + 1}
-                aria-label="Tour progress"
+                aria-label={t('app.tour.progress')}
               >
                 {TOUR_KEYS.map((_, i) => (
                   <span

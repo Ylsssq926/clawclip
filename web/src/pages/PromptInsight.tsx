@@ -20,7 +20,7 @@ import {
 import FadeIn from '../components/ui/FadeIn'
 import EmptyState from '../components/ui/EmptyState'
 import { cn } from '../lib/cn'
-import { useI18n, type Locale } from '../lib/i18n'
+import { useI18n } from '../lib/i18n'
 import { apiGet } from '../lib/api'
 import type { SessionMeta } from '../types/session'
 
@@ -74,33 +74,48 @@ const chartTooltipStyle = {
   backdropFilter: 'blur(12px)',
 } as const
 
-function labelsFor(locale: Locale) {
-  const zh = locale.startsWith('zh')
-  return {
-    summary: zh ? '概览' : 'Summary',
-    tips: zh ? '洞察与建议' : 'Insights',
-    patterns: zh ? '会话模式' : 'Patterns',
-    distribution: zh ? 'Prompt 长度分布' : 'Prompt length distribution',
-    efficiencyCompare: zh ? '高效 vs 低效会话' : 'Efficient vs inefficient sessions',
-    recommendations: zh ? '优化建议' : 'Optimization suggestions',
-    sessions: zh ? '总会话' : 'Sessions',
-    avgLen: zh ? '平均 Prompt 长度' : 'Avg prompt length',
-    ratio: zh ? '平均 输出/输入' : 'Avg output/input',
-    efficient: zh ? '高效会话' : 'Efficient',
-    wasteful: zh ? '低效会话' : 'Wasteful',
-    emptyPatterns: zh ? '暂无符合条件的会话' : 'No matching sessions',
-    emptyEfficient: zh ? '暂无输出/输入比 > 3 的会话' : 'No sessions with output/input > 3',
-    emptyWasteful: zh ? '暂无输出/输入比 < 0.5 的会话' : 'No sessions with output/input < 0.5',
-    chartEmpty: zh ? '暂无可用于统计分布的会话' : 'No sessions available for distribution',
-    agent: zh ? 'Agent' : 'Agent',
-    promptLength: zh ? 'Prompt 长度' : 'Prompt length',
-    outputLength: zh ? '输出长度' : 'Output length',
-    colSession: zh ? '会话' : 'Session',
-    colAvgLen: zh ? '平均长度' : 'Avg length',
-    colRatio: zh ? '输出/输入' : 'Out/in',
-    colTool: zh ? '工具占比' : 'Tool rate',
-    colCost: zh ? '费用' : 'Cost',
-    colSteps: zh ? '步数' : 'Steps',
+type TranslateFn = (key: string, vars?: Record<string, string | number>) => string
+
+function localizePromptTip(
+  t: TranslateFn,
+  locale: string,
+  tip: PromptInsightsPayload['tips'][number],
+) {
+  if (locale.startsWith('zh')) return tip.messageZh
+  if (locale.startsWith('en')) return tip.messageEn
+
+  const efficientMatch = tip.messageEn.match(
+    /^(\d+) session\(s\) have short prompts with rich output \(output\/input ratio >3\)\. Highly efficient\.$/,
+  )
+  if (efficientMatch) {
+    return t('promptInsight.tip.efficient', { count: efficientMatch[1] })
+  }
+
+  const wastefulMatch = tip.messageEn.match(
+    /^(\d+) session\(s\) have long prompts but low output \(ratio <0\.5\)\. Consider simplifying instructions\.$/,
+  )
+  if (wastefulMatch) {
+    return t('promptInsight.tip.wasteful', { count: wastefulMatch[1] })
+  }
+
+  const toolHeavyMatch = tip.messageEn.match(
+    /^Tool calls average (\d+)% of steps\. Your Agent relies heavily on tools — watch tool call costs\.$/,
+  )
+  if (toolHeavyMatch) {
+    return t('promptInsight.tip.toolHeavy', { percent: toolHeavyMatch[1] })
+  }
+
+  switch (tip.messageEn) {
+    case 'Current real sessions do not contain analyzable prompt samples, so demo prompt insights are shown instead.':
+      return t('promptInsight.tip.demoFallback.real')
+    case 'You are viewing prompt insights from demo sessions. Connect OpenClaw to switch to real data automatically.':
+      return t('promptInsight.tip.demoFallback.demo')
+    case 'No demo sessions match the selected time range. Try a wider window.':
+      return t('promptInsight.tip.noDemoRange')
+    case 'No real session data yet. Connect OpenClaw to analyze prompt efficiency.':
+      return t('promptInsight.tip.noRealData')
+    default:
+      return tip.messageEn
   }
 }
 
@@ -132,7 +147,34 @@ function PromptSkeleton() {
 
 export default function PromptInsight() {
   const { t, locale } = useI18n()
-  const L = useMemo(() => labelsFor(locale), [locale])
+  const L = useMemo(
+    () => ({
+      summary: t('promptInsight.section.summary'),
+      tips: t('promptInsight.section.insights'),
+      patterns: t('promptInsight.section.patterns'),
+      distribution: t('promptInsight.section.distribution'),
+      efficiencyCompare: t('promptInsight.section.efficiencyCompare'),
+      recommendations: t('promptInsight.section.recommendations'),
+      sessions: t('promptInsight.metric.sessions'),
+      avgLen: t('promptInsight.metric.avgPromptLength'),
+      ratio: t('promptInsight.metric.ratio'),
+      efficient: t('promptInsight.metric.efficient'),
+      wasteful: t('promptInsight.metric.wasteful'),
+      emptyPatterns: t('promptInsight.empty.patterns'),
+      emptyEfficient: t('promptInsight.empty.efficient'),
+      emptyWasteful: t('promptInsight.empty.wasteful'),
+      chartEmpty: t('promptInsight.empty.chart'),
+      promptLength: t('promptInsight.card.promptLength'),
+      outputLength: t('promptInsight.card.outputLength'),
+      colSession: t('promptInsight.table.session'),
+      colAvgLen: t('promptInsight.table.avgLength'),
+      colRatio: t('promptInsight.table.ratio'),
+      colTool: t('promptInsight.table.toolRate'),
+      colCost: t('promptInsight.table.cost'),
+      colSteps: t('promptInsight.table.steps'),
+    }),
+    [t],
+  )
   const [data, setData] = useState<PromptInsightsPayload | null>(null)
   const [sessionAgentMap, setSessionAgentMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -164,17 +206,12 @@ export default function PromptInsight() {
   const patterns = data?.patterns ?? []
   const summary = data?.summary ?? null
   const tips = data?.tips ?? []
-  const isZh = locale.startsWith('zh')
-  const emptyPromptTitle = isZh ? '还没有可分析的 Prompt 样本' : 'No prompt analysis samples yet'
-  const emptyPromptDesc = isZh
-    ? '接入更多真实会话后，这里会统计 Prompt 长度分布、输出/输入比和工具触发率。'
-    : 'Once more real sessions arrive, this page will chart prompt length distribution, output/input ratio, and tool usage rate.'
-  const emptyPromptHint = isZh
-    ? '如何开始：先在 OpenClaw / ZeroClaw 跑几轮任务，再回来查看哪些 Prompt 更省、更稳。'
-    : 'How to start: run a few tasks in OpenClaw / ZeroClaw, then come back to see which prompt patterns are leaner and more reliable.'
+  const emptyPromptTitle = t('promptInsight.empty.title')
+  const emptyPromptDesc = t('promptInsight.empty.desc')
+  const emptyPromptHint = t('promptInsight.empty.hint')
 
-  const tipMessage = (tip: PromptInsightsPayload['tips'][0]) =>
-    locale.startsWith('zh') ? tip.messageZh : tip.messageEn
+  const tipMessage = (tip: PromptInsightsPayload['tips'][number]) =>
+    localizePromptTip(t, locale, tip)
 
   const tipStyle = (type: 'good' | 'warning' | 'tip') => {
     switch (type) {
@@ -219,27 +256,16 @@ export default function PromptInsight() {
 
   const recommendations = useMemo(() => {
     if (!summary || patternCards.length === 0) {
-      return locale === 'zh'
-        ? [
-            {
-              type: 'tip' as const,
-              message: '当前时间范围内暂无足够样本，建议继续积累会话后再观察 Prompt 结构和产出比。',
-            },
-            {
-              type: 'tip' as const,
-              message: '接入更多真实会话后，可优先关注 Prompt 长度、工具调用率与输出/输入比三项指标。',
-            },
-          ]
-        : [
-            {
-              type: 'tip' as const,
-              message: 'There are not enough sessions in the selected range yet. Add more runs to evaluate prompt structure and payoff.',
-            },
-            {
-              type: 'tip' as const,
-              message: 'Once more real sessions arrive, focus on prompt length, tool usage rate, and output/input ratio first.',
-            },
-          ]
+      return [
+        {
+          type: 'tip' as const,
+          message: t('promptInsight.recommendation.empty.one'),
+        },
+        {
+          type: 'tip' as const,
+          message: t('promptInsight.recommendation.empty.two'),
+        },
+      ]
     }
 
     const avgToolRatePercent = Math.round(summary.avgToolTriggerRate * 100)
@@ -248,66 +274,58 @@ export default function PromptInsight() {
       summary.avgPromptLength > 500
         ? {
             type: 'warning' as const,
-            message:
-              locale === 'zh'
-                ? `建议精简 Prompt，当前平均长度为 ${summary.avgPromptLength}，整体偏长。`
-                : `Consider shortening prompts. The current average length is ${summary.avgPromptLength}, which is on the long side.`,
+            message: t('promptInsight.recommendation.longPrompt', {
+              avgPromptLength: summary.avgPromptLength,
+            }),
           }
         : {
             type: 'good' as const,
-            message:
-              locale === 'zh'
-                ? `平均 Prompt 长度为 ${summary.avgPromptLength}，整体较克制，可继续沉淀为模板。`
-                : `Average prompt length is ${summary.avgPromptLength}, which looks relatively lean. You can keep standardizing this structure.`,
+            message: t('promptInsight.recommendation.promptLean', {
+              avgPromptLength: summary.avgPromptLength,
+            }),
           },
       summary.avgToolTriggerRate < 0.2
         ? {
             type: 'warning' as const,
-            message:
-              locale === 'zh'
-                ? `工具使用率仅 ${avgToolRatePercent}%，偏低，考虑增加工具调用来提升信息获取能力。`
-                : `Tool usage is only ${avgToolRatePercent}%, which is relatively low. Consider adding more tool calls to improve information gathering.`,
+            message: t('promptInsight.recommendation.toolLow', {
+              avgToolRatePercent,
+            }),
           }
         : summary.avgToolTriggerRate > 0.6
           ? {
               type: 'tip' as const,
-              message:
-                locale === 'zh'
-                  ? `工具使用率约 ${avgToolRatePercent}%，依赖度偏高，建议关注工具链路是否带来额外成本。`
-                  : `Tool usage is around ${avgToolRatePercent}%, which is fairly high. Make sure the extra tool calls are worth the cost.`,
+              message: t('promptInsight.recommendation.toolHigh', {
+                avgToolRatePercent,
+              }),
             }
           : {
               type: 'good' as const,
-              message:
-                locale === 'zh'
-                  ? `工具使用率约 ${avgToolRatePercent}%，整体处于合理区间，可继续保持。`
-                  : `Tool usage is around ${avgToolRatePercent}%, which looks healthy overall.`,
+              message: t('promptInsight.recommendation.toolHealthy', {
+                avgToolRatePercent,
+              }),
             },
       wastefulSessions.length > efficientSessions.length
         ? {
             type: 'warning' as const,
-            message:
-              locale === 'zh'
-                ? `低效会话多于高效会话（${wastefulSessions.length} vs ${efficientSessions.length}），建议优先优化 Prompt 结构与上下文噪音。`
-                : `Inefficient sessions outnumber efficient ones (${wastefulSessions.length} vs ${efficientSessions.length}). Start by tightening prompt structure and reducing noise.`,
+            message: t('promptInsight.recommendation.moreWasteful', {
+              wastefulCount: wastefulSessions.length,
+              efficientCount: efficientSessions.length,
+            }),
           }
         : efficientSessions.length > wastefulSessions.length
           ? {
               type: 'good' as const,
-              message:
-                locale === 'zh'
-                  ? `高效会话更多（${efficientSessions.length} vs ${wastefulSessions.length}），建议复用这些会话的 Prompt 模板。`
-                  : `Efficient sessions are leading (${efficientSessions.length} vs ${wastefulSessions.length}). Reuse their prompt patterns as templates.`,
+              message: t('promptInsight.recommendation.moreEfficient', {
+                efficientCount: efficientSessions.length,
+                wastefulCount: wastefulSessions.length,
+              }),
             }
           : {
               type: 'tip' as const,
-              message:
-                locale === 'zh'
-                  ? `高效与低效会话数量接近，建议重点对比边界样本，找出最影响结果的 Prompt 片段。`
-                  : `Efficient and inefficient sessions are close in count. Compare the borderline cases to identify the prompt fragments that matter most.`,
+              message: t('promptInsight.recommendation.balanced'),
             },
     ]
-  }, [summary, patternCards.length, locale, wastefulSessions.length, efficientSessions.length])
+  }, [summary, patternCards.length, t, wastefulSessions.length, efficientSessions.length])
 
   if (loading) {
     return <PromptSkeleton />

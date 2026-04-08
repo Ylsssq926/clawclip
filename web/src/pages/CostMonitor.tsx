@@ -6,7 +6,14 @@ import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import EmptyState from '../components/ui/EmptyState'
 import { cn } from '../lib/cn'
-import { useI18n } from '../lib/i18n'
+import {
+  getCostMonitorCopy,
+  localizeCostInsightMessage,
+  localizeCostModelRecommendation,
+  type CostMonitorCopy,
+  type Locale,
+  useI18n,
+} from '../lib/i18n'
 import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
 import {
   DEFAULT_COST_RECONCILIATION_SORT,
@@ -72,61 +79,52 @@ interface CostReconciliationData {
   rows: CostReconciliationRow[]
 }
 
-const PRICING_REFERENCE_OPTIONS: Array<{
-  value: PricingReference
-  labelZh: string
-  labelEn: string
-}> = [
-  { value: 'pricetoken', labelZh: '联网公开价', labelEn: 'Online public prices' },
-  { value: 'official-static', labelZh: '官方公开价', labelEn: 'Official public prices' },
-  { value: 'openrouter', labelZh: 'OpenRouter 公开价', labelEn: 'OpenRouter public prices' },
-]
+const PRICING_REFERENCE_OPTIONS: PricingReference[] = ['pricetoken', 'official-static', 'openrouter']
 
 function isPricingReference(value: unknown): value is PricingReference {
   return value === 'official-static' || value === 'pricetoken' || value === 'openrouter'
 }
 
-function getPricingReferenceLabel(reference: PricingReference | undefined, isZh: boolean): string | null {
+function getIntlLocale(locale: Locale): string {
+  switch (locale) {
+    case 'zh':
+      return 'zh-CN'
+    case 'ja':
+      return 'ja-JP'
+    case 'ko':
+      return 'ko-KR'
+    case 'es':
+      return 'es-ES'
+    case 'fr':
+      return 'fr-FR'
+    case 'de':
+      return 'de-DE'
+    case 'en':
+    default:
+      return 'en-US'
+  }
+}
+
+function fillTemplate(template: string, replacements: Record<string, string | number>): string {
+  let result = template
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.split(`{${key}}`).join(String(value))
+  }
+  return result
+}
+
+function getPricingReferenceLabel(reference: PricingReference | undefined, copy: CostMonitorCopy): string | null {
   if (!reference) return null
-  switch (reference) {
-    case 'official-static':
-      return isZh ? '官方公开价' : 'Official public prices'
-    case 'pricetoken':
-      return isZh ? '联网公开价' : 'Online public prices'
-    case 'openrouter':
-      return isZh ? 'OpenRouter 公开价' : 'OpenRouter public prices'
-    default:
-      return null
-  }
+  return copy.pricingReference[reference] ?? null
 }
 
-function getPricingSourceLabel(source: PricingSource | undefined, isZh: boolean): string | null {
+function getPricingSourceLabel(source: PricingSource | undefined, copy: CostMonitorCopy): string | null {
   if (!source) return null
-  switch (source) {
-    case 'pricetoken':
-      return isZh ? '联网公开价格' : 'Online public prices'
-    case 'openrouter':
-      return isZh ? 'OpenRouter 公开价格' : 'OpenRouter public prices'
-    case 'static-default':
-      return isZh ? '内置公开价格' : 'Built-in public prices'
-    default:
-      return null
-  }
+  return copy.pricingSource[source] ?? null
 }
 
-function getUsageSourceLabel(source: UsageSource | undefined, isZh: boolean): string {
-  switch (source) {
-    case 'replay':
-      return isZh ? '回放' : 'Replay'
-    case 'log':
-      return isZh ? '日志' : 'Logs'
-    case 'demo':
-      return isZh ? 'Demo' : 'Demo'
-    case 'mixed':
-      return isZh ? '混合' : 'Mixed'
-    default:
-      return '--'
-  }
+function getUsageSourceLabel(source: UsageSource | undefined, copy: CostMonitorCopy): string {
+  return (source ? copy.usageSource[source] : null) ?? '--'
 }
 
 function getUsageSourceBadgeClass(source: UsageSource | undefined): string {
@@ -253,31 +251,31 @@ function formatSignedCostDelta(value: number): string {
   return `${value > 0 ? '+' : '-'}$${formatWasteCost(Math.abs(value))}`
 }
 
-function getSavingTypeMeta(reasonType: SavingReasonType | undefined, isZh: boolean) {
+function getSavingTypeMeta(reasonType: SavingReasonType | undefined, copy: CostMonitorCopy) {
   switch (reasonType) {
     case 'reduce-retries':
       return {
-        label: isZh ? '先修重试' : 'Fix retries',
+        label: copy.savings.types['reduce-retries'],
         className: 'border-amber-200 bg-amber-50 text-amber-700',
       }
     case 'trim-prompt':
       return {
-        label: isZh ? '缩 Prompt' : 'Trim prompt',
+        label: copy.savings.types['trim-prompt'],
         className: 'border-cyan-200 bg-cyan-50 text-cyan-700',
       }
     case 'trim-output':
       return {
-        label: isZh ? '缩输出' : 'Trim output',
+        label: copy.savings.types['trim-output'],
         className: 'border-violet-200 bg-violet-50 text-violet-700',
       }
     case 'switch-model':
       return {
-        label: isZh ? '换模型' : 'Switch model',
+        label: copy.savings.types['switch-model'],
         className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
       }
     default:
       return {
-        label: isZh ? '优化建议' : 'Suggestion',
+        label: copy.savings.types.default,
         className: 'border-slate-200 bg-slate-50 text-slate-600',
       }
   }
@@ -294,123 +292,81 @@ function getSavingCardClass(priority: SavingPriority | undefined): string {
   }
 }
 
-function getSavingGuardrailMeta(reasonType: SavingReasonType | undefined, t: (key: string) => string) {
+function getSavingGuardrailMeta(reasonType: SavingReasonType | undefined, copy: CostMonitorCopy) {
   if (reasonType === 'switch-model') {
     return {
-      label: t('cost.savings.guardrail.cautious'),
+      label: copy.savings.guardrailLabels.cautious,
       className: 'border-slate-200 bg-slate-50/80 text-slate-700',
     }
   }
 
   return {
-    label: t('cost.savings.guardrail.lowRisk'),
+    label: copy.savings.guardrailLabels.lowRisk,
     className: 'border-slate-200 bg-slate-50/80 text-slate-700',
   }
 }
 
-function getSavingReasonText(suggestion: SavingSuggestion, isZh: boolean): string {
-  if (isZh) {
-    if (suggestion.reasonZh) return suggestion.reasonZh
-    if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-      return `${suggestion.currentModel} 在这类任务上的单次成本偏高，换成 ${suggestion.alternativeModel} 预计能少花 $${formatWasteCost(suggestion.saving)}。`
-    }
-
-    switch (suggestion.reasonType) {
-      case 'reduce-retries':
-        return '这类会话的钱主要白花在反复重试上，先把失败最多的那一步修掉。'
-      case 'trim-prompt':
-        return '这类会话的输入 Token 偏长，先删掉重复说明和长背景，省钱最直接。'
-      case 'trim-output':
-        return '这类会话主要花在输出上，先收紧答案长度或格式最容易见效。'
-      default:
-        return '这类会话最近花钱偏多，先从这里下手更容易看到变化。'
-    }
-  }
-
-  if (suggestion.reasonEn) return suggestion.reasonEn
+function getSavingReasonText(suggestion: SavingSuggestion, locale: Locale, copy: CostMonitorCopy): string {
+  if (locale === 'zh' && suggestion.reasonZh) return suggestion.reasonZh
+  if (locale === 'en' && suggestion.reasonEn) return suggestion.reasonEn
   if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-    return `${suggestion.currentModel} is costing too much on this task type, and switching to ${suggestion.alternativeModel} could save about $${formatWasteCost(suggestion.saving)}.`
+    return fillTemplate(copy.savings.reason['switch-model'], {
+      current: suggestion.currentModel,
+      alternative: suggestion.alternativeModel,
+      saving: `$${formatWasteCost(suggestion.saving)}`,
+    })
   }
 
   switch (suggestion.reasonType) {
     case 'reduce-retries':
-      return 'Most of the spend here is going into repeated retries, so the first fix is the step that keeps failing.'
+      return copy.savings.reason['reduce-retries']
     case 'trim-prompt':
-      return 'Input tokens are doing most of the damage here, so cutting repeated instructions and long setup text is the fastest win.'
+      return copy.savings.reason['trim-prompt']
     case 'trim-output':
-      return 'Most of the money here is in the response itself, so tighter length or format limits should pay off first.'
+      return copy.savings.reason['trim-output']
     default:
-      return 'This task type has been one of the pricier ones lately, so changes here should show up quickly.'
+      return copy.savings.reason.default
   }
 }
 
-function getSavingActionText(suggestion: SavingSuggestion, isZh: boolean): string {
-  if (isZh) {
-    if (suggestion.actionZh) return suggestion.actionZh
-    if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-      return `先把最近这类任务切到 ${suggestion.alternativeModel}，连看几次成本、成功率和重试次数。`
-    }
-
-    switch (suggestion.reasonType) {
-      case 'reduce-retries':
-        return '先回看重试最多的几条会话，找出哪一步反复失败，再改那一步。'
-      case 'trim-prompt':
-        return '先删掉提示词里重复出现的规则、背景和示例，再看输入 Token 有没有下来。'
-      case 'trim-output':
-        return '先收紧输出格式或长度，再看单次输出 Token 有没有明显变短。'
-      default:
-        return '先挑最近最花钱的几条同类会话，照着这张卡里的问题去改。'
-    }
-  }
-
-  if (suggestion.actionEn) return suggestion.actionEn
+function getSavingActionText(suggestion: SavingSuggestion, locale: Locale, copy: CostMonitorCopy): string {
+  if (locale === 'zh' && suggestion.actionZh) return suggestion.actionZh
+  if (locale === 'en' && suggestion.actionEn) return suggestion.actionEn
   if (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel) {
-    return `Switch a few recent runs of this task type to ${suggestion.alternativeModel}, then watch cost, success rate, and retry count side by side.`
+    return fillTemplate(copy.savings.action['switch-model'], {
+      alternative: suggestion.alternativeModel,
+    })
   }
 
   switch (suggestion.reasonType) {
     case 'reduce-retries':
-      return 'Start with the runs that retry the most, find the step that keeps failing, and fix that step first.'
+      return copy.savings.action['reduce-retries']
     case 'trim-prompt':
-      return 'Cut repeated rules, background, and examples from the prompt, then check whether input tokens actually drop.'
+      return copy.savings.action['trim-prompt']
     case 'trim-output':
-      return 'Tighten the response format or length, then check whether output tokens get shorter.'
+      return copy.savings.action['trim-output']
     default:
-      return 'Pick a few of the most expensive recent runs in this category and change the thing this card is pointing at.'
+      return copy.savings.action.default
   }
 }
 
-function getSavingGuardrailText(suggestion: SavingSuggestion, isZh: boolean): string {
-  if (isZh) {
-    if (suggestion.qualityGuardrailZh) return suggestion.qualityGuardrailZh
-
-    switch (suggestion.reasonType) {
-      case 'switch-model':
-        return `换到 ${suggestion.alternativeModel || '新模型'} 后，重点看回复质量、成功率和重试次数。`
-      case 'trim-prompt':
-        return '改完后重点看输入 Token 有没有降下来，同时确认回复没有漏掉关键要求。'
-      case 'trim-output':
-        return '改完后重点看输出 Token 有没有变短，同时确认结果没有少关键步骤。'
-      case 'reduce-retries':
-        return '改完后重点看同类会话的重试次数和报错有没有真的降下来。'
-      default:
-        return '改完后盯住这类会话的成本和成功率，确认钱是真的少花了。'
-    }
-  }
-
-  if (suggestion.qualityGuardrailEn) return suggestion.qualityGuardrailEn
+function getSavingGuardrailText(suggestion: SavingSuggestion, locale: Locale, copy: CostMonitorCopy): string {
+  if (locale === 'zh' && suggestion.qualityGuardrailZh) return suggestion.qualityGuardrailZh
+  if (locale === 'en' && suggestion.qualityGuardrailEn) return suggestion.qualityGuardrailEn
 
   switch (suggestion.reasonType) {
     case 'switch-model':
-      return `After switching to ${suggestion.alternativeModel || 'the new model'}, watch reply quality, success rate, and retry count first.`
+      return fillTemplate(copy.savings.guardrailText['switch-model'], {
+        alternative: suggestion.alternativeModel || copy.savings.newModel,
+      })
     case 'trim-prompt':
-      return 'After the edit, check whether input tokens dropped and whether the reply still covers the key requirements.'
+      return copy.savings.guardrailText['trim-prompt']
     case 'trim-output':
-      return 'After the edit, check whether output tokens got shorter without dropping important steps.'
+      return copy.savings.guardrailText['trim-output']
     case 'reduce-retries':
-      return 'After the fix, check whether retry count and errors really went down on similar runs.'
+      return copy.savings.guardrailText['reduce-retries']
     default:
-      return 'Watch cost and success rate on similar runs after the change to confirm the savings are real.'
+      return copy.savings.guardrailText.default
   }
 }
 
@@ -462,8 +418,8 @@ function formatRate(value: number): string {
   return `${(value * 100).toFixed(value * 100 >= 10 ? 0 : 1)}%`
 }
 
-function formatCompactTokens(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+function formatCompactTokens(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(value)
@@ -483,27 +439,27 @@ function getModelValueBadgeClass(valueLabel: ModelValueLabel): string {
   }
 }
 
-function getStabilityMeta(errorRate: number, isZh: boolean): { label: string; className: string } {
+function getStabilityMeta(errorRate: number, copy: CostMonitorCopy): { label: string; className: string } {
   if (errorRate <= 0.03) {
     return {
-      label: isZh ? '很稳' : 'Very stable',
+      label: copy.modelValue.stability.veryStable,
       className: 'text-emerald-600',
     }
   }
   if (errorRate <= 0.08) {
     return {
-      label: isZh ? '较稳' : 'Stable',
+      label: copy.modelValue.stability.stable,
       className: 'text-cyan-700',
     }
   }
   if (errorRate <= 0.15) {
     return {
-      label: isZh ? '可接受' : 'Acceptable',
+      label: copy.modelValue.stability.acceptable,
       className: 'text-amber-700',
     }
   }
   return {
-    label: isZh ? '波动偏大' : 'Needs watching',
+    label: copy.modelValue.stability.watch,
     className: 'text-rose-600',
   }
 }
@@ -515,15 +471,27 @@ const chartTooltipStyle = {
   backdropFilter: 'blur(12px)',
 } as const
 
-function formatFreshnessTime(value: string | undefined, locale: string): string {
+function formatFreshnessTime(value: string | undefined, locale: Locale): string {
   if (!value) return '--'
   const timestamp = new Date(value)
   if (Number.isNaN(timestamp.getTime())) return '--'
 
-  return new Intl.DateTimeFormat(locale.startsWith('zh') ? 'zh-CN' : 'en-US', {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(timestamp)
+}
+
+function getTokenWasteDiagnosticTitle(diagnostic: TokenWasteDiagnostic, locale: Locale, copy: CostMonitorCopy): string {
+  if (locale === 'zh') return diagnostic.titleZh
+  if (locale === 'en') return diagnostic.titleEn
+  return copy.tokenWaste.titles[diagnostic.type] ?? diagnostic.titleEn
+}
+
+function getTokenWasteDiagnosticDescription(diagnostic: TokenWasteDiagnostic, locale: Locale, copy: CostMonitorCopy): string {
+  if (locale === 'zh') return diagnostic.descZh
+  if (locale === 'en') return diagnostic.descEn
+  return copy.tokenWaste.descriptions[diagnostic.type] ?? diagnostic.descEn
 }
 
 function CostSkeleton() {
@@ -556,8 +524,8 @@ interface CostMonitorRenderableSection {
 }
 
 export default function CostMonitor({ onOpenReplaySession }: Props) {
-  const { t, locale } = useI18n()
-  const isZh = locale.startsWith('zh')
+  const { locale, t } = useI18n()
+  const copy = getCostMonitorCopy(locale)
   const [daily, setDaily] = useState<DailyData[]>([])
   const [summary, setSummary] = useState<CostSummary | null>(null)
   const [referenceCompare, setReferenceCompare] = useState<ReferenceCompareData | null>(null)
@@ -633,11 +601,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       setModelValueRows(Array.isArray(modelValue?.rows) ? modelValue.rows : [])
       setBudgetConfig(normalizedBudget)
     } catch {
-      setError(t('cost.error'))
+      setError(copy.errorLoad)
     } finally {
       setLoading(false)
     }
-  }, [days, t])
+  }, [copy.errorLoad, days])
 
   useEffect(() => {
     void loadData()
@@ -670,13 +638,13 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
     .slice(0, 6)
   const averageDailyCost = daily.length > 0 ? daily.reduce((sum, item) => sum + item.cost, 0) / daily.length : 0
   const selectedPricingReference = budgetConfig?.pricingReference ?? summary?.costMeta?.pricingReference ?? 'pricetoken'
-  const pricingReferenceLabel = getPricingReferenceLabel(summary?.costMeta?.pricingReference ?? selectedPricingReference, isZh)
-  const pricingSourceLabel = getPricingSourceLabel(summary?.pricingSource, isZh)
+  const pricingReferenceLabel = getPricingReferenceLabel(summary?.costMeta?.pricingReference ?? selectedPricingReference, copy)
+  const pricingSourceLabel = getPricingSourceLabel(summary?.pricingSource, copy)
   const pricingUpdatedAtLabel = (() => {
     if (!summary?.pricingUpdatedAt) return null
     const timestamp = new Date(summary.pricingUpdatedAt)
     if (Number.isNaN(timestamp.getTime())) return null
-    return new Intl.DateTimeFormat(isZh ? 'zh-CN' : 'en-US', {
+    return new Intl.DateTimeFormat(getIntlLocale(locale), {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(timestamp)
@@ -686,7 +654,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   const referenceCompareRows = referenceCompare?.rows ?? []
   const currentReferenceRow = referenceCompareRows.find(row => row.reference === referenceCompare?.currentReference) ?? null
   const currentReferenceCompareLabel = currentReferenceRow
-    ? getPricingReferenceLabel(currentReferenceRow.reference, isZh) ?? currentReferenceRow.label
+    ? getPricingReferenceLabel(currentReferenceRow.reference, copy) ?? currentReferenceRow.label
     : null
   const officialReferenceRow = referenceCompareRows.find(row => row.reference === 'official-static') ?? null
   const referenceVsOfficialRows = officialReferenceRow
@@ -701,38 +669,39 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   const reconciliationSummary = reconciliation?.summary ?? null
   const reconciliationMeta = reconciliation?.meta ?? null
   const reconciliationUsageBreakdown = reconciliationSummary?.usageSourceBreakdown ?? null
-  const reconciliationCurrentReferenceLabel = getPricingReferenceLabel(reconciliationMeta?.currentReference, isZh)
-  const reconciliationBaselineReferenceLabel = getPricingReferenceLabel(reconciliationMeta?.baselineReference, isZh)
-  const reconciliationCurrentSourceLabel = getPricingSourceLabel(reconciliationMeta?.pricingSource, isZh)
-  const reconciliationBaselineSourceLabel = getPricingSourceLabel(reconciliationMeta?.baselinePricingSource, isZh)
+  const reconciliationCurrentReferenceLabel = getPricingReferenceLabel(reconciliationMeta?.currentReference, copy)
+  const reconciliationBaselineReferenceLabel = getPricingReferenceLabel(reconciliationMeta?.baselineReference, copy)
+  const reconciliationCurrentSourceLabel = getPricingSourceLabel(reconciliationMeta?.pricingSource, copy)
+  const reconciliationBaselineSourceLabel = getPricingSourceLabel(reconciliationMeta?.baselinePricingSource, copy)
   const displayedReconciliationRows = getCostReconciliationDisplayRows(reconciliationRows, {
     sortBy: reconciliationSortBy,
     onlyEstimated: showEstimatedOnly,
     onlyReplayable: showReplayableOnly,
   })
   const showGlobalEmptyState = !loading && !error && !!summary && summary.totalCost === 0
-  const emptyStartHint = isZh
-    ? '接入本地 JSONL 日志后跑几次真实任务，再回来查看趋势、模型占比和预算提醒。'
-    : 'Connect local JSONL logs, run a few real tasks, then come back to review trends, model breakdown, and budget alerts.'
+  const emptyStartHint = copy.empty.hint
   const wasteDiagnostics = tokenWaste?.diagnostics.slice(0, 4) ?? []
   const wasteSummaryText = tokenWaste
-    ? `${isZh ? '可能白花' : 'Likely wasted'} $${formatWasteCost(tokenWaste.summary.estimatedWasteCost)} / ${tokenWaste.summary.estimatedWasteTokens.toLocaleString()} tokens`
-    : (isZh ? '诊断数据暂不可用' : 'Diagnostics unavailable right now')
+    ? fillTemplate(copy.tokenWaste.summary, {
+      cost: `$${formatWasteCost(tokenWaste.summary.estimatedWasteCost)}`,
+      tokens: tokenWaste.summary.estimatedWasteTokens.toLocaleString(getIntlLocale(locale)),
+    })
+    : copy.tokenWaste.unavailable
   const wasteMetaText = tokenWaste
-    ? `${isZh ? `${tokenWaste.summary.signals} 处值得先看` : `${tokenWaste.summary.signals} places worth checking`}${tokenWaste.summary.usingDemo ? (isZh ? ' · 当前为 Demo 诊断' : ' · Demo diagnostics') : ''}`
-    : (isZh ? '这里会汇总重试、长 Prompt、冗长输出这些最容易白花钱的问题。' : 'This is where retry loops, long prompts, and overly long replies show up first.')
+    ? `${fillTemplate(copy.tokenWaste.signals, { count: tokenWaste.summary.signals })}${tokenWaste.summary.usingDemo ? copy.tokenWaste.demoSuffix : ''}`
+    : copy.tokenWaste.fallback
   const hasSwitchModelSuggestion = Boolean(
     savings?.suggestions.some(suggestion => (
       suggestion.reasonType === 'switch-model'
       || (suggestion.currentModel && suggestion.alternativeModel && suggestion.currentModel !== suggestion.alternativeModel)
     )),
   )
-  const replayActionLabel = isZh ? '查看会话' : 'View session'
+  const replayActionLabel = copy.replayAction
   const canOpenReplaySession = (sessionId?: string): sessionId is string => Boolean(sessionId?.trim())
   const reconciliationSortOptions: Array<{ value: CostReconciliationSortKey; label: string }> = [
-    { value: 'abs-delta', label: isZh ? '偏差最大' : 'Largest delta' },
-    { value: 'current-cost', label: isZh ? '当前成本最高' : 'Highest current cost' },
-    { value: 'tokens', label: isZh ? 'Token 最多' : 'Most tokens' },
+    { value: 'abs-delta', label: copy.reconciliation.sortOptions['abs-delta'] },
+    { value: 'current-cost', label: copy.reconciliation.sortOptions['current-cost'] },
+    { value: 'tokens', label: copy.reconciliation.sortOptions.tokens },
   ]
 
   const openBudgetModal = () => {
@@ -749,12 +718,12 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
     const alertThreshold = Number(budgetForm.alertThreshold)
 
     if (!Number.isFinite(monthly) || monthly <= 0) {
-      setBudgetError(isZh ? '请输入有效的月预算金额' : 'Please enter a valid monthly budget amount')
+      setBudgetError(copy.budget.invalidMonthly)
       return
     }
 
     if (!Number.isFinite(alertThreshold) || alertThreshold < 1 || alertThreshold > 100) {
-      setBudgetError(isZh ? '告警阈值必须在 1 到 100 之间' : 'Alert threshold must be between 1 and 100')
+      setBudgetError(copy.budget.invalidThreshold)
       return
     }
 
@@ -766,9 +735,9 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       await apiPost('/api/cost/budget', { monthly, alertThreshold })
       setBudgetModalOpen(false)
       await loadData()
-      setBudgetSuccessMessage(isZh ? '预算已保存' : 'Budget saved')
+      setBudgetSuccessMessage(copy.budget.saved)
     } catch (err) {
-      setBudgetError(parseApiErrorMessage(err, isZh ? '保存预算设置失败' : 'Failed to save budget settings'))
+      setBudgetError(parseApiErrorMessage(err, copy.budget.saveFailed))
     } finally {
       setBudgetSaving(false)
     }
@@ -789,14 +758,14 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
     try {
       await apiPost('/api/cost/budget', { pricingReference })
       await loadData()
-      setBudgetSuccessMessage(isZh ? '价格参考已更新' : 'Pricing reference updated')
+      setBudgetSuccessMessage(copy.budget.referenceUpdated)
     } catch (err) {
       setBudgetConfig(current => (
         current
           ? { ...current, pricingReference: previousReference }
           : { monthly: 50, alertThreshold: 80, pricingReference: previousReference }
       ))
-      setError(parseApiErrorMessage(err, isZh ? '切换价格参考失败' : 'Failed to update pricing reference'))
+      setError(parseApiErrorMessage(err, copy.budget.referenceFailed))
     } finally {
       setReferenceSaving(false)
     }
@@ -810,7 +779,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
   const pricingReferenceControl = (
     <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 shadow-sm">
-      <span className="text-xs text-slate-500">{isZh ? '价格参考' : 'Pricing reference'}</span>
+      <span className="text-xs text-slate-500">{copy.pricingReferenceLabel}</span>
       <select
         value={selectedPricingReference}
         onChange={event => void handlePricingReferenceChange(event.target.value as PricingReference)}
@@ -818,8 +787,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         className="bg-transparent text-sm text-slate-700 focus:outline-none disabled:opacity-60"
       >
         {PRICING_REFERENCE_OPTIONS.map(option => (
-          <option key={option.value} value={option.value}>
-            {isZh ? option.labelZh : option.labelEn}
+          <option key={option} value={option}>
+            {getPricingReferenceLabel(option, copy) ?? option}
           </option>
         ))}
       </select>
@@ -835,25 +804,23 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         <div className={primarySectionCardClass}>
           <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
             <div>
-              <h3 className="text-lg font-semibold">{isZh ? '先砍哪笔钱' : 'What to cut first'}</h3>
+              <h3 className="text-lg font-semibold">{copy.savings.title}</h3>
               <p className="mt-1 text-sm text-slate-500">
-                {isZh
-                  ? '先做这一类改动，最容易把无效成本降下来。'
-                  : 'Start with the change most likely to cut wasted spend first.'}
+                {copy.savings.subtitle}
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xs text-slate-500">{isZh ? '这一刀大约能省' : 'Savings if you start here'}</span>
+              <span className="text-xs text-slate-500">{copy.savings.totalLabel}</span>
               <span className="ml-2 text-lg font-bold text-emerald-500">${formatWasteCost(savings.totalPotentialSaving)}</span>
             </div>
           </div>
           <div className="space-y-3">
             {savings.suggestions.map((sug, i) => {
-              const typeMeta = getSavingTypeMeta(sug.reasonType, isZh)
-              const guardrailMeta = getSavingGuardrailMeta(sug.reasonType, t)
-              const reasonText = getSavingReasonText(sug, isZh)
-              const actionText = getSavingActionText(sug, isZh)
-              const guardrailText = getSavingGuardrailText(sug, isZh)
+              const typeMeta = getSavingTypeMeta(sug.reasonType, copy)
+              const guardrailMeta = getSavingGuardrailMeta(sug.reasonType, copy)
+              const reasonText = getSavingReasonText(sug, locale, copy)
+              const actionText = getSavingActionText(sug, locale, copy)
+              const guardrailText = getSavingGuardrailText(sug, locale, copy)
               const replaySessionId = sug.sessionId?.trim()
               const isReplayLinkable = canOpenReplaySession(replaySessionId)
               const showModelRoute = Boolean(
@@ -871,19 +838,19 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       </span>
                       {sug.sessionLabel && (
                         <span className="truncate text-[11px] text-slate-500">
-                          {t('cost.savings.session')}: {sug.sessionLabel}
+                          {copy.savings.session}: {sug.sessionLabel}
                         </span>
                       )}
                     </div>
                     <p className="mt-3 text-sm font-medium leading-relaxed text-slate-800">{reasonText}</p>
                     <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
                       <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-                        <p className="text-[11px] font-medium text-slate-500">{t('cost.savings.next')}</p>
+                        <p className="text-[11px] font-medium text-slate-500">{copy.savings.next}</p>
                         <p className="mt-1 text-sm leading-relaxed text-slate-600">{actionText}</p>
                       </div>
                       <div className={cn('rounded-lg border px-3 py-2.5', guardrailMeta.className)}>
                         <p className="text-[11px] font-medium text-slate-500">
-                          {t('cost.savings.guardrail')} · {guardrailMeta.label}
+                          {copy.savings.guardrail} · {guardrailMeta.label}
                         </p>
                         <p className="mt-1 text-sm leading-relaxed">{guardrailText}</p>
                       </div>
@@ -891,7 +858,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                       {showModelRoute ? (
                         <p className="text-xs text-slate-500">
-                          {isZh ? '模型切换：' : 'Route: '}
+                          {copy.savings.routeLabel}
                           <span className="font-medium text-slate-700">{sug.currentModel}</span>
                           <span className="mx-1">→</span>
                           <span className="font-medium text-slate-700">{sug.alternativeModel}</span>
@@ -906,7 +873,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-xs text-slate-500">{t('cost.savings.estSave')}</p>
+                    <p className="text-xs text-slate-500">{copy.savings.estSave}</p>
                     <p className="mt-1 text-lg font-semibold text-emerald-500">-${formatWasteCost(sug.saving)}</p>
                   </div>
                 </div>
@@ -941,12 +908,10 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
           <div className="mt-3 space-y-1">
             {hasSwitchModelSuggestion && (
               <p className="text-xs text-amber-700">
-                {isZh
-                  ? '换模型后，连续看几次同类会话的成功率、重试次数和输出长度。'
-                  : 'After switching models, watch a few similar runs for success rate, retries, and response length.'}
+                {copy.savings.switchModelNote}
               </p>
             )}
-            <p className="text-xs text-slate-600">{t('cost.savings.disclaimer')}</p>
+            <p className="text-xs text-slate-600">{copy.savings.disclaimer}</p>
           </div>
         </div>
       ),
@@ -959,9 +924,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       content: (
         <div className={`${primarySectionCardClass} text-center`}>
           <p className="text-sm text-slate-500">
-            {isZh
-              ? '这段时间还没有特别明确的第一刀，先看下面的钱最容易白花在哪。'
-              : 'There is no obvious first cut right now, so start with where money is getting wasted below.'}
+            {copy.savings.emptyHint}
           </p>
         </div>
       ),
@@ -974,7 +937,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       <div className={primarySectionCardClass}>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h3 className="text-lg font-semibold">{isZh ? '钱最容易白花在哪' : 'Where money is getting wasted'}</h3>
+            <h3 className="text-lg font-semibold">{copy.tokenWaste.title}</h3>
             <p className="mt-2 text-sm text-slate-700">{wasteSummaryText}</p>
             <p className="mt-1 text-xs text-slate-500">{wasteMetaText}</p>
           </div>
@@ -990,7 +953,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 <>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{isZh ? diagnostic.titleZh : diagnostic.titleEn}</p>
+                      <p className="text-sm font-semibold text-slate-900">{getTokenWasteDiagnosticTitle(diagnostic, locale, copy)}</p>
                       {diagnostic.sessionLabel && (
                         <p className="mt-1 truncate text-[11px] text-slate-500">{diagnostic.sessionLabel}</p>
                       )}
@@ -1006,16 +969,16 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       )}
                     >
                       {diagnostic.severity === 'high'
-                        ? (isZh ? '高' : 'High')
+                        ? copy.tokenWaste.severity.high
                         : diagnostic.severity === 'medium'
-                          ? (isZh ? '中' : 'Medium')
-                          : (isZh ? '低' : 'Low')}
+                          ? copy.tokenWaste.severity.medium
+                          : copy.tokenWaste.severity.low}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{isZh ? diagnostic.descZh : diagnostic.descEn}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{getTokenWasteDiagnosticDescription(diagnostic, locale, copy)}</p>
                   <div className="mt-4 flex items-end justify-between gap-3">
                     <p className="text-sm font-medium text-[#3b82c4]">
-                      {isZh ? '可能白花' : 'Likely wasted'} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString()} tokens
+                      {copy.tokenWaste.likelyWasted} ${formatWasteCost(diagnostic.estimatedWasteCost)} · {diagnostic.estimatedWasteTokens.toLocaleString(getIntlLocale(locale))} {copy.modelValue.tokensUnit}
                     </p>
                     {isReplayLinkable && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-all group-hover:gap-1.5 group-hover:text-[#2f6fa8]">
@@ -1049,9 +1012,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
           </div>
         ) : (
           <div className="mt-5 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500">
-            {tokenWaste
-              ? (isZh ? '当前时间范围内暂未看到明显白花 Token 的地方。' : 'No obvious places are wasting tokens in the selected time range.')
-              : (isZh ? '诊断接口暂不可用，稍后会在这里显示最费钱的问题。' : 'The diagnostics API is unavailable right now. The costliest problems will show up here once it recovers.')}
+            {tokenWaste ? copy.tokenWaste.noWaste : copy.tokenWaste.apiUnavailable}
           </div>
         )}
       </div>
@@ -1064,14 +1025,14 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">{t('cost.trend.title')}</h3>
+            <h3 className="text-sm font-semibold text-slate-900">{copy.trend.title}</h3>
             <p className="mt-1 text-xs text-slate-500">
-              {isZh ? '先确认最近是在涨、在稳，还是已经回落。' : 'Check whether spend is rising, flat, or already cooling down.'}
+              {copy.trend.subtitle}
             </p>
           </div>
           {averageDailyCost > 0 && (
             <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
-              {isZh ? '日均成本' : 'Average per day'} · ${averageDailyCost.toFixed(2)}
+              {copy.trend.averagePerDay} · ${averageDailyCost.toFixed(2)}
             </span>
           )}
         </div>
@@ -1079,8 +1040,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         {summary && summary.totalCost === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-slate-500">
             <span className="text-3xl">📉</span>
-            <p className="mt-3 text-sm font-medium text-slate-700">{t('cost.empty.title')}</p>
-            <p className="mt-1 text-center text-xs text-slate-500">{t('cost.empty.desc')}</p>
+            <p className="mt-3 text-sm font-medium text-slate-700">{copy.empty.title}</p>
+            <p className="mt-1 text-center text-xs text-slate-500">{copy.empty.desc}</p>
           </div>
         ) : (
           <div className="mt-4">
@@ -1097,7 +1058,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 {averageDailyCost > 0 && (
                   <ReferenceLine y={averageDailyCost} stroke="#94a3b8" strokeDasharray="6 6" />
                 )}
-                <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={t('cost.chart.series')} />
+                <Line type="monotone" dataKey="cost" stroke="#f97316" strokeWidth={2} dot={false} name={copy.chart.series} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1112,9 +1073,9 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       content: (
         <div className={secondarySectionCardClass}>
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-            <h3 className="text-base font-semibold">{isZh ? '模型成本占比' : 'Cost by model'}</h3>
+            <h3 className="text-base font-semibold">{copy.modelBreakdown.title}</h3>
             <span className="text-xs text-slate-500">
-              {isZh ? '显示各模型在当前周期内的成本占比' : 'Share of spend by model in the selected range'}
+              {copy.modelBreakdown.subtitle}
             </span>
           </div>
           <ResponsiveContainer width="100%" height={Math.max(220, modelBreakdownRows.length * 46)}>
@@ -1137,7 +1098,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 labelStyle={{ color: '#64748b' }}
                 itemStyle={{ color: '#0f172a' }}
               />
-              <Bar dataKey="percentage" name={isZh ? '成本占比' : 'Cost share'} fill="#3b82c4" radius={[0, 8, 8, 0]} />
+              <Bar dataKey="percentage" name={copy.modelBreakdown.series} fill="#3b82c4" radius={[0, 8, 8, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1152,17 +1113,15 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         <div className={secondarySectionCardClass}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h3 className="text-base font-semibold">{isZh ? '模型该放到哪类任务里' : 'Which jobs each model should handle'}</h3>
+              <h3 className="text-base font-semibold">{copy.modelValue.title}</h3>
               <p className="mt-2 max-w-3xl text-sm text-slate-600">
-                {isZh
-                  ? '别只看谁便宜，也看谁适合高频任务、谁更适合留给复杂任务。这里把单次成本、回复长度、工具使用和报错放在一起看。'
-                  : 'Don’t just ask which model is cheaper. Look at which one is steady for repeat work and which one should stay on harder jobs. This table puts cost per session, response size, tool use, and errors together.'}
+                {copy.modelValue.subtitle}
               </p>
             </div>
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-right">
-              <p className="text-xs font-medium text-cyan-700">{isZh ? '省钱，也要稳' : 'Cheap only matters if it holds'}</p>
+              <p className="text-xs font-medium text-cyan-700">{copy.modelValue.calloutTitle}</p>
               <p className="mt-1 text-xs text-cyan-700/80">
-                {isZh ? '成本 × 回复长度 × 报错' : 'Cost × response size × errors'}
+                {copy.modelValue.calloutSubtitle}
               </p>
             </div>
           </div>
@@ -1171,38 +1130,38 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '模型' : 'Model'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '会话数' : 'Sessions'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '平均成本' : 'Avg cost'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '回复 / 工具' : 'Output / tools'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '稳定性' : 'Stability'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '角色标签' : 'Role label'}</th>
-                  <th className="pb-3 font-medium">{isZh ? '推荐用途' : 'Recommended use'}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.modelValue.headers.model}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.modelValue.headers.sessions}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.modelValue.headers.avgCost}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.modelValue.headers.outputTools}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.modelValue.headers.stability}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.modelValue.headers.role}</th>
+                  <th className="pb-3 font-medium">{copy.modelValue.headers.recommended}</th>
                 </tr>
               </thead>
               <tbody>
                 {modelValueDisplayRows.map(row => {
-                  const stabilityMeta = getStabilityMeta(row.errorRate, isZh)
+                  const stabilityMeta = getStabilityMeta(row.errorRate, copy)
                   return (
                     <tr key={row.model} className="border-b border-slate-100 align-top last:border-0">
                       <td className="min-w-[180px] py-4 pr-4">
                         <div className="font-medium text-slate-900">{row.model}</div>
                         <div className="mt-1 text-xs text-slate-500">
-                          ${formatMatrixCost(row.totalCost)} · {formatCompactTokens(row.totalTokens, locale)} {isZh ? 'Token' : 'tokens'}
+                          ${formatMatrixCost(row.totalCost)} · {formatCompactTokens(row.totalTokens, locale)} {copy.modelValue.tokensUnit}
                         </div>
                       </td>
                       <td className="whitespace-nowrap py-4 pr-4">
                         <div className="font-semibold text-slate-900">{row.sessions}</div>
-                        <div className="mt-1 text-xs text-slate-500">{isZh ? '个会话样本' : 'session samples'}</div>
+                        <div className="mt-1 text-xs text-slate-500">{copy.modelValue.samples}</div>
                       </td>
                       <td className="whitespace-nowrap py-4 pr-4">
                         <div className="font-semibold text-slate-900">${formatMatrixCost(row.avgCostPerSession)}</div>
-                        <div className="mt-1 text-xs text-slate-500">{isZh ? '每会话均值' : 'per session'}</div>
+                        <div className="mt-1 text-xs text-slate-500">{copy.modelValue.perSession}</div>
                       </td>
                       <td className="whitespace-nowrap py-4 pr-4">
                         <div className="font-semibold text-slate-900">{row.avgOutputInputRatio.toFixed(2)}×</div>
                         <div className="mt-1 text-xs text-slate-500">
-                          {isZh ? '工具使用率' : 'Tool usage'} {formatRate(row.toolUsageRate)}
+                          {copy.modelValue.toolUsage} {formatRate(row.toolUsageRate)}
                         </div>
                       </td>
                       <td className="whitespace-nowrap py-4 pr-4">
@@ -1211,11 +1170,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       </td>
                       <td className="whitespace-nowrap py-4 pr-4">
                         <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium', getModelValueBadgeClass(row.valueLabel))}>
-                          {isZh ? row.valueLabelZh : row.valueLabelEn}
+                          {copy.modelValue.labels[row.valueLabel]}
                         </span>
                       </td>
                       <td className="min-w-[240px] max-w-[360px] py-4 text-sm leading-6 text-slate-600">
-                        {isZh ? row.recommendationZh : row.recommendationEn}
+                        {localizeCostModelRecommendation(row, locale, t)}
                       </td>
                     </tr>
                   )
@@ -1225,9 +1184,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
           </div>
 
           <p className="mt-4 text-xs leading-relaxed text-slate-500">
-            {isZh
-              ? 'output/input 看回复大概有多长，工具使用率看它常不常调工具，错误率看它稳不稳；放在一起更容易判断这个模型该去做哪类活。'
-              : 'Output/input shows how long replies tend to be, tool usage shows how often the model reaches for tools, and error rate shows how steady it is. Together they help you decide which jobs fit this model best.'}
+            {copy.modelValue.footer}
           </p>
         </div>
       ),
@@ -1239,7 +1196,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       id: 'insights',
       content: (
         <div className={secondarySectionCardClass}>
-          <h3 className="mb-4 text-base font-semibold">{t('cost.insights.title')}</h3>
+          <h3 className="mb-4 text-base font-semibold">{copy.insightsTitle}</h3>
           <div className="space-y-3">
             {insights.map((ins, i) => (
               <div
@@ -1251,7 +1208,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       : 'border border-slate-200 bg-slate-50 text-slate-500',
                 )}
               >
-                <span>{isZh ? ins.messageZh : ins.messageEn}</span>
+                <span>{localizeCostInsightMessage(ins, locale, t)}</span>
               </div>
             ))}
           </div>
@@ -1267,21 +1224,17 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         <div className={secondarySectionCardClass}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h3 className="text-base font-semibold">{isZh ? '先看哪套价格更省' : 'Which pricing path is cheaper'}</h3>
+              <h3 className="text-base font-semibold">{copy.referenceCompare.title}</h3>
               <p className="mt-1 text-sm text-slate-500">
                 {referenceCompare && currentReferenceCompareLabel
-                  ? (
-                    isZh
-                      ? `同批会话按 3 套公开价格重算；当前按 ${currentReferenceCompareLabel} 记为 $${formatWasteCost(referenceCompare.currentTotalCost)}，先看换哪套更省。`
-                      : `The same sessions are repriced across 3 public price views. Current ${currentReferenceCompareLabel}: $${formatWasteCost(referenceCompare.currentTotalCost)} — see which path gets cheaper first.`
-                  )
-                  : (isZh ? '同批会话按 3 套公开价格重算，先看哪套更省。' : 'The same sessions are repriced across 3 public price views so you can see which path is cheaper first.')}
+                  ? fillTemplate(copy.referenceCompare.descriptionCurrent, { label: currentReferenceCompareLabel, cost: `$${formatWasteCost(referenceCompare.currentTotalCost)}` })
+                  : copy.referenceCompare.description}
               </p>
             </div>
             {referenceVsOfficialRows.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {referenceVsOfficialRows.map(row => {
-                  const displayLabel = getPricingReferenceLabel(row.reference, isZh) ?? row.label
+                  const displayLabel = getPricingReferenceLabel(row.reference, copy) ?? row.label
                   return (
                     <span
                       key={`official-${row.reference}`}
@@ -1294,7 +1247,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                             : 'bg-slate-100 text-slate-500',
                       )}
                     >
-                      {displayLabel} {isZh ? '较官方公开价' : 'vs official public prices'} {formatSignedCostDelta(row.deltaVsOfficial)}
+                      {displayLabel} {copy.referenceCompare.vsOfficial} {formatSignedCostDelta(row.deltaVsOfficial)}
                     </span>
                   )
                 })}
@@ -1305,7 +1258,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
           <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
             {referenceCompareRows.map(row => {
               const isCurrentRow = row.reference === referenceCompare?.currentReference
-              const displayLabel = getPricingReferenceLabel(row.reference, isZh) ?? row.label
+              const displayLabel = getPricingReferenceLabel(row.reference, copy) ?? row.label
               const deltaTone = isCurrentRow
                 ? 'bg-[#3b82c4]/10 text-[#3b82c4]'
                 : row.deltaVsCurrent > 0
@@ -1314,12 +1267,12 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     ? 'bg-emerald-50 text-emerald-600'
                     : 'bg-slate-100 text-slate-500'
               const deltaDescription = isCurrentRow
-                ? (isZh ? '这是你当前在看的价格口径' : 'This is the pricing view you are using now')
+                ? copy.referenceCompare.currentDescription
                 : row.deltaVsCurrent > 0
-                  ? (isZh ? '比当前方案更贵' : 'More expensive than current')
+                  ? copy.referenceCompare.moreExpensive
                   : row.deltaVsCurrent < 0
-                    ? (isZh ? '比当前方案更便宜' : 'Cheaper than current')
-                    : (isZh ? '和当前方案差不多' : 'About the same as current')
+                    ? copy.referenceCompare.cheaper
+                    : copy.referenceCompare.aboutSame
 
               return (
                 <div
@@ -1335,12 +1288,12 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                     <div>
                       <p className="text-sm font-semibold text-slate-900">{displayLabel}</p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {getPricingSourceLabel(row.pricingSource, isZh) ?? row.pricingSource}
+                        {getPricingSourceLabel(row.pricingSource, copy) ?? row.pricingSource}
                       </p>
                     </div>
                     {isCurrentRow && (
                       <span className="rounded-full bg-[#3b82c4]/10 px-2.5 py-1 text-[11px] font-medium text-[#3b82c4]">
-                        {isZh ? '当前方案' : 'Current'}
+                        {copy.referenceCompare.current}
                       </span>
                     )}
                   </div>
@@ -1351,8 +1304,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
                   <div className={cn('mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-medium', deltaTone)}>
                     {isCurrentRow
-                      ? (isZh ? '当前方案 · $0.0000' : 'Current · $0.0000')
-                      : `${isZh ? '较当前' : 'vs current'} ${formatSignedCostDelta(row.deltaVsCurrent)}`}
+                      ? `${copy.referenceCompare.current} · $0.0000`
+                      : `${copy.referenceCompare.vsCurrent} ${formatSignedCostDelta(row.deltaVsCurrent)}`}
                   </div>
 
                   <p className="mt-2 text-xs text-slate-500">{deltaDescription}</p>
@@ -1372,23 +1325,24 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         <div className={secondarySectionCardClass}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h3 className="text-base font-semibold">{isZh ? '先砍哪批会话' : 'Which sessions to cut first'}</h3>
+              <h3 className="text-base font-semibold">{copy.reconciliation.title}</h3>
               <p className="mt-1 text-sm text-slate-500">
-                {isZh
-                  ? `同批会话逐条对比：当前 ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}，对照 ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}，差额大的优先看。`
-                  : `Compare the same sessions row by row: current ${reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'} vs ${reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}, with the biggest gaps worth checking first.`}
+                {fillTemplate(copy.reconciliation.description, {
+                  current: reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--',
+                  baseline: reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--',
+                })}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="rounded-full border border-[#3b82c4]/20 bg-[#3b82c4]/10 px-3 py-1 text-xs font-medium text-[#2f6fa8]">
-                {isZh ? '当前方案' : 'Current'} · {reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}
+                {copy.reconciliation.current} · {reconciliationCurrentReferenceLabel ?? reconciliationMeta?.currentReference ?? '--'}
               </span>
               <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                {isZh ? '对照方案' : 'Comparison'} · {reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}
+                {copy.reconciliation.comparison} · {reconciliationBaselineReferenceLabel ?? reconciliationMeta?.baselineReference ?? '--'}
               </span>
               {(reconciliationMeta?.stale || reconciliationMeta?.baselineStale) && (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                  {isZh ? '价格参考待更新' : 'Price reference needs refresh'}
+                  {copy.reconciliation.stale}
                 </span>
               )}
             </div>
@@ -1396,17 +1350,17 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
           <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border border-[#3b82c4]/20 bg-[#3b82c4]/5 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '当前总成本' : 'Current total'}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{copy.reconciliation.currentTotal}</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">${formatWasteCost(reconciliationSummary.currentCost)}</p>
               <p className="mt-1 text-xs text-slate-500">{reconciliationCurrentSourceLabel ?? reconciliationMeta?.pricingSource ?? '--'}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '对照总成本' : 'Comparison total'}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{copy.reconciliation.comparisonTotal}</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">${formatWasteCost(reconciliationSummary.baselineCost)}</p>
               <p className="mt-1 text-xs text-slate-500">{reconciliationBaselineSourceLabel ?? reconciliationMeta?.baselinePricingSource ?? '--'}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '差额' : 'Delta'}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{copy.reconciliation.delta}</p>
               <p className={cn(
                 'mt-2 text-2xl font-semibold tabular-nums',
                 reconciliationSummary.delta > 0
@@ -1419,17 +1373,17 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 {reconciliationSummary.delta > 0
-                  ? (isZh ? '当前方案高于对照' : 'Current is above comparison')
+                  ? copy.reconciliation.deltaAbove
                   : reconciliationSummary.delta < 0
-                    ? (isZh ? '当前方案低于对照' : 'Current is below comparison')
-                    : (isZh ? '当前方案与对照持平' : 'Current matches comparison')}
+                    ? copy.reconciliation.deltaBelow
+                    : copy.reconciliation.deltaEqual}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isZh ? '会话 / 估算' : 'Sessions / estimated'}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{copy.reconciliation.sessionsEstimated}</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">{reconciliationSummary.sessions}</p>
               <p className="mt-1 text-xs text-slate-500">
-                {isZh ? `估算行 ${reconciliationSummary.estimatedRows}` : `${reconciliationSummary.estimatedRows} estimated row${reconciliationSummary.estimatedRows === 1 ? '' : 's'}`}
+                {fillTemplate(copy.reconciliation.estimatedRows, { count: reconciliationSummary.estimatedRows })}
               </p>
             </div>
           </div>
@@ -1443,7 +1397,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                   key={`recon-source-${source}`}
                   className={cn('rounded-full border px-3 py-1 text-xs font-medium', getUsageSourceBadgeClass(source))}
                 >
-                  {getUsageSourceLabel(source, isZh)} · {count}
+                  {getUsageSourceLabel(source, copy)} · {count}
                 </span>
               )
             })}
@@ -1451,7 +1405,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
           <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
             <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 shadow-sm">
-              <span className="text-xs text-slate-500">{isZh ? '排序' : 'Sort'}</span>
+              <span className="text-xs text-slate-500">{copy.reconciliation.sort}</span>
               <select
                 value={reconciliationSortBy}
                 onChange={event => setReconciliationSortBy(event.target.value as CostReconciliationSortKey)}
@@ -1477,7 +1431,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 onChange={event => setShowEstimatedOnly(event.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 text-[#3b82c4] focus:ring-[#3b82c4]/30"
               />
-              <span>{isZh ? '只看 Estimated' : 'Estimated only'}</span>
+              <span>{copy.reconciliation.estimatedOnly}</span>
             </label>
 
             <label className={cn(
@@ -1492,13 +1446,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 onChange={event => setShowReplayableOnly(event.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 text-[#3b82c4] focus:ring-[#3b82c4]/30"
               />
-              <span>{isZh ? '只看可回放' : 'Replayable only'}</span>
+              <span>{copy.reconciliation.replayableOnly}</span>
             </label>
 
             <span className="text-xs text-slate-500 sm:ml-auto">
-              {isZh
-                ? `显示 ${displayedReconciliationRows.length} / ${reconciliationRows.length} 行`
-                : `Showing ${displayedReconciliationRows.length} / ${reconciliationRows.length} rows`}
+              {fillTemplate(copy.reconciliation.rowsShown, { shown: displayedReconciliationRows.length, total: reconciliationRows.length })}
             </span>
           </div>
 
@@ -1506,22 +1458,20 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '会话' : 'Session'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '服务商' : 'Provider'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '主模型' : 'Primary model'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? 'Token' : 'Tokens'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '当前成本' : 'Current cost'}</th>
-                  <th className="pb-3 pr-4 font-medium">{isZh ? '对照成本' : 'Comparison cost'}</th>
-                  <th className="pb-3 font-medium">{isZh ? '差额' : 'Delta'}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.reconciliation.headers.session}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.reconciliation.headers.provider}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.reconciliation.headers.primaryModel}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.reconciliation.headers.tokens}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.reconciliation.headers.currentCost}</th>
+                  <th className="pb-3 pr-4 font-medium">{copy.reconciliation.headers.comparisonCost}</th>
+                  <th className="pb-3 font-medium">{copy.reconciliation.delta}</th>
                 </tr>
               </thead>
               <tbody>
                 {displayedReconciliationRows.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
-                      {isZh
-                        ? '当前筛选下没有会话，试试取消上面的过滤条件。'
-                        : 'No sessions match the current filters. Try clearing the filters above.'}
+                      {copy.reconciliation.noRows}
                     </td>
                   </tr>
                 )}
@@ -1552,11 +1502,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                             <div className="mt-1 break-all font-mono text-[11px] text-slate-500">{row.sessionId}</div>
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               <span className={cn('inline-flex rounded-full border px-2 py-1 text-[11px] font-medium', getUsageSourceBadgeClass(row.usageSource))}>
-                                {getUsageSourceLabel(row.usageSource, isZh)}
+                                {getUsageSourceLabel(row.usageSource, copy)}
                               </span>
                               {row.estimated && (
                                 <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
-                                  {isZh ? '估算' : 'Estimated'}
+                                  {copy.reconciliation.estimated}
                                 </span>
                               )}
                             </div>
@@ -1573,8 +1523,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                       <td className="min-w-[180px] py-4 pr-4 text-slate-600">{row.primaryModel || '--'}</td>
                       <td className="min-w-[150px] py-4 pr-4 text-slate-600">
                         <div className="font-medium text-slate-900">{(row.inputTokens + row.outputTokens).toLocaleString()}</div>
-                        <div className="mt-1 text-xs text-slate-500">{isZh ? '输入' : 'In'} {row.inputTokens.toLocaleString()}</div>
-                        <div className="text-xs text-slate-500">{isZh ? '输出' : 'Out'} {row.outputTokens.toLocaleString()}</div>
+                        <div className="mt-1 text-xs text-slate-500">{copy.reconciliation.input} {row.inputTokens.toLocaleString(getIntlLocale(locale))}</div>
+                        <div className="text-xs text-slate-500">{copy.reconciliation.output} {row.outputTokens.toLocaleString(getIntlLocale(locale))}</div>
                       </td>
                       <td className="whitespace-nowrap py-4 pr-4 font-semibold tabular-nums text-slate-900">${formatWasteCost(row.currentCost)}</td>
                       <td className="whitespace-nowrap py-4 pr-4 font-semibold tabular-nums text-slate-600">${formatWasteCost(row.baselineCost)}</td>
@@ -1592,9 +1542,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
           </div>
 
           <p className="mt-4 text-xs leading-relaxed text-slate-500">
-            {isZh
-              ? '说明：当前成本跟随你选中的价格口径；对照方案固定为官方公开价。Estimated 表示该行含估算输入。'
-              : 'Note: current cost follows the pricing view you selected, comparison stays on official public prices, and “Estimated” means some inputs were inferred.'}
+            {copy.reconciliation.footer}
           </p>
         </div>
       ),
@@ -1606,7 +1554,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       id: 'top-tasks',
       content: (
         <div className={secondarySectionCardClass}>
-          <h3 className="mb-4 text-base font-semibold">{isZh ? '高消耗任务 TOP 5' : 'Top 5 spend-heavy tasks'}</h3>
+          <h3 className="mb-4 text-base font-semibold">{copy.topTasksTitle}</h3>
           <div className="space-y-3">
             {summary.topTasks.slice(0, 5).map((task, i) => (
               <div key={task.taskId} className="flex items-center justify-between border-b border-surface-border py-2 last:border-0">
@@ -1617,7 +1565,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 <div className="text-right">
                   <span className="font-medium text-accent">${task.cost.toFixed(4)}</span>
                   <span className="ml-2 text-xs text-slate-500">
-                    {task.tokens.toLocaleString()} {t('replay.list.tokensUnit')}
+                    {task.tokens.toLocaleString(getIntlLocale(locale))} {copy.modelValue.tokensUnit}
                   </span>
                 </div>
               </div>
@@ -1636,7 +1584,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h2 className="text-2xl font-bold">{t('cost.title')}</h2>
+        <h2 className="text-2xl font-bold">{copy.pageTitle}</h2>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {([7, 14, 30] as const).map(d => (
             <button
@@ -1648,7 +1596,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 days === d ? 'bg-accent text-white' : 'glass-raised text-slate-500 hover:text-slate-900 hover:bg-slate-100',
               )}
             >
-              {t('cost.days').replace('{n}', String(d))}
+              {fillTemplate(copy.days, { n: d })}
             </button>
           ))}
           <button
@@ -1656,14 +1604,14 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             onClick={openBudgetModal}
             className="px-3 py-1.5 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
           >
-            {isZh ? '预算设置' : 'Budget Settings'}
+            {copy.budget.button}
           </button>
         </div>
       </div>
 
       {demoCostHint && (
         <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-700/90">
-          {t('demo.hint.cost')}
+          {copy.demoHint}
         </div>
       )}
 
@@ -1685,8 +1633,8 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
         <div className="mb-6">
           <EmptyState
             icon="📉"
-            title={t('cost.empty.title')}
-            description={t('cost.empty.desc')}
+            title={copy.empty.title}
+            description={copy.empty.desc}
             hint={emptyStartHint}
           />
         </div>
@@ -1705,11 +1653,9 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             <div className={overviewCardClass}>
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h3 className="text-lg font-semibold">{isZh ? '这段时间先从这里下手' : 'Start here for this time range'}</h3>
+                  <h3 className="text-lg font-semibold">{copy.overview.title}</h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    {isZh
-                      ? '先看总花费、Token 和预算，再决定哪一刀最值。'
-                      : 'Start with total spend, tokens, and budget, then decide which cut matters most.'}
+                    {copy.overview.subtitle}
                   </p>
                 </div>
               </div>
@@ -1717,34 +1663,35 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
               <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <GlowCard>
                   <div className="p-5">
-                    <span className="text-sm text-slate-500">{t('cost.card.total')}</span>
+                    <span className="text-sm text-slate-500">{copy.cards.total}</span>
                     <div className="mt-1 text-2xl font-bold text-accent tabular-nums">
                       <AnimatedCounter value={summary?.totalCost ?? 0} prefix="$" decimals={2} duration={1000} />
                     </div>
                     <div className={`mt-1 flex items-center gap-1 text-xs ${trendColor}`}>
                       <TrendIcon className="h-3 w-3" />
                       <span>
-                        {t('cost.card.mom').replace('{n}', String(summary?.comparedToLastMonth?.toFixed(1) ?? '0'))}
+                        {fillTemplate(copy.cards.mom, { n: summary?.comparedToLastMonth?.toFixed(1) ?? '0' })}
                       </span>
                     </div>
                   </div>
                 </GlowCard>
                 <GlowCard>
                   <div className="p-5">
-                    <span className="text-sm text-slate-500">{t('cost.card.tokens')}</span>
+                    <span className="text-sm text-slate-500">{copy.cards.tokens}</span>
                     <div className="mt-1 text-2xl font-bold text-blue-400 tabular-nums">
                       <AnimatedCounter value={summary?.totalTokens ?? 0} decimals={0} duration={1000} />
                     </div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {t('cost.card.inOut')
-                        .replace('{in}', String(summary?.inputTokens?.toLocaleString() ?? 0))
-                        .replace('{out}', String(summary?.outputTokens?.toLocaleString() ?? 0))}
+                      {fillTemplate(copy.cards.inOut, {
+                        in: summary?.inputTokens?.toLocaleString(getIntlLocale(locale)) ?? 0,
+                        out: summary?.outputTokens?.toLocaleString(getIntlLocale(locale)) ?? 0,
+                      })}
                     </div>
                   </div>
                 </GlowCard>
                 <GlowCard>
                   <div className="p-5">
-                    <span className="text-sm text-slate-500">{t('cost.card.budget')}</span>
+                    <span className="text-sm text-slate-500">{copy.cards.budget}</span>
                     <div className="mt-1 text-2xl font-bold text-purple-400 tabular-nums">
                       <AnimatedCounter value={summary?.budget?.percentage ?? 0} decimals={1} suffix="%" duration={1000} />
                     </div>
@@ -1772,7 +1719,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             {furtherAnalysisSections.length > 0 && (
               <details className="group rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-slate-700 [&::-webkit-details-marker]:hidden">
-                  <span>{isZh ? '进一步分析' : 'Advanced breakdown'}</span>
+                  <span>{copy.advancedTitle}</span>
                   <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" />
                 </summary>
 
@@ -1798,15 +1745,15 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
             onClick={event => event.stopPropagation()}
           >
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">{isZh ? '预算设置' : 'Budget Settings'}</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{copy.budget.modalTitle}</h3>
               <p className="text-sm text-slate-500 mt-1">
-                {isZh ? '设置月预算金额和触发告警的阈值。' : 'Set your monthly budget and alert threshold.'}
+                {copy.budget.modalDesc}
               </p>
             </div>
 
             <div className="space-y-4">
               <label className="block">
-                <span className="block text-xs text-slate-500 mb-1.5">{isZh ? '月预算金额' : 'Monthly budget'}</span>
+                <span className="block text-xs text-slate-500 mb-1.5">{copy.budget.monthly}</span>
                 <input
                   type="number"
                   min="0"
@@ -1814,12 +1761,12 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                   value={budgetForm.monthly}
                   onChange={event => setBudgetForm(form => ({ ...form, monthly: event.target.value }))}
                   className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
-                  placeholder={isZh ? '例如 500' : 'e.g. 500'}
+                  placeholder={copy.budget.monthlyPlaceholder}
                 />
               </label>
 
               <label className="block">
-                <span className="block text-xs text-slate-500 mb-1.5">{isZh ? '告警阈值（%）' : 'Alert threshold (%)'}</span>
+                <span className="block text-xs text-slate-500 mb-1.5">{copy.budget.threshold}</span>
                 <input
                   type="number"
                   min="1"
@@ -1842,7 +1789,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 onClick={() => setBudgetModalOpen(false)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-500 border border-slate-200 hover:bg-slate-100 disabled:opacity-50"
               >
-                {isZh ? '取消' : 'Cancel'}
+                {copy.budget.cancel}
               </button>
               <button
                 type="button"
@@ -1850,7 +1797,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                 onClick={handleBudgetSave}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#3b82c4] to-teal-500 disabled:opacity-50"
               >
-                {budgetSaving ? (isZh ? '保存中...' : 'Saving...') : (isZh ? '保存' : 'Save')}
+                {budgetSaving ? copy.budget.saving : copy.budget.save}
               </button>
             </div>
           </div>
@@ -1859,41 +1806,39 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
       {/* Pricing disclaimer */}
       <div className="mt-4 px-1">
-        <p className="text-[11px] leading-relaxed text-slate-600">{t('cost.disclaimer.estimate')}</p>
+        <p className="text-[11px] leading-relaxed text-slate-600">{copy.pricingDetails.estimate}</p>
         {summary?.costMeta?.stale && (
           <p className="mt-1 text-[11px] text-amber-700">
-            {isZh
-              ? '价格参考待更新，先按最近一次可用结果显示。'
-              : 'Price reference needs refresh; showing the latest available result.'}
+            {copy.pricingDetails.stale}
           </p>
         )}
         <details className="mt-2 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5">
           <summary className="cursor-pointer text-[11px] font-medium text-slate-600">
-            {isZh ? '价格说明' : 'Pricing details'}
+            {copy.pricingDetails.title}
           </summary>
           <div className="mt-2 space-y-1 text-[11px] leading-relaxed text-slate-600">
             {pricingReferenceLabel && (
               <p>
-                {isZh ? '当前价格口径：' : 'Current pricing view: '}
+                {copy.pricingDetails.currentView}
                 <span className="font-medium text-slate-700">{pricingReferenceLabel}</span>
               </p>
             )}
             {pricingSourceLabel && (
               <p>
-                {isZh ? '价格参考：' : 'Price reference: '}
+                {copy.pricingDetails.reference}
                 <span className="font-medium text-slate-700">{pricingSourceLabel}</span>
-                {pricingUpdatedAtLabel ? ` · ${isZh ? '更新于' : 'Updated'} ${pricingUpdatedAtLabel}` : ''}
+                {pricingUpdatedAtLabel ? ` · ${copy.pricingDetails.updated} ${pricingUpdatedAtLabel}` : ''}
               </p>
             )}
             <p>
-              {isZh ? '数据截止：' : 'Data cutoff: '}
+              {copy.pricingDetails.cutoff}
               <span className="font-medium text-slate-700">{dataCutoffLabel}</span>
             </p>
             <p>
-              {isZh ? '最近记录：' : 'Latest record: '}
+              {copy.pricingDetails.latest}
               <span className="font-medium text-slate-700">{latestUsageLabel}</span>
             </p>
-            <p>{t('cost.disclaimer.source')}</p>
+            <p>{copy.pricingDetails.source}</p>
           </div>
         </details>
       </div>

@@ -9,79 +9,6 @@ interface Props {
   onEnterDemo: (tab?: Tab) => void
 }
 
-const LANDING_LOCAL_COPY = {
-  zh: {
-    'landing.hero.eyebrow': 'Replay · Scorecard · Cost',
-    'landing.hero.title': '你的 Agent，是真变强了，还是只是更贵了？',
-    'landing.hero.kicker': '你先把这次运行看明白，再决定这次优化值不值。',
-    'landing.hero.meta': '你先看 Demo 回放，再接你自己的日志。',
-    'landing.cta.demoPrimary': '看示例回放',
-    'landing.hero.source': 'GitHub',
-    'landing.hero.media.badge': '精选样本',
-    'landing.hero.media.caption': '这段样本把一次运行的回放、结果和花费放在一起给你看。',
-    'landing.hero.media.pill.replay': '这次运行的步骤',
-    'landing.hero.media.pill.score': '74 / 100',
-    'landing.hero.media.pill.cost': '$3.42 · 重试先修',
-    'landing.flow.eyebrow': '顺着一次运行往下看',
-    'landing.flow.title': '把这次运行看明白，再决定先修哪一步。',
-    'landing.flow.subtitle': '从头看到尾，问题在哪一步就在哪一步。',
-    'landing.feature.replay.desc': '每一步都摊开，不用猜问题从哪里开始拐。',
-    'landing.feature.replay.note': '先看哪一步歪了',
-    'landing.feature.benchmark.desc': '一句结论告诉你这次是稳了、摇了，还是擦边过。',
-    'landing.feature.benchmark.note': '先看这次稳不稳',
-    'landing.feature.cost.desc': '花了多少、换来了什么，放在一起对。',
-    'landing.feature.cost.note': '先看钱花得值不值',
-    'landing.preview.eyebrow': '看完之后',
-    'landing.preview.title': '下一步该改哪，通常看完就清楚了。',
-    'landing.preview.desc': '回放、结果、花费放在一起，这次该继续还是该停，自己就有数了。',
-    'landing.preview.quote': '一次运行，看完就知道卡在哪。',
-    'landing.preview.card.retries.title': '哪一步一直在重试',
-    'landing.preview.card.retries.desc': '哪一步在空转，一眼就能看到，不用翻日志猜。',
-    'landing.preview.card.risk.title': '这次结果稳不稳',
-    'landing.preview.card.risk.desc': '稳稳过了，还是只是擦边，马上能判断。',
-    'landing.preview.card.cost.title': '这次优化值不值',
-    'landing.preview.card.cost.desc': '多花的钱有没有换来结果，当场就能对上。',
-    'landing.install.sub': '想接自己的日志，本地跑起来只要几步。',
-    'landing.install.badge': 'Local-first',
-    'landing.footer.more': '更多作品',
-  },
-  en: {
-    'landing.hero.eyebrow': 'Replay · Scorecard · Cost',
-    'landing.hero.title': 'Did your agent get better, or just get more expensive?',
-    'landing.hero.kicker': 'You look at the run first, then decide whether the optimization was worth it.',
-    'landing.hero.meta': 'You start with the demo replay, then plug in your own logs.',
-    'landing.cta.demoPrimary': 'Watch demo replay',
-    'landing.hero.source': 'GitHub',
-    'landing.hero.media.badge': 'Featured sample',
-    'landing.hero.media.caption': 'This sample puts the replay, the result, and the cost for one run in one view.',
-    'landing.hero.media.pill.replay': 'Run steps',
-    'landing.hero.media.pill.score': '74 / 100',
-    'landing.hero.media.pill.cost': '$3.42 · fix retries first',
-    'landing.flow.eyebrow': 'Follow one run',
-    'landing.flow.title': 'Understand the run, then decide what to fix first.',
-    'landing.flow.subtitle': 'Go through it from start to finish. The problem shows itself.',
-    'landing.feature.replay.desc': 'Every step is laid out. No guessing where it started to go wrong.',
-    'landing.feature.replay.note': 'See where it went wrong',
-    'landing.feature.benchmark.desc': 'One plain verdict: held up, shaky, or barely through.',
-    'landing.feature.benchmark.note': 'See if it held',
-    'landing.feature.cost.desc': 'What it cost and what it bought, side by side.',
-    'landing.feature.cost.note': 'Judge if it paid off',
-    'landing.preview.eyebrow': 'After one pass',
-    'landing.preview.title': 'After one pass, what to change next is usually clear.',
-    'landing.preview.desc': 'Replay, result, and cost together. Whether to keep going or stop tends to answer itself.',
-    'landing.preview.quote': 'One run. One pass. You know where it got stuck.',
-    'landing.preview.card.retries.title': 'Which step kept retrying?',
-    'landing.preview.card.retries.desc': 'Spot the step that was spinning instead of moving forward.',
-    'landing.preview.card.risk.title': 'Did it really hold?',
-    'landing.preview.card.risk.desc': 'Tell whether it held cleanly or only scraped by.',
-    'landing.preview.card.cost.title': 'Was it worth it?',
-    'landing.preview.card.cost.desc': 'Match the extra spend against the actual result.',
-    'landing.install.sub': 'Plug in your own logs with a short local setup.',
-    'landing.install.badge': 'Local-first',
-    'landing.footer.more': 'More by Luelan',
-  }
-} as const
-
 const FLOW_STEPS = [
   {
     icon: Eye,
@@ -138,8 +65,7 @@ const PREVIEW_CARDS = [
 
 export default function Landing({ onEnterDemo }: Props) {
   const { t, locale } = useI18n()
-  const copyLocale = locale === 'zh' ? 'zh' : 'en'
-  const copy = (key: string) => (LANDING_LOCAL_COPY[copyLocale] as Record<string, string>)[key] ?? t(key as never)
+  const copy = (key: string) => t(key)
   const heroMedia = getLandingDemoMedia(locale)
   const heroOverlays = getLandingHeroOverlays()
 

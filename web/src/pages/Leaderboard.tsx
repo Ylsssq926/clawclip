@@ -87,14 +87,20 @@ export default function Leaderboard() {
   const [submitOk, setSubmitOk] = useState(false)
   const [hasRealSessionData, setHasRealSessionData] = useState<boolean | null>(null)
 
-  const submitDisabledHint = locale === 'zh' ? '需要真实数据才能提交' : 'Real data required to submit'
+  const submitDisabledHint = t('leaderboard.submit.disabled')
   const canSubmit = hasRealSessionData === true
   const submitBlocked = hasRealSessionData === false
   const hasValidPreview = !!preview && Number.isFinite(preview.overallScore) && preview.rank.trim().length > 0 && preview.topModel.trim().length > 0
   const showDemoBanner = (isDemo || !canSubmit) && entries.length > 0
-  const columnLabels = locale === 'zh'
-    ? { position: '排名', nickname: '玩家', rank: '等级', model: '模型', sessions: '会话数', score: '得分', submitted: '提交时间' }
-    : { position: 'Place', nickname: 'Player', rank: 'Rank', model: 'Model', sessions: 'Sessions', score: 'Score', submitted: 'Submitted' }
+  const columnLabels = {
+    position: t('leaderboard.table.position'),
+    nickname: t('leaderboard.table.nickname'),
+    rank: t('leaderboard.table.rank'),
+    model: t('leaderboard.table.model'),
+    sessions: t('leaderboard.table.sessions'),
+    score: t('leaderboard.table.score'),
+    submitted: t('leaderboard.table.submitted'),
+  }
 
   const fmtRelative = useCallback((iso: string) => {
     const diff = Date.now() - new Date(iso).getTime()

@@ -76,20 +76,42 @@ function formatWasteCost(value: number): string {
   return value.toFixed(4)
 }
 
-function getTokenWasteIssueLabel(issue: TokenWasteIssueType | undefined, locale: Locale): string {
+const DASHBOARD_NUMBER_LOCALE: Record<Locale, string> = {
+  zh: 'zh-CN',
+  en: 'en-US',
+  ja: 'ja-JP',
+  ko: 'ko-KR',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  de: 'de-DE',
+}
+
+function formatDashboardNumber(value: number, locale: Locale): string {
+  return value.toLocaleString(DASHBOARD_NUMBER_LOCALE[locale] ?? DASHBOARD_NUMBER_LOCALE.en)
+}
+
+function fillI18nTemplate(template: string, values: Record<string, string | number>): string {
+  let next = template
+  for (const [key, value] of Object.entries(values)) {
+    next = next.split(`{${key}}`).join(String(value))
+  }
+  return next
+}
+
+function getTokenWasteIssueLabel(issue: TokenWasteIssueType | undefined, t: (key: string) => string): string {
   switch (issue) {
     case 'retry-loop':
-      return locale === 'en' ? 'Tool retry loop' : '工具重试循环'
+      return t('dashboard.tokenWaste.retryLoop')
     case 'long-prompt':
-      return locale === 'en' ? 'Long prompt, weak payoff' : '长 Prompt 低产出'
+      return t('dashboard.tokenWaste.longPrompt')
     case 'verbose-output':
-      return locale === 'en' ? 'Overly verbose output' : '输出明显过长'
+      return t('dashboard.tokenWaste.verboseOutput')
     case 'expensive-model':
-      return locale === 'en' ? 'Premium model on a light task' : '高价模型用在轻任务'
+      return t('dashboard.tokenWaste.expensiveModel')
     case 'context-bloat':
-      return locale === 'en' ? 'Context bloat' : '上下文膨胀'
+      return t('dashboard.tokenWaste.contextBloat')
     default:
-      return locale === 'en' ? 'No major issue yet' : '暂未发现明显问题'
+      return t('dashboard.tokenWaste.none')
   }
 }
 
@@ -108,12 +130,12 @@ interface ReplayDiagnosticsData {
   sessions: ReplayDiagnosticsSession[]
 }
 
-function sessionListTitle(s: SessionMeta, locale: Locale): string {
+function sessionListTitle(s: SessionMeta, t: (key: string) => string): string {
   const fromStore = s.sessionLabel?.trim()
   const fromTranscript = s.summary?.trim()
   const text = (fromStore || fromTranscript || '').slice(0, 80)
   if (text) return text
-  return locale === 'en' ? 'Session' : '会话'
+  return t('dashboard.session.fallbackTitle')
 }
 
 interface Props {
@@ -187,20 +209,24 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
       })
   }, [])
 
-  const isEnglish = locale === 'en'
   const jsonlTotal = status?.totalSessionFiles ?? 0
   const parsableCount = status?.parsableSessionCount ?? 0
   const hasJsonlButUnparsed = Boolean(status) && jsonlTotal > 0 && parsableCount === 0 && !status?.hasRealSessionData
   const diagnosticSessions = diagnostics?.sessions ?? []
   const highlightDiagnostics = diagnosticSessions.length > 0 && !diagnosticsDismissed
   const hasConnectedSessions = Boolean(status?.hasRealSessionData)
-  const sessionCountLabel = parsableCount.toLocaleString(isEnglish ? 'en-US' : 'zh-CN')
+  const sessionCountLabel = formatDashboardNumber(parsableCount, locale)
+  const diagnosticCountLabel = formatDashboardNumber(diagnosticSessions.length, locale)
   const latestSession = sessions[0] ?? null
   const latestSessionSubtitle = latestSession ? sessionMetaSubtitle(latestSession, locale) : null
   const hasWasteSignals = Boolean(tokenWaste && tokenWaste.summary.signals > 0)
+  const demoDataSuffix = tokenWaste?.summary.usingDemo ? t('dashboard.common.demoDataSuffix') : ''
 
   const connectionBadgeText = hasConnectedSessions
-    ? `${t('dashboard.connection.connected')} · ${sessionCountLabel} ${isEnglish ? `session${parsableCount === 1 ? '' : 's'}` : '个会话'}`
+    ? fillI18nTemplate(
+        t(parsableCount === 1 ? 'dashboard.connection.badge.connected.one' : 'dashboard.connection.badge.connected.other'),
+        { count: sessionCountLabel },
+      )
     : hasJsonlButUnparsed
       ? t('dashboard.connection.processing')
       : t('dashboard.connection.demo')
@@ -217,28 +243,27 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
       ? 'dashboard.entry.body.processing'
       : 'dashboard.entry.body.demo'
 
-  let issueTitle = isEnglish ? 'Analyzing what to fix first' : '正在判断先修哪一类问题'
-  let issueBody = isEnglish
-    ? 'Checking retries, prompt bloat, and model mismatch from the last 30 days.'
-    : '正在检查最近 30 天的重试循环、Prompt 冗余和模型错配。'
+  let issueTitle = t('dashboard.issue.analyzingTitle')
+  let issueBody = t('dashboard.issue.analyzingBody')
   let issueCta = t('dashboard.entry.issue.cta.cost')
   let issueTone = 'border-amber-200 bg-amber-50/70 text-amber-900'
   let handleIssueAction = () => onNavigate('cost')
 
   if (tokenWaste) {
     if (hasWasteSignals) {
-      issueTitle = getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)
-      issueBody = isEnglish
-        ? `${tokenWaste.summary.signals} waste signals showed up in the last 30 days. Fix this before broader tuning${tokenWaste.summary.usingDemo ? ' · Demo data' : ''}.`
-        : `最近 30 天出现了 ${tokenWaste.summary.signals} 个浪费信号，建议先修这类问题再做更大范围优化${tokenWaste.summary.usingDemo ? ' · Demo 数据' : ''}。`
+      issueTitle = getTokenWasteIssueLabel(tokenWaste.summary.topIssue, t)
+      issueBody = fillI18nTemplate(t('dashboard.issue.wasteSignalsBody'), {
+        count: formatDashboardNumber(tokenWaste.summary.signals, locale),
+        suffix: demoDataSuffix,
+      })
       issueCta = t('dashboard.entry.issue.cta.cost')
       issueTone = 'border-amber-200 bg-amber-50/70 text-amber-900'
       handleIssueAction = () => onNavigate('cost')
     } else if (highlightDiagnostics) {
-      issueTitle = isEnglish ? 'Some runs still need cleanup' : '有些运行还没整理好'
-      issueBody = isEnglish
-        ? `${diagnosticSessions.length} runs were found, but they are not fully replayable yet.`
-        : `发现了 ${diagnosticSessions.length} 个运行，但它们还不能完整回放。`
+      issueTitle = t('dashboard.issue.cleanupTitle')
+      issueBody = fillI18nTemplate(t('dashboard.issue.cleanupBody'), {
+        count: diagnosticCountLabel,
+      })
       issueCta = t('dashboard.entry.issue.cta.replayStatus')
       issueTone = 'border-amber-200 bg-amber-50/70 text-amber-900'
       handleIssueAction = () => onNavigate('replay')
@@ -249,10 +274,8 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
       issueTone = 'border-slate-200 bg-white text-slate-900'
       handleIssueAction = () => onNavigate('replay')
     } else {
-      issueTitle = isEnglish ? 'No sharper issue stands out yet' : '暂时没有更尖锐的问题'
-      issueBody = isEnglish
-        ? 'Start from the latest run and confirm whether the change is still worth keeping.'
-        : '先从最新运行开始，确认这次改动是不是还值得保留。'
+      issueTitle = t('dashboard.issue.noneTitle')
+      issueBody = t('dashboard.issue.noneBody')
       issueCta = t('dashboard.entry.issue.cta.replay')
       issueTone = 'border-slate-200 bg-white text-slate-900'
       handleIssueAction = () => {
@@ -268,39 +291,32 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const spendTitle = tokenWaste
     ? hasWasteSignals
       ? `$${formatWasteCost(tokenWaste.summary.estimatedWasteCost)}`
-      : isEnglish
-        ? 'No obvious wasted spend yet'
-        : '暂未发现明显白花的钱'
-    : isEnglish
-      ? 'Analyzing…'
-      : '分析中…'
+      : t('dashboard.spend.noneTitle')
+    : t('dashboard.spend.analyzingTitle')
   const spendBody = tokenWaste
     ? hasWasteSignals
-      ? `${tokenWaste.summary.estimatedWasteTokens.toLocaleString(isEnglish ? 'en-US' : 'zh-CN')} tokens · ${getTokenWasteIssueLabel(tokenWaste.summary.topIssue, locale)}${tokenWaste.summary.usingDemo ? (isEnglish ? ' · Demo data' : ' · Demo 数据') : ''}`
-      : isEnglish
-        ? `Last 30 days total spend: $${(cost?.totalCost ?? 0).toFixed(2)}.`
-        : `近 30 天总成本：$${(cost?.totalCost ?? 0).toFixed(2)}。`
-    : isEnglish
-      ? 'Checking which spend from the last 30 days was least worth it.'
-      : '正在判断最近 30 天哪部分花费最不值。'
+      ? fillI18nTemplate(t('dashboard.spend.wasteBody'), {
+          tokens: formatDashboardNumber(tokenWaste.summary.estimatedWasteTokens, locale),
+          tokensUnit: t('replay.list.tokensUnit'),
+          issue: getTokenWasteIssueLabel(tokenWaste.summary.topIssue, t),
+          suffix: demoDataSuffix,
+        })
+      : fillI18nTemplate(t('dashboard.spend.totalCostBody'), {
+          cost: (cost?.totalCost ?? 0).toFixed(2),
+        })
+    : t('dashboard.spend.analyzingBody')
 
   const diagnosticsTitle = highlightDiagnostics
-    ? isEnglish
-      ? `${diagnosticSessions.length} replay issues need follow-up`
-      : `${diagnosticSessions.length} 个回放问题待处理`
+    ? fillI18nTemplate(t('dashboard.diagnostics.pendingTitle'), {
+        count: diagnosticCountLabel,
+      })
     : diagnosticsDismissed && diagnosticSessions.length > 0
-      ? isEnglish
-        ? 'Replay diagnostics are muted for now'
-        : '回放诊断已先收起'
+      ? t('dashboard.diagnostics.dismissedTitle')
       : t('dashboard.diagnostics.emptyTitle')
   const diagnosticsBody = highlightDiagnostics
-    ? isEnglish
-      ? 'These runs were found, but some lines still need cleanup before they can fully appear in Replay.'
-      : '这些运行已经被发现，但还需要先整理部分日志，之后才会完整出现在运行洞察里。'
+    ? t('dashboard.diagnostics.pendingBody')
     : diagnosticsDismissed && diagnosticSessions.length > 0
-      ? isEnglish
-        ? 'If you need the exact details again, Replay will still surface the affected runs.'
-        : '如果后面还想看具体细节，运行洞察里仍会继续暴露这些受影响的运行。'
+      ? t('dashboard.diagnostics.dismissedBody')
       : t('dashboard.diagnostics.emptyBody')
 
   const summaryCards = [
@@ -325,7 +341,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
     {
       label: t('dashboard.stat.monthCost'),
       value: `$${(cost?.totalCost ?? 0).toFixed(2)}`,
-      sub: cost ? `${cost.totalTokens.toLocaleString(isEnglish ? 'en-US' : 'zh-CN')} ${t('replay.list.tokensUnit')}` : null,
+      sub: cost ? `${formatDashboardNumber(cost.totalTokens, locale)} ${t('replay.list.tokensUnit')}` : null,
       icon: DollarSign,
       numValue: cost?.totalCost ?? 0,
       numPrefix: '$',
@@ -407,10 +423,10 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-2xl font-semibold leading-tight text-slate-900">
-                      {sessionListTitle(latestSession, locale)}
+                      {sessionListTitle(latestSession, t)}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                      {latestSessionSubtitle ?? (latestSession.summary?.trim() || (isEnglish ? 'Open the latest replay first and decide whether this run is worth keeping.' : '先打开最新回放，判断这次运行到底值不值得保留。'))}
+                      {latestSessionSubtitle ?? (latestSession.summary?.trim() || t('dashboard.entry.latest.fallbackSummary'))}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs text-slate-600">
@@ -543,7 +559,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-slate-900 transition-colors group-hover:text-[#3b82c4]">
-                            {sessionListTitle(session, locale)}
+                            {sessionListTitle(session, t)}
                           </p>
                           {subtitle ? (
                             <p className="mt-1 truncate text-xs text-slate-500">{subtitle}</p>
@@ -653,7 +669,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                     onClick={() => setDiagnosticsOpen(open => !open)}
                     className="inline-flex items-center gap-1 rounded-lg border border-amber-400/20 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-400/10"
                   >
-                    {diagnosticsOpen ? (isEnglish ? 'Hide details' : '收起详情') : (isEnglish ? 'View details' : '查看详情')}
+                    {diagnosticsOpen ? t('dashboard.diagnostics.toggle.hide') : t('dashboard.diagnostics.toggle.show')}
                     {diagnosticsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                   </button>
                   <button
@@ -664,7 +680,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                       writeDashboardDiagnosticsDismissed(true)
                     }}
                     className="rounded-lg p-1 text-amber-700/80 transition-colors hover:bg-amber-400/10 hover:text-amber-800"
-                    aria-label={isEnglish ? 'Dismiss diagnostics' : '关闭诊断提示'}
+                    aria-label={t('dashboard.diagnostics.dismissAria')}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -679,9 +695,11 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="text-sm font-medium text-amber-900">{session.agentName}</span>
                       <span className="text-[11px] text-amber-800/70">
-                        {isEnglish
-                          ? `total ${session.totalLines} · parsed ${session.parsedLines} · skipped ${session.skippedLines}`
-                          : `总计 ${session.totalLines} · 解析 ${session.parsedLines} · 跳过 ${session.skippedLines}`}
+                        {fillI18nTemplate(t('dashboard.diagnostics.metrics'), {
+                          total: formatDashboardNumber(session.totalLines, locale),
+                          parsed: formatDashboardNumber(session.parsedLines, locale),
+                          skipped: formatDashboardNumber(session.skippedLines, locale),
+                        })}
                       </span>
                     </div>
                     <p className="mt-1 break-all font-mono text-[11px] text-amber-800/60">{session.id}</p>

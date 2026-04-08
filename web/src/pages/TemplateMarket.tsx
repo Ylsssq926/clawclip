@@ -54,37 +54,69 @@ interface Template {
   tags?: string[]
 }
 
+type TranslateFn = (key: string, vars?: Record<string, string | number>) => string
+
 const CAT_I18N: Record<string, string> = {
   '效率': 'templates.cat.efficiency',
   '创作': 'templates.cat.creative',
   '开发': 'templates.cat.dev',
   '客服': 'templates.cat.support',
+  '通用': 'templates.cat.general',
+  efficiency: 'templates.cat.efficiency',
+  creative: 'templates.cat.creative',
+  dev: 'templates.cat.dev',
+  support: 'templates.cat.support',
+  general: 'templates.cat.general',
 }
 
-const DESCRIPTION_FALLBACKS: Record<string, string> = {
-  'daily-reporter': '自动聚合热点、整理要点并产出适合公众号或小红书发布的日报内容。',
-  'email-assistant': '帮助整理收件箱、识别重点邮件并给出可直接发送的回复草稿。',
-  'customer-service': '处理高频咨询、整理常见问题，并把复杂问题转交给人工继续跟进。',
-  'code-reviewer': '围绕 PR 做代码审查、安全检查和改进建议，适合开发协作流程。',
-  'schedule-manager': '围绕日历、提醒和会议纪要搭建日常安排助手，减少漏看与冲突。',
+const DESCRIPTION_FALLBACK_KEYS: Record<string, string> = {
+  'daily-reporter': 'templates.fallback.desc.daily-reporter',
+  'email-assistant': 'templates.fallback.desc.email-assistant',
+  'customer-service': 'templates.fallback.desc.customer-service',
+  'code-reviewer': 'templates.fallback.desc.code-reviewer',
+  'schedule-manager': 'templates.fallback.desc.schedule-manager',
 }
 
-function buildMeaningfulDescription(template: Pick<Template, 'id' | 'name' | 'description' | 'category' | 'skills'>): string {
+function getCategoryI18nKey(category: string): string | null {
+  const trimmed = typeof category === 'string' ? category.trim() : ''
+  if (!trimmed) return null
+  return CAT_I18N[trimmed] ?? CAT_I18N[trimmed.toLowerCase()] ?? null
+}
+
+function getTemplateCategoryLabel(category: string, t: TranslateFn): string {
+  const key = getCategoryI18nKey(category)
+  return key ? t(key) : category
+}
+
+function buildMeaningfulDescription(
+  template: Pick<Template, 'id' | 'name' | 'description' | 'category' | 'skills'>,
+  t: TranslateFn,
+): string {
   const description = typeof template.description === 'string' ? template.description.trim() : ''
   if (description.length >= 10) return description
-  if (DESCRIPTION_FALLBACKS[template.id]) return DESCRIPTION_FALLBACKS[template.id]
+
+  const fallbackKey = DESCRIPTION_FALLBACK_KEYS[template.id]
+  if (fallbackKey) return t(fallbackKey)
 
   const skills = Array.isArray(template.skills) ? template.skills.filter(Boolean) : []
+  const categoryLabel = getTemplateCategoryLabel(template.category || 'general', t)
   if (skills.length > 0) {
-    return `${template.name} 适合 ${template.category || '通用'} 场景，内置 ${skills.slice(0, 3).join('、')} 等能力，方便直接开跑。`
+    return t('templates.fallback.desc.withSkills', {
+      name: template.name,
+      category: categoryLabel,
+      skills: skills.slice(0, 3).join(', '),
+    })
   }
 
-  return `${template.name} 是一个可直接导入的 ${template.category || '通用'} 模板，适合快速搭起首版工作流。`
+  return t('templates.fallback.desc.generic', {
+    name: template.name,
+    category: categoryLabel,
+  })
 }
 
-function normalizeTemplate(template: Template, index: number): Template {
+function normalizeTemplate(template: Template, index: number, t: TranslateFn): Template {
   const fallbackId = `template-${index + 1}`
-  const category = typeof template.category === 'string' && template.category.trim() ? template.category.trim() : '效率'
+  const category = typeof template.category === 'string' && template.category.trim() ? template.category.trim() : 'general'
   const skills = Array.isArray(template.skills)
     ? template.skills.filter((skill): skill is string => typeof skill === 'string' && skill.trim().length > 0)
     : []
@@ -92,7 +124,7 @@ function normalizeTemplate(template: Template, index: number): Template {
   const normalized: Template = {
     ...template,
     id: typeof template.id === 'string' && template.id.trim() ? template.id.trim() : fallbackId,
-    name: typeof template.name === 'string' && template.name.trim() ? template.name.trim() : `模板 ${index + 1}`,
+    name: typeof template.name === 'string' && template.name.trim() ? template.name.trim() : t('templates.fallback.name', { index: index + 1 }),
     category,
     icon: typeof template.icon === 'string' && template.icon.trim() ? template.icon.trim() : '🧩',
     skills,
@@ -102,7 +134,7 @@ function normalizeTemplate(template: Template, index: number): Template {
     description: '',
   }
 
-  normalized.description = buildMeaningfulDescription(normalized)
+  normalized.description = buildMeaningfulDescription(normalized, t)
   return normalized
 }
 
@@ -121,7 +153,7 @@ export default function TemplateMarket() {
     [templates],
   )
 
-  const getCategoryLabel = (category: string) => (CAT_I18N[category] ? t(CAT_I18N[category]) : category)
+  const getCategoryLabel = (category: string) => getTemplateCategoryLabel(category, t)
 
   useEffect(() => {
     let cancelled = false
@@ -135,7 +167,7 @@ export default function TemplateMarket() {
       .then(([templateList, installedSkills]) => {
         if (cancelled) return
 
-        const normalizedTemplates = (Array.isArray(templateList) ? templateList : []).map((template, index) => normalizeTemplate(template, index))
+        const normalizedTemplates = (Array.isArray(templateList) ? templateList : []).map((template, index) => normalizeTemplate(template, index, t))
         setTemplates(normalizedTemplates)
 
         if (Array.isArray(installedSkills)) {

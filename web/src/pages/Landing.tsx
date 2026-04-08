@@ -3,6 +3,7 @@ import { Play, Trophy, Github, MessageCircle, ArrowRight, Terminal, Eye, Coins }
 import type { Tab } from '../App'
 import { useI18n, LanguageSwitcher } from '../lib/i18n'
 import { getLandingDemoMedia } from './getLandingDemoMedia'
+import { getLandingHeroOverlays } from './landingHeroOverlay'
 
 interface Props {
   onEnterDemo: (tab?: Tab) => void
@@ -140,6 +141,7 @@ export default function Landing({ onEnterDemo }: Props) {
   const copyLocale = locale === 'zh' ? 'zh' : 'en'
   const copy = (key: string) => (LANDING_LOCAL_COPY[copyLocale] as Record<string, string>)[key] ?? t(key as never)
   const heroMedia = getLandingDemoMedia(locale)
+  const heroOverlays = getLandingHeroOverlays()
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-white via-[#f5fbff] to-slate-50 text-slate-800">
@@ -209,9 +211,9 @@ export default function Landing({ onEnterDemo }: Props) {
             transition={{ duration: 0.65, delay: 0.12, ease: [0.25, 0.4, 0.25, 1] }}
             className="w-full max-w-[640px] lg:ml-auto"
           >
-            <div className="relative overflow-hidden rounded-[32px] border border-white/80 bg-white/80 p-3 shadow-[0_32px_120px_-60px_rgba(59,130,196,0.7)] backdrop-blur-xl sm:p-4">
-              <div className="absolute inset-x-12 top-2 h-24 rounded-full bg-cyan-200/55 blur-3xl" />
-              <div className="relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-slate-950 p-3 sm:p-4">
+            <div className="relative overflow-hidden rounded-[32px] border border-white/85 bg-white/82 p-3 shadow-[0_30px_100px_-58px_rgba(15,23,42,0.38)] backdrop-blur-xl sm:p-4">
+              <div className="absolute inset-x-14 top-3 h-20 rounded-full bg-cyan-200/38 blur-3xl" />
+              <div className="relative overflow-hidden rounded-[28px] border border-slate-200/70 bg-slate-950/98 p-3 sm:p-4">
                 <div className="mb-3 flex items-center gap-2 px-1 text-slate-400">
                   <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
                   <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
@@ -220,38 +222,29 @@ export default function Landing({ onEnterDemo }: Props) {
                     {copy('landing.hero.media.badge')}
                   </div>
                 </div>
-                <img
-                  src={heroMedia.src}
-                  alt={heroMedia.alt}
-                  loading="eager"
-                  className="w-full rounded-[22px] border border-white/10 bg-slate-900 object-cover shadow-2xl shadow-cyan-500/10"
-                />
+                <div className="relative">
+                  <img
+                    src={heroMedia.src}
+                    alt={heroMedia.alt}
+                    loading="eager"
+                    className="w-full rounded-[22px] border border-white/10 bg-slate-900 object-cover shadow-[0_20px_60px_-36px_rgba(34,211,238,0.22)]"
+                  />
+                  {heroOverlays.map(overlay => (
+                    <div
+                      key={overlay.id}
+                      className={`pointer-events-none absolute ${overlay.positionClassName}`}
+                    >
+                      <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 text-[11px] font-medium text-slate-200/90 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.92)] backdrop-blur-md">
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          {t(overlay.labelKey as never)}
+                        </span>
+                        <span className="h-1 w-1 rounded-full bg-cyan-400/65" />
+                        <span className="text-[11px] text-slate-200/85">{copy(overlay.valueKey)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute left-2 top-12 hidden rounded-2xl border border-white/80 bg-white/92 px-4 py-3 shadow-lg shadow-blue-100/80 md:block"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t('nav.replay')}</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">{copy('landing.hero.media.pill.replay')}</p>
-              </motion.div>
-              <motion.div
-                animate={{ y: [0, 9, 0] }}
-                transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
-                className="absolute bottom-20 left-6 hidden rounded-2xl border border-white/80 bg-white/92 px-4 py-3 shadow-lg shadow-cyan-100/80 md:block"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t('nav.benchmark')}</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">{copy('landing.hero.media.pill.score')}</p>
-              </motion.div>
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
-                className="absolute right-2 top-20 hidden rounded-2xl border border-white/80 bg-white/92 px-4 py-3 text-right shadow-lg shadow-emerald-100/80 md:block"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t('nav.cost')}</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">{copy('landing.hero.media.pill.cost')}</p>
-              </motion.div>
 
               <p className="mt-4 px-1 text-xs leading-relaxed text-slate-500 sm:px-2">
                 {copy('landing.hero.media.caption')}

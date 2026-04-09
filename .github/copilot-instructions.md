@@ -221,6 +221,11 @@
 - 修改后统一运行同步脚本，刷新各 IDE 适配层
 - 不要在生成物里手改规则；若发现生成物与规则源不一致，应回到 canonical 文件修
 
+## 默认协作偏好
+- 默认工作流：完成改动 → 自行验证 → commit → push
+- 除非用户明确说“不要提交 / 不要推送 / 先别上线”，否则不要把 commit / push 作为反复确认事项
+- 若仓库没有远端，则至少完成本地 commit，并在结果里明确说明未推送原因
+
 ## 不要当作权威规则源的目录
 以下路径即使存在规则样式文件，也只当参考、历史、临时副本或第三方内容：
 - `.deploy-tmp/`
@@ -278,6 +283,12 @@
 - 先让关键链路跑通，再回头打磨细节
 - 非阻塞问题先记录，不要让单点问题卡住整条链路
 - 每完成数个子任务后，做一次整体检查，防止方向偏移
+
+## 部署提示
+- 服务目录：`/opt/apps/services/clawclip/`
+- 常见线上更新链路：`git pull && npm ci && npm run build && pm2 restart clawclip`
+- GitHub 仓库：`https://github.com/Ylsssq926/clawclip.git`
+- License：`MIT`
 
 ## 关键检查
 - 质量门禁：`npm run check`

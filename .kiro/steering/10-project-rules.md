@@ -35,6 +35,12 @@
 - 非阻塞问题先记录，不要让单点问题卡住整条链路
 - 每完成数个子任务后，做一次整体检查，防止方向偏移
 
+## 部署提示
+- 服务目录：`/opt/apps/services/clawclip/`
+- 常见线上更新链路：`git pull && npm ci && npm run build && pm2 restart clawclip`
+- GitHub 仓库：`https://github.com/Ylsssq926/clawclip.git`
+- License：`MIT`
+
 ## 关键检查
 - 质量门禁：`npm run check`
 - 与 OpenClaw 相关的大改前，对照官方文档中 session / environment 等相关章节

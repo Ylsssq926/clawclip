@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Play, Bot, Clock, ChevronDown, ChevronUp, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react'
+import { ArrowLeft, Play, Pause, RotateCcw, Bot, Clock, ChevronDown, ChevronUp, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useI18n, formatI18n } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
@@ -10,6 +10,14 @@ import type { SessionMeta } from '../types/session'
 import { apiGet, apiGetSafe } from '../lib/api'
 
 const TAG_ALL = '__all__'
+
+type ReplaySpeed = 'slow' | 'normal' | 'fast'
+
+const SPEED_MAP: Record<ReplaySpeed, number> = {
+  slow: 1200,
+  normal: 700,
+  fast: 300,
+}
 
 function normalizeReplayText(text?: string): string {
   const raw = (text ?? '').replace(/\r/g, '').trim()
@@ -150,7 +158,7 @@ function ReasoningBlock({ reasoning }: { reasoning: string }) {
   )
 }
 
-function StepCard({ step, startTime, totalCost = 0, index }: { step: SessionStep; startTime: string; totalCost?: number; index: number }) {
+function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; startTime: string; totalCost?: number }) {
   const { t } = useI18n()
   const tokens = step.inputTokens + step.outputTokens
   const typeKey = `replay.step.${step.type}`
@@ -166,13 +174,12 @@ function StepCard({ step, startTime, totalCost = 0, index }: { step: SessionStep
   const baseConfig = STEP_STYLES[step.type] || STEP_STYLES.system
   const config = isFailureStep ? STEP_STYLES.error : baseConfig
   const primaryContent = step.reasoning && step.content.trim() === step.reasoning.trim() ? '' : step.content
-  const entranceDelay = Math.min(index, 30) * 0.04
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: entranceDelay, duration: 0.25 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
       className="flex gap-2.5"
     >
       <div className="flex w-11 shrink-0 flex-col items-center">
@@ -331,6 +338,12 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
   const [demoReplayHint, setDemoReplayHint] = useState(false)
+  const [autoPlay, setAutoPlay] = useState(false)
+  const [visibleSteps, setVisibleSteps] = useState(0)
+  const [speed, setSpeed] = useState<ReplaySpeed>('normal')
+  const [showAllSteps, setShowAllSteps] = useState(false)
+  const [controlsVisible, setControlsVisible] = useState(false)
+  const lastVisibleStepRef = useRef<HTMLDivElement | null>(null)
 
   const tagColorByTag = useMemo(() => {
     const m = new Map<string, string>()
@@ -384,6 +397,11 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
     setInsights([])
     setInsightsLoading(true)
     setInsightsOpen(false)
+    setAutoPlay(false)
+    setVisibleSteps(0)
+    setSpeed('normal')
+    setShowAllSteps(false)
+    setControlsVisible(false)
     const encoded = encodeURIComponent(id)
 
     const loadReplay = async () => {
@@ -419,8 +437,71 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
     onInitialSessionHandled?.()
   }, [initialSessionId, onInitialSessionHandled, openSession])
 
+  useEffect(() => {
+    if (view !== 'detail') return
+    if (!replay) {
+      setAutoPlay(false)
+      setVisibleSteps(0)
+      setSpeed('normal')
+      setShowAllSteps(false)
+      setControlsVisible(false)
+      return
+    }
+
+    const totalSteps = replay.steps.length
+    setSpeed('normal')
+    setShowAllSteps(false)
+    setControlsVisible(false)
+
+    if (totalSteps === 0) {
+      setAutoPlay(false)
+      setVisibleSteps(0)
+      return
+    }
+
+    setAutoPlay(true)
+    setVisibleSteps(1)
+  }, [view, replay?.meta.id, replay?.steps.length])
+
+  useEffect(() => {
+    if (view !== 'detail' || !replay || showAllSteps || !autoPlay) return
+    const totalSteps = replay.steps.length
+    if (totalSteps === 0 || visibleSteps >= totalSteps) return
+
+    const timer = window.setInterval(() => {
+      setVisibleSteps(current => Math.min(current + 1, totalSteps))
+    }, SPEED_MAP[speed])
+
+    return () => window.clearInterval(timer)
+  }, [view, replay?.meta.id, replay?.steps.length, autoPlay, showAllSteps, speed, visibleSteps])
+
+  useEffect(() => {
+    if (view !== 'detail' || !replay || showAllSteps) return
+    const totalSteps = replay.steps.length
+    if (totalSteps === 0 || visibleSteps < totalSteps) return
+
+    setAutoPlay(false)
+    setControlsVisible(true)
+  }, [view, replay?.meta.id, replay?.steps.length, showAllSteps, visibleSteps])
+
+  useEffect(() => {
+    if (view !== 'detail' || !replay || showAllSteps || !autoPlay) return
+    lastVisibleStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [view, replay?.meta.id, visibleSteps, showAllSteps, autoPlay])
+
   if (view === 'detail') {
     const totalSteps = replay?.steps.length ?? 0
+    const playbackCount = totalSteps > 0
+      ? showAllSteps
+        ? totalSteps
+        : Math.min(Math.max(visibleSteps, 1), totalSteps)
+      : 0
+    const playbackProgress = totalSteps > 0 ? playbackCount / totalSteps : 0
+    const displayedSteps = replay
+      ? showAllSteps
+        ? replay.steps
+        : replay.steps.slice(0, playbackCount)
+      : []
     const parseDiagnostics = replay?.meta.parseDiagnostics
     const parseDiagnosticsNotices = [
       (parseDiagnostics?.skippedLines ?? 0) > 0
@@ -432,12 +513,45 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
     ].filter((notice): notice is string => Boolean(notice))
     const detailSections = getReplayDetailSections({ insightsLoading, insightCount: insights.length })
 
+    const handleReplay = () => {
+      if (!replay || totalSteps === 0) return
+      setShowAllSteps(false)
+      setVisibleSteps(1)
+      setAutoPlay(true)
+      setControlsVisible(true)
+    }
+
+    const handleTogglePlayback = () => {
+      if (!replay || totalSteps === 0) return
+      if (showAllSteps || playbackCount >= totalSteps) {
+        handleReplay()
+        return
+      }
+      setAutoPlay(current => !current)
+    }
+
+    const handleShowAllSteps = () => {
+      if (!replay || totalSteps === 0) return
+      setShowAllSteps(true)
+      setVisibleSteps(totalSteps)
+      setAutoPlay(false)
+      setControlsVisible(true)
+    }
+
     return (
       <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() => { setView('list'); setReplay(null) }}
+            onClick={() => {
+              setView('list')
+              setReplay(null)
+              setAutoPlay(false)
+              setVisibleSteps(0)
+              setSpeed('normal')
+              setShowAllSteps(false)
+              setControlsVisible(false)
+            }}
             className="flex items-center gap-2 text-slate-500 transition-colors hover:text-slate-900"
           >
             <ArrowLeft className="h-4 w-4" /> {t('replay.back')}
@@ -541,16 +655,96 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                 }
 
                 return (
-                  <section key={sectionId} className="mb-4 space-y-3">
-                    {replay.steps.map((step, index) => (
-                      <StepCard
-                        key={step.index}
-                        step={step}
-                        startTime={replay.meta.startTime}
-                        totalCost={replay.meta.totalCost}
-                        index={index}
-                      />
-                    ))}
+                  <section key={sectionId} className="mb-4">
+                    {!controlsVisible && (
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200/80">
+                            <motion.div
+                              className="h-full rounded-full bg-[#3b82c4]"
+                              animate={{ width: `${playbackProgress * 100}%` }}
+                              transition={{ duration: 0.2, ease: 'easeOut' }}
+                            />
+                          </div>
+                          <span className="shrink-0 font-mono text-[11px] text-slate-400">
+                            {playbackCount}/{totalSteps}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleShowAllSteps}
+                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                        >
+                          {t('replay.autoplay.viewAll')}
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      {displayedSteps.map(step => {
+                        const isLastVisibleStep = displayedSteps[displayedSteps.length - 1]?.index === step.index
+                        return (
+                          <div key={step.index} ref={isLastVisibleStep ? lastVisibleStepRef : undefined}>
+                            <StepCard
+                              step={step}
+                              startTime={replay.meta.startTime}
+                              totalCost={replay.meta.totalCost}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {controlsVisible && (
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleTogglePlayback}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                          >
+                            {autoPlay ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                            <span>{autoPlay ? t('replay.autoplay.pause') : t('replay.autoplay.play')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleReplay}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            <span>{t('replay.autoplay.replay')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleShowAllSteps}
+                            className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                          >
+                            {t('replay.autoplay.viewAll')}
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          {(['slow', 'normal', 'fast'] as const).map(option => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => setSpeed(option)}
+                              className={cn(
+                                'rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                                speed === option
+                                  ? 'border-[#3b82c4]/20 bg-[#3b82c4]/10 text-[#3b82c4]'
+                                  : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700',
+                              )}
+                            >
+                              {t(`replay.autoplay.${option}`)}
+                            </button>
+                          ))}
+                          <span className="ml-1 font-mono text-[11px] text-slate-400">
+                            {playbackCount}/{totalSteps}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </section>
                 )
               }

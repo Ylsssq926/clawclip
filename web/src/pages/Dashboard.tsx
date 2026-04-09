@@ -431,7 +431,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   ]
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="animate-fade-in space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
           {t('dashboard.entry.eyebrow')}
@@ -442,7 +442,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1">
             <Play className="h-3.5 w-3.5 text-[#3b82c4]" />
@@ -500,7 +500,8 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                     </div>
                   </div>
                 ) : latestSession ? (
-                  <div className="space-y-4">
+      <div className="space-y-3">
+
                     <div>
                       <h3 className="text-2xl font-semibold leading-tight text-slate-900">
                         {sessionListTitle(latestSession, t)}
@@ -540,7 +541,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
             </div>
           </button>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <button
               type="button"
               onClick={() => onNavigate('benchmark')}
@@ -636,127 +637,125 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
         </div>
       </div>
 
-      <section className="card p-6 animate-fade-in">
+      <section className="card p-5 animate-fade-in">
         <div className="flex items-center gap-2">
           <Cloud className="h-4 w-4 text-cyan-500" />
           <h3 className="text-sm font-semibold text-slate-500">{t('dashboard.keywords')}</h3>
         </div>
-        <div className="mt-4">
+        <div className="mt-3">
           {kwLoading ? (
-            <div className="space-y-3">
-              <div className="skeleton h-6 w-3/4" />
-              <div className="skeleton h-8 w-full" />
+            <div className="space-y-2.5">
+              <div className="skeleton h-5 w-2/3" />
+              <div className="skeleton h-7 w-full" />
               <div className="skeleton h-5 w-1/2" />
-              <div className="skeleton h-7 w-2/3" />
             </div>
           ) : keywords.length > 0 ? (
-            <WordCloud keywords={keywords} onWordClick={onKnowledgeSearch} height={200} />
+            <WordCloud keywords={keywords} onWordClick={onKnowledgeSearch} height={140} />
           ) : (
-            <p className="py-8 text-center text-xs text-slate-600">{t('dashboard.keywords.empty')}</p>
+            <p className="py-6 text-center text-xs text-slate-600">{t('dashboard.keywords.empty')}</p>
           )}
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-5">
-        <section className="card p-6 xl:col-span-3 animate-fade-in">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
-                {t('dashboard.replay.entryTitle')}
-              </p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-900">{t('dashboard.recent')}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">{t('dashboard.replay.entryBody')}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigate('replay')}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/30 hover:text-[#3b82c4]"
-            >
-              {t('dashboard.recent.all')}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+      <section className="card p-5 animate-fade-in">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
+              {t('dashboard.replay.entryTitle')}
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-slate-900">{t('dashboard.recent')}</h3>
+            <p className="mt-1 text-sm leading-relaxed text-slate-600">{t('dashboard.replay.entryBody')}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('replay')}
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/30 hover:text-[#3b82c4]"
+          >
+            {t('dashboard.recent.all')}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
 
-          <div className="mt-5">
-            {sessionsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(item => <div key={item} className="skeleton h-20 w-full rounded-2xl" />)}
-              </div>
-            ) : sessions.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
-                {t('dashboard.recent.empty')}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {sessions.slice(0, 5).map(session => {
-                  const subtitle = sessionMetaSubtitle(session, locale)
+        <div className="mt-4">
+          {sessionsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(item => <div key={item} className="skeleton h-20 w-full rounded-2xl" />)}
+            </div>
+          ) : sessions.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+              {t('dashboard.recent.empty')}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {sessions.slice(0, 5).map(session => {
+                const subtitle = sessionMetaSubtitle(session, locale)
 
-                  return (
-                    <button
-                      key={session.id}
-                      type="button"
-                      onClick={() => onOpenReplaySession(session.id)}
-                      className="group w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/30 hover:bg-white hover:shadow-sm"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500/10 text-[#3b82c4]">
-                          <Bot className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-slate-900 transition-colors group-hover:text-[#3b82c4]">
-                            {sessionListTitle(session, t)}
-                          </p>
-                          {subtitle ? (
-                            <p className="mt-1 truncate text-xs text-slate-500">{subtitle}</p>
-                          ) : null}
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                            <span>{session.agentName}</span>
-                            <span>·</span>
-                            <span>{formatDuration(session.durationMs, locale)}</span>
-                            <span>·</span>
-                            <span>{formatRelativeTime(session.startTime, locale)}</span>
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-3 pl-2">
-                          <span className="text-xs font-mono text-slate-500">${session.totalCost.toFixed(3)}</span>
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4]">
-                            {t('dashboard.replay.open')}
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </span>
+                return (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => onOpenReplaySession(session.id)}
+                    className="group w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/30 hover:bg-white hover:shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-500/10 text-[#3b82c4]">
+                        <Bot className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-900 transition-colors group-hover:text-[#3b82c4]">
+                          {sessionListTitle(session, t)}
+                        </p>
+                        {subtitle ? (
+                          <p className="mt-1 truncate text-xs text-slate-500">{subtitle}</p>
+                        ) : null}
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                          <span>{session.agentName}</span>
+                          <span>·</span>
+                          <span>{formatDuration(session.durationMs, locale)}</span>
+                          <span>·</span>
+                          <span>{formatRelativeTime(session.startTime, locale)}</span>
                         </div>
                       </div>
-                    </button>
-                  )
-                })}
+                      <div className="flex shrink-0 flex-col items-end gap-3 pl-2">
+                        <span className="text-xs font-mono text-slate-500">${session.totalCost.toFixed(3)}</span>
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4]">
+                          {t('dashboard.replay.open')}
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-4 animate-fade-in">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{t('dashboard.summary.title')}</p>
+          <p className="mt-1 text-sm text-slate-600">{t('dashboard.summary.subtitle')}</p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {summaryCards.map(card => (
+            <div key={card.label} className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{card.label}</span>
+                <card.icon className={cn('h-4 w-4', card.iconTone)} />
               </div>
-            )}
-          </div>
-        </section>
-
-        <section className="space-y-4 xl:col-span-2 animate-fade-in">
-          <div className="card p-5">
-            <div className="mb-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{t('dashboard.summary.title')}</p>
-              <p className="mt-1 text-sm text-slate-600">{t('dashboard.summary.subtitle')}</p>
+              <div className={cn('mt-3 text-2xl font-semibold tracking-tight', card.tone)}>
+                {!loading && card.numValue != null
+                  ? <AnimatedCounter value={card.numValue} prefix={card.numPrefix} decimals={card.numDecimals} duration={800} />
+                  : card.value}
+              </div>
+              {card.sub ? <p className="mt-1 text-xs leading-relaxed text-slate-500">{card.sub}</p> : null}
             </div>
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              {summaryCards.map(card => (
-                <div key={card.label} className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{card.label}</span>
-                    <card.icon className={cn('h-4 w-4', card.iconTone)} />
-                  </div>
-                  <div className={cn('mt-3 text-2xl font-semibold tracking-tight', card.tone)}>
-                    {!loading && card.numValue != null
-                      ? <AnimatedCounter value={card.numValue} prefix={card.numPrefix} decimals={card.numDecimals} duration={800} />
-                      : card.value}
-                  </div>
-                  {card.sub ? <p className="mt-1 text-xs leading-relaxed text-slate-500">{card.sub}</p> : null}
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
+        </div>
 
+        <div className="grid gap-4 xl:grid-cols-2">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between xl:flex-col xl:items-start">
               <div>
@@ -862,14 +861,14 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
               </div>
             ) : null}
           </div>
+        </div>
 
-          {fetchError ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-700">
-              {t('dashboard.error.backend')}
-            </div>
-          ) : null}
-        </section>
-      </div>
+        {fetchError ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-700">
+            {t('dashboard.error.backend')}
+          </div>
+        ) : null}
+      </section>
 
     </div>
   )

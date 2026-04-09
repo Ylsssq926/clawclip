@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="luelan-logo.png" alt="虾片" width="96" />
+<img src="luelan-logo.png" alt="掠蓝标志" width="96" />
 
-# 🍤 虾片 (ClawClip)
+# 虾片（ClawClip）
 
 **本地 Agent 诊断台 · v1.1.0**
 
@@ -107,15 +107,13 @@ npm start
 | 内置 Demo 会话 | 不导入真实数据，也能先体验运行洞察、成绩单与成本报告 |
 | ZeroClaw 导出目录 / 其他 JSONL 文件夹 | 随解析覆盖能力逐步支持 |
 
-## 为什么叫“虾片”
+## 为什么叫“虾片（ClawClip）”
 
-> 我本来只是 OpenClaw 潮池里一只忙着跑任务的小虾。
->
-> 有一天，主人盯着日志问：“你到底是更强了，还是只是更贵了？”
->
-> 这句话后来就变成了虾片：把一次运行摊开，看它有没有撑住，再看这笔钱花得值不值。
->
-> —— 🍤 虾片吉祥物
+虾片（ClawClip）最早就是从本地回看 OpenClaw 运行开始做起的。
+
+后来产品一直围着同一个问题打磨：这个 Agent 到底是真的更强了，还是只是更贵了？
+
+所以现在的主流程还是这三步：先把一次运行摊开，再看结果有没有撑住，最后对照成本判断这次优化值不值。
 
 <a id="roadmap"></a>
 
@@ -138,6 +136,6 @@ npm start
 
 <div align="center">
 
-用 🍤 制作 by **[掠蓝 (Luolan)](https://github.com/Ylsssq926)**
+🍤 由 **[掠蓝（Luelan）](https://github.com/Ylsssq926)** 出品
 
 </div>

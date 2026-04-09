@@ -66,6 +66,7 @@ const PREVIEW_CARDS = [
 export default function Landing({ onEnterDemo }: Props) {
   const { t, locale } = useI18n()
   const copy = (key: string) => t(key)
+  const brandName = locale === 'zh' ? `${t('app.name')}（ClawClip）` : t('app.name')
   const heroMedia = getLandingDemoMedia(locale)
   const heroOverlays = getLandingHeroOverlays()
 
@@ -79,10 +80,11 @@ export default function Landing({ onEnterDemo }: Props) {
 
       <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/78 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/68">
         <nav className="relative mx-auto flex max-w-7xl items-center justify-between gap-3 px-6 py-4 lg:px-16">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🍤</span>
-            <span className="text-lg font-bold text-slate-900">{t('app.name')}</span>
-            <span className="text-xs text-slate-500">ClawClip</span>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/85 p-1.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
+              <img src="/luelan-logo.png" alt="" className="h-full w-full object-contain" />
+            </div>
+            <span className="truncate text-lg font-bold text-slate-900">{brandName}</span>
           </div>
           <LanguageSwitcher variant="landing" />
         </nav>
@@ -309,9 +311,11 @@ export default function Landing({ onEnterDemo }: Props) {
 
       <footer className="relative z-10 border-t border-slate-200/80 bg-white/72 px-6 py-10 backdrop-blur-sm lg:px-16">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-700">{t('app.name')}</span>
-            <span className="text-xs text-slate-500">ClawClip</span>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/85 p-1.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
+              <img src="/luelan-logo.png" alt="" className="h-full w-full object-contain" />
+            </div>
+            <span className="truncate text-sm font-medium text-slate-700">{brandName}</span>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-5 text-sm text-slate-500 md:justify-end">

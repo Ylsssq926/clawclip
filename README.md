@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="luelan-logo.png" alt="ClawClip logo" width="96" />
+<img src="luelan-logo.png" alt="Luelan logo" width="96" />
 
 # ClawClip
 
@@ -107,15 +107,13 @@ Support for other local JSONL runtimes expands as parser coverage grows.
 | Built-in demo sessions | Explore Run Insights, Agent Scorecard, and Cost Report without importing real data |
 | ZeroClaw exports / additional JSONL folders | Supported progressively as format coverage expands |
 
-## Why the mascot is a shrimp
+## Why ClawClip starts from OpenClaw
 
-> The mascot is a shrimp because ClawClip started around OpenClaw runs.
->
-> Then the real question showed up: “Did this agent actually get better, or did it just get more expensive?”
->
-> That question still defines the product: replay the run, check whether it held up, and compare the result with the cost.
->
-> — 🍤 ClawClip Mascot
+ClawClip started from reviewing OpenClaw runs locally.
+
+The product kept the same question from day one: did the agent actually get better, or did it just get more expensive?
+
+That is still the core loop today: replay the run, check whether it held up, and compare the result with the cost before you keep the change.
 
 <a id="roadmap"></a>
 

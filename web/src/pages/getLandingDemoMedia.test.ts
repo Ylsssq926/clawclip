@@ -5,7 +5,7 @@ describe('getLandingDemoMedia', () => {
   it('为中文返回中文动图和替代文本', () => {
     expect(getLandingDemoMedia('zh')).toEqual({
       src: '/landing/radar-animation-zh.gif',
-      alt: '虾片 Demo 动图：回放、成绩单与成本视图联动演示',
+      alt: '虾片（ClawClip）Demo 动图：回放、成绩单与成本视图联动演示',
     })
   })
 

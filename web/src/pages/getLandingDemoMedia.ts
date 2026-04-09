@@ -8,7 +8,7 @@ export interface LandingDemoMedia {
 const LANDING_DEMO_MEDIA: Record<'zh' | 'en' | 'default', LandingDemoMedia> = {
   zh: {
     src: '/landing/radar-animation-zh.gif',
-    alt: '虾片 Demo 动图：回放、成绩单与成本视图联动演示',
+    alt: '虾片（ClawClip）Demo 动图：回放、成绩单与成本视图联动演示',
   },
   en: {
     src: '/landing/radar-animation-en.gif',

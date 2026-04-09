@@ -56,7 +56,7 @@ function TabFallback() {
 }
 
 function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding: () => void; initialTab?: Tab }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>(initialTab)
   const [knowledgeInitialQuery, setKnowledgeInitialQuery] = useState('')
   const [replayInitialSessionId, setReplayInitialSessionId] = useState('')
@@ -95,6 +95,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
   const isDemo = dataBannerMode === 'demo'
   const showStatusBadge = dataBannerMode !== 'loading'
   const statusBadgeText = isDemo ? t('app.demo') : t('app.realData')
+  const brandName = locale === 'zh' ? `${t('app.name')}（ClawClip）` : t('app.name')
 
   const navigateTab = useCallback((tab: Tab) => {
     setActiveTab(tab)
@@ -253,7 +254,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
               <img src="/luelan-logo.png" alt="" className="h-full w-full object-contain" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">{t('app.name')}</h1>
+              <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">{brandName}</h1>
               <div className="flex min-w-0 items-center gap-1.5 text-[10px] leading-none text-slate-500">
                 <p className="truncate">{t('app.subtitle')}</p>
                 {showStatusBadge && (

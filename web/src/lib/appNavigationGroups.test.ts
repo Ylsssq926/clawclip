@@ -24,6 +24,8 @@ describe('APP_NAVIGATION_GROUPS', () => {
       'leaderboard',
     ])
     expect(toolsGroup?.tone).toBe('secondary')
+    expect(toolsGroup?.collapsible).toBe(true)
+    expect(toolsGroup?.defaultCollapsed).toBe(true)
   })
 
   it('确保每个顶层 tab 只出现一次', () => {

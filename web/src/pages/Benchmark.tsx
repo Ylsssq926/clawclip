@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Trophy, Zap, Play, RefreshCw, Shield, Search, Code, Pen, Wrench, Coins, TrendingUp, Share2, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
+import type { Tab } from '../App'
 import FadeIn from '../components/ui/FadeIn'
 import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
@@ -289,7 +290,20 @@ function getDeltaState(value: number, prefersLower = false): 'positive' | 'negat
   return improved ? 'positive' : 'negative'
 }
 
-export default function Benchmark() {
+type BenchmarkNextActionType = 'rerun' | 'replay' | 'cost' | 'keep'
+
+interface BenchmarkProps {
+  onNavigate: (tab: Tab) => void
+}
+
+function resolveBenchmarkNextActionType(deltas: BenchmarkProofDeltas | null, hasPrevious: boolean): BenchmarkNextActionType {
+  if (!deltas || !hasPrevious) return 'rerun'
+  if (deltas.score > 0 && deltas.cost > 0) return 'cost'
+  if (deltas.score < 0 || (deltas.score === 0 && deltas.cost >= 0)) return 'replay'
+  return 'keep'
+}
+
+export default function Benchmark({ onNavigate }: BenchmarkProps) {
   const { t, locale } = useI18n()
   const isZh = locale.startsWith('zh')
   const [result, setResult] = useState<BenchmarkResult | null>(null)
@@ -457,6 +471,22 @@ export default function Benchmark() {
         },
       ]
     : []
+  const nextActionType = resolveBenchmarkNextActionType(proofDeltas, Boolean(proofPrevious))
+  const nextActionTitle = t(`benchmark.next.${nextActionType}.title`)
+  const nextActionBody = t(`benchmark.next.${nextActionType}.body`)
+  const nextActionCta = t(`benchmark.next.${nextActionType}.cta`)
+  const nextActionTone = nextActionType === 'cost'
+    ? 'border-amber-200 bg-amber-50/80 text-amber-900'
+    : nextActionType === 'replay'
+      ? 'border-rose-200 bg-rose-50/80 text-rose-900'
+      : nextActionType === 'keep'
+        ? 'border-emerald-200 bg-emerald-50/80 text-emerald-900'
+        : 'border-slate-200 bg-slate-50/90 text-slate-900'
+  const verdictBody = proofPrevious && proofDeltas
+    ? (summaryText || t('benchmark.proof.section.body'))
+    : (proofLatest
+        ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
+        : t('benchmark.proof.runAgainBodyEmpty'))
 
   if (loading) {
     return (
@@ -556,180 +586,188 @@ export default function Benchmark() {
 
       {result && (
         <>
-          <div className="mb-4 flex flex-wrap gap-2">
-            <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
-              {formatI18n(t('benchmark.meta.latestSessions'), { count: result.totalSessions })}
-            </span>
-            <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
-              {t('benchmark.meta.dataCutoff')} <span className="font-medium text-slate-700">{benchmarkCutoffLabel}</span>
-            </span>
-            <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
-              {t('benchmark.meta.confidence')} <span className="font-medium text-slate-700">{benchmarkConfidenceLabel}</span>
-            </span>
-          </div>
           {successMessage && (
             <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
               {successMessage}
             </div>
           )}
-          <GlowCard className={`rounded-2xl mb-6 ${rankStyle.bg} ${rankStyle.glow} border-surface-border`}>
-            <div className="p-6">
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <motion.div
-                  className={`text-6xl font-black ${rankStyle.text}`}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-                >
-                  {result.rank}
-                </motion.div>
-                <div className="text-xs text-slate-500 mt-1">{t('benchmark.rankLabel')}</div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-4xl font-bold text-slate-900 tabular-nums">
-                    <AnimatedCounter value={result.overallScore} duration={1500} decimals={0} />
-                  </span>
-                  <span className="text-slate-500">/ 100</span>
-                  <Trophy className="w-5 h-5 text-accent ml-1" />
-                </div>
-                <p className="text-sm text-slate-500 leading-relaxed">{summaryText}</p>
-              </div>
-            </div>
+          <GlowCard className={`rounded-3xl mb-6 ${rankStyle.bg} ${rankStyle.glow} border-surface-border`}>
+            <div className="p-6 md:p-7">
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex min-w-0 flex-1 gap-4">
+                    <div className="shrink-0 text-center">
+                      <motion.div
+                        className={`text-5xl font-black ${rankStyle.text}`}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                      >
+                        {result.rank}
+                      </motion.div>
+                      <div className="mt-1 text-[11px] text-slate-500">{t('benchmark.rankLabel')}</div>
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center rounded-full border border-white/70 bg-white/75 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
+                            <Trophy className="mr-1.5 h-3.5 w-3.5 text-[#3b82c4]" />
+                            <AnimatedCounter value={result.overallScore} duration={1500} decimals={0} />
+                            <span className="ml-1 text-slate-500">/ 100</span>
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          {t('benchmark.proof.verdictLabel')}
+                        </p>
+                        <h3 className="max-w-3xl text-2xl font-semibold leading-tight text-slate-900 md:text-[1.9rem]">
+                          {proofPrevious && proofDeltas ? proofVerdict : t('benchmark.proof.runAgainTitle')}
+                        </h3>
+                        <p className="max-w-3xl text-sm leading-relaxed text-slate-600">{verdictBody}</p>
+                      </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t border-slate-200">
-              <div>
-                <span className="text-xs text-slate-500">{t('benchmark.metric.sessions')}</span>
-                <div className="text-lg font-semibold text-slate-900">{result.totalSessions}</div>
+                      {proofLatest && (
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full border border-white/70 bg-white/75 px-3 py-1 text-[11px] text-slate-600 shadow-sm">
+                            {t('benchmark.proof.latest')} · {formatProofTime(proofLatest.runAt, locale)}
+                          </span>
+                          {proofPrevious && (
+                            <span className="rounded-full border border-white/70 bg-white/75 px-3 py-1 text-[11px] text-slate-600 shadow-sm">
+                              {t('benchmark.proof.previous')} · {formatProofTime(proofPrevious.runAt, locale)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {proofMetricCards.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {proofMetricCards.map(card => {
+                      const state = getDeltaState(card.deltaValue, card.prefersLower)
+                      const DeltaIcon = card.deltaValue > 0 ? ArrowUpRight : card.deltaValue < 0 ? ArrowDownRight : Minus
+                      const toneClass = state === 'positive'
+                        ? 'border-emerald-200 bg-white/85'
+                        : state === 'negative'
+                          ? 'border-rose-200 bg-white/85'
+                          : 'border-slate-200 bg-white/80'
+                      const badgeClass = state === 'positive'
+                        ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                        : state === 'negative'
+                          ? 'border-rose-200 bg-rose-100 text-rose-700'
+                          : 'border-slate-200 bg-white text-slate-500'
+
+                      return (
+                        <div key={card.key} className={`rounded-2xl border p-4 shadow-sm ${toneClass}`}>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
+                            <div className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>
+                              <DeltaIcon className="h-3.5 w-3.5" />
+                              <span>{card.deltaLabel}</span>
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <p className="text-2xl font-semibold text-slate-900 tabular-nums">{card.latestValue}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {formatI18n(t('benchmark.proof.prevShort'), { value: card.previousValue })}
+                            </p>
+                            <p className="mt-3 text-[11px] text-slate-500">
+                              {card.pctLabel
+                                ? formatI18n(t('benchmark.proof.vsPrevious'), { value: card.pctLabel })
+                                : (card.key === 'score'
+                                    ? t('benchmark.proof.higherBetter')
+                                    : t('benchmark.proof.lowerBetter'))}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-4 py-6 text-center">
+                    <p className="text-sm font-medium text-slate-700">
+                      {t('benchmark.proof.runAgainTitle')}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {proofLatest
+                        ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
+                        : t('benchmark.proof.runAgainBodyEmpty')}
+                    </p>
+                  </div>
+                )}
+
+                <div className={cn('rounded-2xl border p-4 shadow-sm', nextActionTone)}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-current/70">{t('benchmark.next.label')}</p>
+                  <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h4 className="text-lg font-semibold text-current">{nextActionTitle}</h4>
+                      <p className="mt-1 text-sm leading-relaxed text-current/80">{nextActionBody}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {nextActionType === 'cost' ? (
+                        <button type="button" onClick={() => onNavigate('cost')} className={BENCHMARK_PRIMARY_BUTTON_CLASS}>
+                          <Coins className="h-4 w-4" />
+                          {nextActionCta}
+                        </button>
+                      ) : nextActionType === 'replay' ? (
+                        <button type="button" onClick={() => onNavigate('replay')} className={BENCHMARK_PRIMARY_BUTTON_CLASS}>
+                          <Play className="h-4 w-4" />
+                          {nextActionCta}
+                        </button>
+                      ) : nextActionType === 'rerun' ? (
+                        <button type="button" onClick={runBenchmark} disabled={running} className={BENCHMARK_PRIMARY_BUTTON_CLASS}>
+                          {running ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          {nextActionCta}
+                        </button>
+                      ) : (
+                        <>
+                          <span className="inline-flex items-center rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm">
+                            {nextActionCta}
+                          </span>
+                          <button type="button" onClick={runBenchmark} disabled={running} className={BENCHMARK_SECONDARY_BUTTON_CLASS}>
+                            {running ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                            {t('benchmark.next.keep.secondary')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="text-xs text-slate-500">{t('benchmark.metric.tokens')}</span>
-                <div className="text-lg font-semibold text-blue-400">{result.totalTokens.toLocaleString()}</div>
-              </div>
-              <div>
-                <span className="text-xs text-slate-500">{t('benchmark.metric.cost')}</span>
-                <div className="text-lg font-semibold text-accent">${result.totalCost.toFixed(2)}</div>
-              </div>
-              <div>
-                <span className="text-xs text-slate-500">{t('benchmark.metric.model')}</span>
-                <div className="text-lg font-semibold text-green-400">{result.topModel}</div>
-              </div>
-            </div>
             </div>
           </GlowCard>
 
-          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-              <div>
-                <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-                  <Zap className="w-5 h-5 text-accent" />
-                  <span>{t('benchmark.proof.section.title')}</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  {t('benchmark.proof.section.body')}
-                </p>
-              </div>
-            </div>
-
-            {proofLatest && proofPrevious && proofDeltas ? (
-              <>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-600">
-                    {t('benchmark.proof.latest')} · {formatProofTime(proofLatest.runAt, locale)}
-                  </span>
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-600">
-                    {t('benchmark.proof.previous')} · {formatProofTime(proofPrevious.runAt, locale)}
-                  </span>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  {proofMetricCards.map(card => {
-                    const state = getDeltaState(card.deltaValue, card.prefersLower)
-                    const DeltaIcon = card.deltaValue > 0 ? ArrowUpRight : card.deltaValue < 0 ? ArrowDownRight : Minus
-                    const toneClass = state === 'positive'
-                      ? 'border-emerald-200 bg-emerald-50/80'
-                      : state === 'negative'
-                        ? 'border-rose-200 bg-rose-50/80'
-                        : 'border-slate-200 bg-slate-50/80'
-                    const badgeClass = state === 'positive'
-                      ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
-                      : state === 'negative'
-                        ? 'border-rose-200 bg-rose-100 text-rose-700'
-                        : 'border-slate-200 bg-white text-slate-500'
-
-                    return (
-                      <div key={card.key} className={`rounded-xl border p-4 ${toneClass}`}>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{card.label}</p>
-                        <div className="mt-3 flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-2xl font-semibold text-slate-900 tabular-nums">{card.latestValue}</p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              {formatI18n(t('benchmark.proof.prevShort'), { value: card.previousValue })}
-                            </p>
-                          </div>
-                          <div className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>
-                            <DeltaIcon className="w-3.5 h-3.5" />
-                            <span>{card.deltaLabel}</span>
-                          </div>
-                        </div>
-                        <p className="mt-3 text-[11px] text-slate-500">
-                          {card.pctLabel
-                            ? formatI18n(t('benchmark.proof.vsPrevious'), { value: card.pctLabel })
-                            : (card.key === 'score'
-                                ? t('benchmark.proof.higherBetter')
-                                : t('benchmark.proof.lowerBetter'))}
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-blue-700">{t('benchmark.proof.verdictLabel')}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-blue-900">{proofVerdict}</p>
-                </div>
-              </>
-            ) : (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-6 text-center">
-                <p className="text-sm font-medium text-slate-700">
-                  {t('benchmark.proof.runAgainTitle')}
-                </p>
-                <p className="text-xs text-slate-500 mt-2">
-                  {proofLatest
-                    ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
-                    : t('benchmark.proof.runAgainBodyEmpty')}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+          <details className="glass-raised rounded-xl border border-surface-border mb-6 p-6">
+            <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
               <div>
                 <h3 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
                   <TrendingUp className="w-5 h-5 text-accent" />
                   <span>{t('benchmark.radar.title')}</span>
                 </h3>
-                {compareResult && (
-                  <span className="mt-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
-                    {t('benchmark.compare.against')}
-                    <span className="font-medium text-slate-700">
-                      {formatRunDate(compareResult.runAt)} · {compareResult.rank}{t('benchmark.rankSuffix')} · {compareResult.overallScore}{t('benchmark.scoreUnit')}
-                    </span>
-                  </span>
-                )}
+                <p className={cn('mt-2 pr-4', getSupportingElementPriority('benchmarkSupportNote').className)}>{t('benchmark.radar.short')}</p>
               </div>
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
+                <ChevronRight className="h-3.5 w-3.5" />
+                {t('benchmark.radar.title')}
+              </span>
+            </summary>
+            <div className="mt-5">
+              {compareResult && (
+                <span className="mb-4 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
+                  {t('benchmark.compare.against')}
+                  <span className="font-medium text-slate-700">
+                    {formatRunDate(compareResult.runAt)} · {compareResult.rank}{t('benchmark.rankSuffix')} · {compareResult.overallScore}{t('benchmark.scoreUnit')}
+                  </span>
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => setShowRadarHelp(v => !v)}
-                className={cn('shrink-0 flex items-center gap-1 transition-colors', getSupportingElementPriority('benchmarkHelpAction').className)}
+                className={cn('mb-4 flex items-center gap-1 transition-colors', getSupportingElementPriority('benchmarkHelpAction').className)}
               >
                 {showRadarHelp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 {t('benchmark.radar.toggle')}
               </button>
-            </div>
-            <p className={cn('mb-4', getSupportingElementPriority('benchmarkSupportNote').className)}>{t('benchmark.radar.short')}</p>
             {showRadarHelp && (
               <p className={cn('mb-4 p-3', getSupportingElementPriority('benchmarkSupportCard').className, getSupportingElementPriority('benchmarkSupportNote').className)}>
                 {t('benchmark.radar.long')}
@@ -795,31 +833,36 @@ export default function Benchmark() {
               </div>
             )}
 
-            <div className="space-y-4">
-              {(result.dimensions ?? []).map(dim => {
-                const Icon = DIMENSION_ICONS[dim.dimension] || Zap
-                const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-500'
-                const evidenceText = dimEvidence(dim, isZh) || dimEvidenceFallback(dim, t)
-                return (
-                  <div key={dim.dimension}>
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Icon className={`w-4 h-4 ${color}`} />
-                      <span className="text-sm font-medium text-slate-500">{dimLabel(dim, t)}</span>
+            <details className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+              <summary className="cursor-pointer list-none text-sm font-medium text-slate-700">
+                {t('benchmark.dimension.whyThisScore')}
+              </summary>
+              <div className="mt-4 space-y-4">
+                {(result.dimensions ?? []).map(dim => {
+                  const Icon = DIMENSION_ICONS[dim.dimension] || Zap
+                  const color = DIMENSION_COLORS[dim.dimension] || 'text-slate-500'
+                  const evidenceText = dimEvidence(dim, isZh) || dimEvidenceFallback(dim, t)
+                  return (
+                    <div key={dim.dimension}>
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <Icon className={`w-4 h-4 ${color}`} />
+                        <span className="text-sm font-medium text-slate-500">{dimLabel(dim, t)}</span>
+                      </div>
+                      <ScoreBar score={dim.score} color={color} />
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs leading-relaxed text-slate-500">{evidenceText}</p>
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-500">{localizeBenchmarkDimensionDetail(dim, locale, t)}</p>
                     </div>
-                    <ScoreBar score={dim.score} color={color} />
-                    <div className="mt-2 space-y-1">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{t('benchmark.dimension.whyThisScore')}</p>
-                      <p className="text-xs leading-relaxed text-slate-500">{evidenceText}</p>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1.5">{localizeBenchmarkDimensionDetail(dim, locale, t)}</p>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
+            </details>
             </div>
-          </div>
+          </details>
 
-          <div className="glass-raised rounded-xl p-6 border border-surface-border mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+          <details className="glass-raised rounded-xl border border-surface-border mb-6 p-6">
+            <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-lg font-semibold">{t('benchmark.curve.title')}</h3>
@@ -829,17 +872,22 @@ export default function Benchmark() {
                     </span>
                   )}
                 </div>
-                <p className={cn('mt-1', getSupportingElementPriority('benchmarkSupportNote').className)}>{t('benchmark.curve.oneLiner')}</p>
+                <p className={cn('mt-2 pr-4', getSupportingElementPriority('benchmarkSupportNote').className)}>{t('benchmark.curve.oneLiner')}</p>
               </div>
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
+                <ChevronRight className="h-3.5 w-3.5" />
+                {t('benchmark.curve.title')}
+              </span>
+            </summary>
+            <div className="mt-5">
               <button
                 type="button"
                 onClick={() => setShowCurveHelp(v => !v)}
-                className={cn('shrink-0 flex items-center gap-1 self-start transition-colors', getSupportingElementPriority('benchmarkHelpAction').className)}
+                className={cn('mb-4 flex items-center gap-1 transition-colors', getSupportingElementPriority('benchmarkHelpAction').className)}
               >
                 {showCurveHelp ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 {t('benchmark.curve.toggle')}
               </button>
-            </div>
             {curveNote && <p className={cn('mb-3', getSupportingElementPriority('benchmarkSupportNote').className)}>{curveNote}</p>}
             {showCurveHelp && (
               <p className={cn('mb-4 p-3', getSupportingElementPriority('benchmarkSupportCard').className, getSupportingElementPriority('benchmarkSupportNote').className)}>
@@ -933,7 +981,8 @@ export default function Benchmark() {
                 </ResponsiveContainer>
               </div>
             )}
-          </div>
+            </div>
+          </details>
 
           <div className="glass-raised rounded-xl p-5 border border-surface-border mb-4">
             <div className="flex items-start gap-3">
@@ -949,6 +998,20 @@ export default function Benchmark() {
                     {t('benchmark.lastRun')}: {new Date(result.runAt).toLocaleString(dateLocale)}
                   </p>
                 )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
+                    {formatI18n(t('benchmark.meta.latestSessions'), { count: result.totalSessions })}
+                  </span>
+                  <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
+                    {t('benchmark.meta.dataCutoff')} <span className="font-medium text-slate-700">{benchmarkCutoffLabel}</span>
+                  </span>
+                  <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
+                    {t('benchmark.meta.confidence')} <span className="font-medium text-slate-700">{benchmarkConfidenceLabel}</span>
+                  </span>
+                  <span className={getSupportingElementPriority('benchmarkSupportChip').className}>
+                    {t('benchmark.metric.model')} <span className="font-medium text-slate-700">{result.topModel}</span>
+                  </span>
+                </div>
               </div>
             </div>
             <div className={cn('mt-3 px-3 py-2 text-left', getSupportingElementPriority('benchmarkSupportCard').className)}>

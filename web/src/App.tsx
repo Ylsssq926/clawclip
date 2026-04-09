@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Landing from './pages/Landing'
 import ErrorBoundary from './components/ErrorBoundary'
-import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb, GitCompareArrows } from 'lucide-react'
+import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb, GitCompareArrows, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from './lib/cn'
 import { buildAppNavigationGroups, ALL_NAV_TAB_IDS } from './lib/appNavigationGroups'
 import { useI18n, LanguageSwitcher } from './lib/i18n'
@@ -85,6 +85,13 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
   })
   const [tourStep, setTourStep] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsedNavGroups, setCollapsedNavGroups] = useState<Record<string, boolean>>(() => (
+    Object.fromEntries(
+      navigationGroups
+        .filter(group => group.defaultCollapsed)
+        .map(group => [group.id, true]),
+    )
+  ))
   const isDemo = dataBannerMode === 'demo'
   const showStatusBadge = dataBannerMode !== 'loading'
   const statusBadgeText = isDemo ? t('app.demo') : t('app.realData')
@@ -104,6 +111,13 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
     setKnowledgeInitialQuery(query)
     navigateTab('knowledge')
   }, [navigateTab])
+
+  const toggleNavGroup = useCallback((groupId: string) => {
+    setCollapsedNavGroups(current => ({
+      ...current,
+      [groupId]: !current[groupId],
+    }))
+  }, [])
 
   const setReplayTargetSession = useCallback((sessionId: string) => {
     setReplayInitialSessionId(sessionId)
@@ -295,70 +309,100 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
           )}
         >
           <div className="flex-1 space-y-4">
-            {navigationGroups.map(group => (
-              <section
-                key={group.id}
-                className={cn(
-                  'space-y-1',
-                  group.tone === 'overview' && 'rounded-2xl bg-white/55 p-1.5',
-                  group.tone === 'secondary' && 'rounded-2xl border border-slate-200/70 bg-white/40 p-2',
-                )}
-              >
-                <p
+            {navigationGroups.map(group => {
+              const isToolGroup = group.tone === 'secondary'
+              const groupHasActiveItem = group.items.some(item => item.id === activeTab)
+              const isCollapsed = Boolean(group.collapsible && collapsedNavGroups[group.id] && !groupHasActiveItem)
+
+              return (
+                <section
+                  key={group.id}
                   className={cn(
-                    'px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em]',
-                    group.tone === 'primary' && 'text-[#3b82c4]',
-                    group.tone === 'overview' && 'text-slate-400',
-                    group.tone === 'secondary' && 'text-slate-400/90',
+                    'space-y-1',
+                    group.tone === 'overview' && 'rounded-2xl bg-white/55 p-1.5',
+                    group.tone === 'primary' && 'rounded-[26px] border border-[#3b82c4]/12 bg-white p-2 shadow-sm shadow-slate-200/60',
+                    group.tone === 'secondary' && 'rounded-2xl border border-slate-200/60 bg-slate-50/55 p-2',
+                    isToolGroup && isCollapsed && 'bg-transparent shadow-none',
                   )}
                 >
-                  {t(group.titleKey)}
-                </p>
-                <ul className="space-y-0.5">
-                  {group.items.map(tab => {
-                    const isActive = activeTab === tab.id
-                    const isPrimaryGroup = group.tone === 'primary'
-                    const isToolGroup = group.tone === 'secondary'
+                  {group.collapsible ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleNavGroup(group.id)}
+                      className="flex w-full items-center justify-between rounded-xl px-3 pb-1 text-left"
+                    >
+                      <span
+                        className={cn(
+                          'text-[10px] font-semibold uppercase tracking-[0.2em]',
+                          'text-slate-400/90',
+                        )}
+                      >
+                        {t(group.titleKey)}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400">
+                        <span>{group.items.length}</span>
+                        {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      </span>
+                    </button>
+                  ) : (
+                    <p
+                      className={cn(
+                        'px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em]',
+                        group.tone === 'primary' && 'text-[#3b82c4]',
+                        group.tone === 'overview' && 'text-slate-400',
+                      )}
+                    >
+                      {t(group.titleKey)}
+                    </p>
+                  )}
 
-                    return (
-                      <li key={tab.id}>
-                        <button
-                          type="button"
-                          onClick={() => navigateTab(tab.id)}
-                          className={cn(
-                            'flex w-full items-center gap-3 rounded-xl px-3 font-medium transition-all duration-150',
-                            isToolGroup ? 'py-2 text-[12px]' : 'py-2.5 text-[13px]',
-                            isActive
-                              ? isPrimaryGroup
-                                ? 'bg-blue-50 text-[#3b82c4] shadow-sm'
-                                : 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/80'
-                              : isPrimaryGroup
-                                ? 'text-slate-700 hover:bg-white hover:text-slate-900'
-                                : isToolGroup
-                                  ? 'text-slate-500 hover:bg-white/80 hover:text-slate-800'
-                                  : 'text-slate-600 hover:bg-white hover:text-slate-900',
-                          )}
-                        >
-                          <tab.icon
-                            className={cn(
-                              'h-[18px] w-[18px]',
-                              isActive
-                                ? isPrimaryGroup
-                                  ? 'text-[#3b82c4]'
-                                  : 'text-slate-500'
-                                : isToolGroup
-                                  ? 'text-slate-400'
-                                  : 'text-slate-500',
-                            )}
-                          />
-                          {t(tab.nameKey)}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </section>
-            ))}
+                  {!isCollapsed && (
+                    <ul className="space-y-0.5">
+                      {group.items.map(tab => {
+                        const isActive = activeTab === tab.id
+                        const isPrimaryGroup = group.tone === 'primary'
+
+                        return (
+                          <li key={tab.id}>
+                            <button
+                              type="button"
+                              onClick={() => navigateTab(tab.id)}
+                              className={cn(
+                                'flex w-full items-center gap-3 rounded-xl px-3 font-medium transition-all duration-150',
+                                isToolGroup ? 'py-1.5 text-[11px]' : 'py-2.5 text-[13px]',
+                                isActive
+                                  ? isPrimaryGroup
+                                    ? 'bg-blue-50 text-[#3b82c4] shadow-sm ring-1 ring-[#3b82c4]/10'
+                                    : 'bg-white text-slate-700 shadow-sm ring-1 ring-slate-200/80'
+                                  : isPrimaryGroup
+                                    ? 'text-slate-700 hover:bg-[#3b82c4]/6 hover:text-slate-900'
+                                    : isToolGroup
+                                      ? 'text-slate-400 hover:bg-white/80 hover:text-slate-600'
+                                      : 'text-slate-600 hover:bg-white hover:text-slate-900',
+                              )}
+                            >
+                              <tab.icon
+                                className={cn(
+                                  isToolGroup ? 'h-4 w-4' : 'h-[18px] w-[18px]',
+                                  isActive
+                                    ? isPrimaryGroup
+                                      ? 'text-[#3b82c4]'
+                                      : 'text-slate-500'
+                                    : isToolGroup
+                                      ? 'text-slate-400'
+                                      : 'text-slate-500',
+                                )}
+                              />
+                              {t(tab.nameKey)}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </section>
+              )
+            })}
           </div>
           <div className="border-t border-slate-200 pt-4">
             <p className="px-3 text-[10px] font-medium tracking-[0.08em] text-slate-400">{t('app.lobster')}</p>
@@ -389,7 +433,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                       onInitialSessionHandled={clearReplayInitialSession}
                     />
                   )}
-                  {activeTab === 'benchmark' && <Benchmark />}
+                  {activeTab === 'benchmark' && <Benchmark onNavigate={navigateTab} />}
                   {activeTab === 'leaderboard' && <Leaderboard />}
                   {activeTab === 'cost' && <CostMonitor onOpenReplaySession={openReplaySession} />}
                   {activeTab === 'prompt' && <PromptInsight />}

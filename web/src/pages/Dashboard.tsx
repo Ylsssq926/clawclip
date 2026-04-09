@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, ArrowRight, Bot, ChevronDown, ChevronUp, Cloud, DollarSign, Play, Wifi, WifiOff, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowRight, Bot, ChevronDown, ChevronUp, Cloud, DollarSign, Play, Trophy, Wifi, WifiOff, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Tab } from '../App'
 import WordCloud, { type KeywordItem } from '../components/WordCloud'
@@ -70,10 +70,34 @@ interface TokenWasteReport {
   }
 }
 
+interface DashboardBenchmarkSnapshot {
+  overallScore: number
+  totalCost: number
+}
+
+interface DashboardBenchmarkProof {
+  latest: DashboardBenchmarkSnapshot
+  previous: DashboardBenchmarkSnapshot | null
+  deltas: {
+    score: number
+    cost: number
+  } | null
+}
+
 function formatWasteCost(value: number): string {
   if (value >= 1) return value.toFixed(2)
   if (value >= 0.1) return value.toFixed(3)
   return value.toFixed(4)
+}
+
+function formatSignedDashboardInteger(value: number): string {
+  if (value === 0) return '0'
+  return `${value > 0 ? '+' : ''}${Math.round(value)}`
+}
+
+function formatSignedDashboardCurrency(value: number): string {
+  if (value === 0) return '$0.00'
+  return `${value > 0 ? '+' : '-'}$${Math.abs(value).toFixed(2)}`
 }
 
 const DASHBOARD_NUMBER_LOCALE: Record<Locale, string> = {
@@ -149,6 +173,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const [status, setStatus] = useState<StatusData | null>(null)
   const [cost, setCost] = useState<CostSummary | null>(null)
   const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
+  const [benchmarkProof, setBenchmarkProof] = useState<DashboardBenchmarkProof | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [keywords, setKeywords] = useState<KeywordItem[]>([])
@@ -199,6 +224,17 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   }, [])
 
   useEffect(() => {
+    apiGetSafe<DashboardBenchmarkProof>('/api/benchmark/proof')
+      .then(data => {
+        if (!data?.latest) {
+          setBenchmarkProof(null)
+          return
+        }
+        setBenchmarkProof(data)
+      })
+  }, [])
+
+  useEffect(() => {
     apiGetSafe<ReplayDiagnosticsData>('/api/replay/diagnostics')
       .then(data => {
         if (!data || !Array.isArray(data.sessions)) {
@@ -219,6 +255,8 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const diagnosticCountLabel = formatDashboardNumber(diagnosticSessions.length, locale)
   const latestSession = sessions[0] ?? null
   const latestSessionSubtitle = latestSession ? sessionMetaSubtitle(latestSession, locale) : null
+  const benchmarkLatest = benchmarkProof?.latest ?? null
+  const benchmarkDeltas = benchmarkProof?.deltas ?? null
   const hasWasteSignals = Boolean(tokenWaste && tokenWaste.summary.signals > 0)
   const demoDataSuffix = tokenWaste?.summary.usingDemo ? t('dashboard.common.demoDataSuffix') : ''
 
@@ -242,6 +280,30 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
     : hasJsonlButUnparsed
       ? 'dashboard.entry.body.processing'
       : 'dashboard.entry.body.demo'
+
+  let benchmarkTitle = t('dashboard.entry.benchmark.pendingTitle')
+  let benchmarkBody = t('dashboard.entry.benchmark.pendingBody')
+  let benchmarkTone = 'border-slate-200 bg-white text-slate-900'
+
+  if (benchmarkDeltas) {
+    if (benchmarkDeltas.score > 0 && benchmarkDeltas.cost > 0) {
+      benchmarkTitle = t('dashboard.entry.benchmark.costTitle')
+      benchmarkBody = t('dashboard.entry.benchmark.costBody')
+      benchmarkTone = 'border-amber-200 bg-amber-50/70 text-amber-900'
+    } else if (benchmarkDeltas.score < 0 || (benchmarkDeltas.score === 0 && benchmarkDeltas.cost >= 0)) {
+      benchmarkTitle = t('dashboard.entry.benchmark.riskTitle')
+      benchmarkBody = t('dashboard.entry.benchmark.riskBody')
+      benchmarkTone = 'border-rose-200 bg-rose-50/75 text-rose-900'
+    } else {
+      benchmarkTitle = t('dashboard.entry.benchmark.goodTitle')
+      benchmarkBody = t('dashboard.entry.benchmark.goodBody')
+      benchmarkTone = 'border-emerald-200 bg-emerald-50/75 text-emerald-900'
+    }
+  } else if (benchmarkLatest) {
+    benchmarkTitle = t('dashboard.entry.benchmark.waitTitle')
+    benchmarkBody = t('dashboard.entry.benchmark.waitBody')
+    benchmarkTone = 'border-slate-200 bg-white text-slate-900'
+  }
 
   let issueTitle = t('dashboard.issue.analyzingTitle')
   let issueBody = t('dashboard.issue.analyzingBody')
@@ -380,135 +442,197 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-        <button
-          type="button"
-          onClick={() => {
-            if (latestSession) {
-              onOpenReplaySession(latestSession.id)
-              return
-            }
-            onNavigate('replay')
-          }}
-          className="rounded-[28px] border border-[#3b82c4]/15 bg-gradient-to-br from-white via-blue-50/80 to-cyan-50/70 p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/30 hover:shadow-md"
-        >
-          <div className="flex h-full flex-col justify-between gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#3b82c4]/10 text-[#3b82c4]">
-                  <Play className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
-                    {t('dashboard.entry.latest')}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {status?.running ? t('dashboard.status.running') : t('dashboard.status.offline')}
-                  </p>
-                </div>
-              </div>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1">
+            <Play className="h-3.5 w-3.5 text-[#3b82c4]" />
+            {t('dashboard.entry.chain.replay')}
+          </span>
+          <ArrowRight className="h-3.5 w-3.5 text-slate-300" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1">
+            <Trophy className="h-3.5 w-3.5 text-[#3b82c4]" />
+            {t('dashboard.entry.chain.benchmark')}
+          </span>
+          <ArrowRight className="h-3.5 w-3.5 text-slate-300" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1">
+            <DollarSign className="h-3.5 w-3.5 text-[#3b82c4]" />
+            {t('dashboard.entry.chain.cost')}
+          </span>
+        </div>
 
-              {sessionsLoading ? (
-                <div className="space-y-3">
-                  <div className="skeleton h-8 w-2/3 rounded-xl" />
-                  <div className="skeleton h-4 w-full rounded-lg" />
-                  <div className="skeleton h-4 w-4/5 rounded-lg" />
-                  <div className="flex gap-2 pt-2">
-                    <div className="skeleton h-8 w-24 rounded-full" />
-                    <div className="skeleton h-8 w-20 rounded-full" />
-                    <div className="skeleton h-8 w-24 rounded-full" />
-                  </div>
-                </div>
-              ) : latestSession ? (
-                <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+          <button
+            type="button"
+            onClick={() => {
+              if (latestSession) {
+                onOpenReplaySession(latestSession.id)
+                return
+              }
+              onNavigate('replay')
+            }}
+            className="rounded-[28px] border border-[#3b82c4]/15 bg-gradient-to-br from-white via-blue-50/80 to-cyan-50/70 p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/30 hover:shadow-md"
+          >
+            <div className="flex h-full flex-col justify-between gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#3b82c4]/10 text-[#3b82c4]">
+                    <Play className="h-5 w-5" />
+                  </span>
                   <div>
-                    <h3 className="text-2xl font-semibold leading-tight text-slate-900">
-                      {sessionListTitle(latestSession, t)}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                      {latestSessionSubtitle ?? (latestSession.summary?.trim() || t('dashboard.entry.latest.fallbackSummary'))}
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#3b82c4]">
+                      {t('dashboard.entry.latest')}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {status?.running ? t('dashboard.status.running') : t('dashboard.status.offline')}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-                    <span className="rounded-full bg-white/90 px-3 py-1">{latestSession.agentName}</span>
-                    <span className="rounded-full bg-white/90 px-3 py-1">{formatDuration(latestSession.durationMs, locale)}</span>
-                    <span className="rounded-full bg-white/90 px-3 py-1">{formatRelativeTime(latestSession.startTime, locale)}</span>
-                    <span className="rounded-full bg-white/90 px-3 py-1">{latestSession.stepCount} {t('replay.list.steps')}</span>
+                </div>
+
+                {sessionsLoading ? (
+                  <div className="space-y-3">
+                    <div className="skeleton h-8 w-2/3 rounded-xl" />
+                    <div className="skeleton h-4 w-full rounded-lg" />
+                    <div className="skeleton h-4 w-4/5 rounded-lg" />
+                    <div className="flex gap-2 pt-2">
+                      <div className="skeleton h-8 w-24 rounded-full" />
+                      <div className="skeleton h-8 w-20 rounded-full" />
+                      <div className="skeleton h-8 w-24 rounded-full" />
+                    </div>
+                  </div>
+                ) : latestSession ? (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-2xl font-semibold leading-tight text-slate-900">
+                        {sessionListTitle(latestSession, t)}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                        {latestSessionSubtitle ?? (latestSession.summary?.trim() || t('dashboard.entry.latest.fallbackSummary'))}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+                      <span className="rounded-full bg-white/90 px-3 py-1">{latestSession.agentName}</span>
+                      <span className="rounded-full bg-white/90 px-3 py-1">{formatDuration(latestSession.durationMs, locale)}</span>
+                      <span className="rounded-full bg-white/90 px-3 py-1">{formatRelativeTime(latestSession.startTime, locale)}</span>
+                      <span className="rounded-full bg-white/90 px-3 py-1">{latestSession.stepCount} {t('replay.list.steps')}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-semibold leading-tight text-slate-900">
+                      {t('dashboard.entry.latest.emptyTitle')}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-slate-600">{t('dashboard.entry.latest.emptyBody')}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-3 text-sm font-medium text-[#3b82c4]">
+                <span>{t('dashboard.entry.latest.cta')}</span>
+                <div className="flex items-center gap-2">
+                  {latestSession ? (
+                    <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-mono text-slate-600">
+                      ${latestSession.totalCost.toFixed(3)}
+                    </span>
+                  ) : null}
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => onNavigate('benchmark')}
+              className={cn(
+                'rounded-3xl border p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md',
+                benchmarkTone,
+              )}
+            >
+              <div className="flex h-full flex-col justify-between gap-5">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Trophy className="h-4 w-4" />
+                    <span>{t('dashboard.entry.benchmark')}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold leading-tight">{benchmarkTitle}</h3>
+                    <p className="text-sm leading-relaxed text-current/80">{benchmarkBody}</p>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <h3 className="text-2xl font-semibold leading-tight text-slate-900">
-                    {t('dashboard.entry.latest.emptyTitle')}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-slate-600">{t('dashboard.entry.latest.emptyBody')}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-3 text-sm font-medium text-[#3b82c4]">
-              <span>{t('dashboard.entry.latest.cta')}</span>
-              <div className="flex items-center gap-2">
-                {latestSession ? (
-                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-mono text-slate-600">
-                    ${latestSession.totalCost.toFixed(3)}
+                <div className="flex items-center justify-between gap-3 text-sm font-medium text-current">
+                  <div className="flex flex-wrap gap-2 text-xs font-medium">
+                    {benchmarkLatest ? (
+                      <span className="rounded-full bg-white/75 px-3 py-1 text-current/85">
+                        {benchmarkLatest.overallScore}{t('benchmark.scoreUnit')}
+                      </span>
+                    ) : null}
+                    {benchmarkDeltas ? (
+                      <span className="rounded-full bg-white/75 px-3 py-1 text-current/85">
+                        {t('benchmark.proof.score')} {formatSignedDashboardInteger(benchmarkDeltas.score)}{t('benchmark.scoreUnit')}
+                      </span>
+                    ) : null}
+                    {benchmarkDeltas ? (
+                      <span className="rounded-full bg-white/75 px-3 py-1 text-current/85">
+                        {t('benchmark.proof.cost')} {formatSignedDashboardCurrency(benchmarkDeltas.cost)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className="inline-flex items-center gap-1">
+                    {t('dashboard.entry.benchmark.cta')}
+                    <ArrowRight className="h-4 w-4" />
                   </span>
-                ) : null}
-                <ArrowRight className="h-4 w-4" />
-              </div>
-            </div>
-          </div>
-        </button>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-          <button
-            type="button"
-            onClick={handleIssueAction}
-            className={cn(
-              'rounded-3xl border p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md',
-              issueTone,
-            )}
-          >
-            <div className="flex h-full flex-col justify-between gap-5">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>{t('dashboard.entry.issue')}</span>
                 </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('cost')}
+              className="rounded-3xl border border-[#3b82c4]/15 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/30 hover:shadow-md"
+            >
+              <div className="flex h-full flex-col justify-between gap-5">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-[#3b82c4]">
+                    <DollarSign className="h-4 w-4" />
+                    <span>{t('dashboard.entry.spend')}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold leading-tight text-slate-900">{spendTitle}</h3>
+                    <p className="text-sm leading-relaxed text-slate-600">{spendBody}</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-[#3b82c4]">
+                  {t('dashboard.entry.spend.cta')}
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleIssueAction}
+              className={cn(
+                'rounded-3xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md',
+                issueTone,
+              )}
+            >
+              <div className="flex h-full flex-col justify-between gap-4">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold leading-tight">{issueTitle}</h3>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{t('dashboard.entry.issue')}</span>
+                  </div>
+                  <h3 className="text-base font-semibold leading-tight">{issueTitle}</h3>
                   <p className="text-sm leading-relaxed text-current/80">{issueBody}</p>
                 </div>
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-current">
+                  {issueCta}
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               </div>
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-current">
-                {issueCta}
-                <ArrowRight className="h-4 w-4" />
-              </span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigate('cost')}
-            className="rounded-3xl border border-[#3b82c4]/15 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/30 hover:shadow-md"
-          >
-            <div className="flex h-full flex-col justify-between gap-5">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#3b82c4]">
-                  <DollarSign className="h-4 w-4" />
-                  <span>{t('dashboard.entry.spend')}</span>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold leading-tight text-slate-900">{spendTitle}</h3>
-                  <p className="text-sm leading-relaxed text-slate-600">{spendBody}</p>
-                </div>
-              </div>
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-[#3b82c4]">
-                {t('dashboard.entry.spend.cta')}
-                <ArrowRight className="h-4 w-4" />
-              </span>
-            </div>
-          </button>
+            </button>
+          </div>
         </div>
       </div>
 

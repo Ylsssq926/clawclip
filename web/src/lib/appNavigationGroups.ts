@@ -17,9 +17,11 @@ export interface AppNavigationGroupDefinition {
   titleKey: string
   tabIds: readonly AppNavigationTabId[]
   tone: AppNavigationGroupTone
+  collapsible?: boolean
+  defaultCollapsed?: boolean
 }
 
-export const APP_NAVIGATION_GROUPS = [
+export const APP_NAVIGATION_GROUPS: readonly AppNavigationGroupDefinition[] = [
   {
     id: 'overview',
     titleKey: 'nav.group.overview',
@@ -37,8 +39,10 @@ export const APP_NAVIGATION_GROUPS = [
     titleKey: 'nav.group.tools',
     tabIds: TOOL_NAV_TAB_IDS,
     tone: 'secondary',
+    collapsible: true,
+    defaultCollapsed: true,
   },
-] as const satisfies readonly AppNavigationGroupDefinition[]
+]
 
 export function buildAppNavigationGroups<T extends { id: AppNavigationTabId }>(tabs: readonly T[]) {
   const tabMap = new Map(tabs.map(tab => [tab.id, tab]))

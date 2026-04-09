@@ -636,6 +636,27 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
         </div>
       </div>
 
+      <section className="card p-6 animate-fade-in">
+        <div className="flex items-center gap-2">
+          <Cloud className="h-4 w-4 text-cyan-500" />
+          <h3 className="text-sm font-semibold text-slate-500">{t('dashboard.keywords')}</h3>
+        </div>
+        <div className="mt-4">
+          {kwLoading ? (
+            <div className="space-y-3">
+              <div className="skeleton h-6 w-3/4" />
+              <div className="skeleton h-8 w-full" />
+              <div className="skeleton h-5 w-1/2" />
+              <div className="skeleton h-7 w-2/3" />
+            </div>
+          ) : keywords.length > 0 ? (
+            <WordCloud keywords={keywords} onWordClick={onKnowledgeSearch} height={200} />
+          ) : (
+            <p className="py-8 text-center text-xs text-slate-600">{t('dashboard.keywords.empty')}</p>
+          )}
+        </div>
+      </section>
+
       <div className="grid gap-6 xl:grid-cols-5">
         <section className="card p-6 xl:col-span-3 animate-fade-in">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -850,26 +871,6 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
         </section>
       </div>
 
-      <section className="card p-6 animate-fade-in">
-        <div className="flex items-center gap-2">
-          <Cloud className="h-4 w-4 text-cyan-500" />
-          <h3 className="text-sm font-semibold text-slate-500">{t('dashboard.keywords')}</h3>
-        </div>
-        <div className="mt-4">
-          {kwLoading ? (
-            <div className="space-y-3">
-              <div className="skeleton h-6 w-3/4" />
-              <div className="skeleton h-8 w-full" />
-              <div className="skeleton h-5 w-1/2" />
-              <div className="skeleton h-7 w-2/3" />
-            </div>
-          ) : keywords.length > 0 ? (
-            <WordCloud keywords={keywords} onWordClick={onKnowledgeSearch} height={200} />
-          ) : (
-            <p className="py-8 text-center text-xs text-slate-600">{t('dashboard.keywords.empty')}</p>
-          )}
-        </div>
-      </section>
     </div>
   )
 }

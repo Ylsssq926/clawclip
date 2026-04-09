@@ -250,8 +250,8 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
             >
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/80 p-1.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
-              <img src="/luelan-logo.png" alt="" className="h-full w-full object-contain" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/85 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
+              <span className="select-none text-lg leading-none" aria-hidden="true">🍤</span>
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">{brandName}</h1>
@@ -370,7 +370,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                               onClick={() => navigateTab(tab.id)}
                               className={cn(
                                 'flex w-full items-center gap-3 rounded-xl px-3 font-medium transition-all duration-150',
-                                isToolGroup ? 'py-1.5 text-[11px]' : 'py-2.5 text-[13px]',
+                                isToolGroup ? 'py-2 text-[12px]' : 'py-2.5 text-[13px]',
                                 isActive
                                   ? isPrimaryGroup
                                     ? 'bg-blue-50 text-[#3b82c4] shadow-sm ring-1 ring-[#3b82c4]/10'

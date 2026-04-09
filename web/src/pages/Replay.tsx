@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { ArrowLeft, Play, Bot, Clock, ChevronDown, ChevronUp, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useI18n, formatI18n } from '../lib/i18n'
@@ -149,7 +150,7 @@ function ReasoningBlock({ reasoning }: { reasoning: string }) {
   )
 }
 
-function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; startTime: string; totalCost?: number }) {
+function StepCard({ step, startTime, totalCost = 0, index }: { step: SessionStep; startTime: string; totalCost?: number; index: number }) {
   const { t } = useI18n()
   const tokens = step.inputTokens + step.outputTokens
   const typeKey = `replay.step.${step.type}`
@@ -165,9 +166,15 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
   const baseConfig = STEP_STYLES[step.type] || STEP_STYLES.system
   const config = isFailureStep ? STEP_STYLES.error : baseConfig
   const primaryContent = step.reasoning && step.content.trim() === step.reasoning.trim() ? '' : step.content
+  const entranceDelay = Math.min(index, 30) * 0.04
 
   return (
-    <div className="flex gap-2.5">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: entranceDelay, duration: 0.25 }}
+      className="flex gap-2.5"
+    >
       <div className="flex w-11 shrink-0 flex-col items-center">
         <span className="font-mono text-[10px] text-slate-400">{formatStepOffset(step.timestamp, startTime)}</span>
         <div className={`mt-1.5 h-2.5 w-2.5 rounded-full border ${config.border.replace('border-l-', 'border-')} ${config.bg}`} />
@@ -251,7 +258,7 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -535,8 +542,14 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
 
                 return (
                   <section key={sectionId} className="mb-4 space-y-3">
-                    {replay.steps.map(step => (
-                      <StepCard key={step.index} step={step} startTime={replay.meta.startTime} totalCost={replay.meta.totalCost} />
+                    {replay.steps.map((step, index) => (
+                      <StepCard
+                        key={step.index}
+                        step={step}
+                        startTime={replay.meta.startTime}
+                        totalCost={replay.meta.totalCost}
+                        index={index}
+                      />
                     ))}
                   </section>
                 )

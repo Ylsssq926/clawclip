@@ -2,7 +2,6 @@ import { Fragment, type ReactNode, useState, useEffect, useCallback } from 'reac
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar } from 'recharts'
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight, ChevronRight } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
-import GlowCard from '../components/ui/GlowCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import EmptyState from '../components/ui/EmptyState'
 import { cn } from '../lib/cn'
@@ -772,7 +771,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
   }
 
   const TrendIcon = summary?.trend === 'up' ? TrendingUp : summary?.trend === 'down' ? TrendingDown : Minus
-  const trendColor = summary?.trend === 'up' ? 'text-red-400' : summary?.trend === 'down' ? 'text-green-400' : 'text-slate-500'
+  const trendColor = summary?.trend === 'up' ? 'text-orange-700' : summary?.trend === 'down' ? 'text-[#3b82c4]' : 'text-slate-500'
   const overviewCardClass = 'glass-raised rounded-2xl border border-surface-border p-6'
   const primarySectionCardClass = 'glass-raised rounded-xl border border-surface-border p-6'
   const secondarySectionCardClass = 'rounded-xl border border-slate-200 bg-white/90 p-6 shadow-sm'
@@ -1661,48 +1660,42 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
               </div>
 
               <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <GlowCard>
-                  <div className="p-5">
-                    <span className="text-sm text-slate-500">{copy.cards.total}</span>
-                    <div className="mt-1 text-2xl font-bold text-accent tabular-nums">
-                      <AnimatedCounter value={summary?.totalCost ?? 0} prefix="$" decimals={2} duration={1000} />
-                    </div>
-                    <div className={`mt-1 flex items-center gap-1 text-xs ${trendColor}`}>
-                      <TrendIcon className="h-3 w-3" />
-                      <span>
-                        {fillTemplate(copy.cards.mom, { n: summary?.comparedToLastMonth?.toFixed(1) ?? '0' })}
-                      </span>
-                    </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
+                  <span className="text-sm text-slate-500">{copy.cards.total}</span>
+                  <div className="mt-1 text-2xl font-bold text-[#3b82c4] tabular-nums">
+                    <AnimatedCounter value={summary?.totalCost ?? 0} prefix="$" decimals={2} duration={1000} />
                   </div>
-                </GlowCard>
-                <GlowCard>
-                  <div className="p-5">
-                    <span className="text-sm text-slate-500">{copy.cards.tokens}</span>
-                    <div className="mt-1 text-2xl font-bold text-blue-400 tabular-nums">
-                      <AnimatedCounter value={summary?.totalTokens ?? 0} decimals={0} duration={1000} />
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {fillTemplate(copy.cards.inOut, {
-                        in: summary?.inputTokens?.toLocaleString(getIntlLocale(locale)) ?? 0,
-                        out: summary?.outputTokens?.toLocaleString(getIntlLocale(locale)) ?? 0,
-                      })}
-                    </div>
+                  <div className={`mt-1 flex items-center gap-1 text-xs ${trendColor}`}>
+                    <TrendIcon className="h-3 w-3" />
+                    <span>
+                      {fillTemplate(copy.cards.mom, { n: summary?.comparedToLastMonth?.toFixed(1) ?? '0' })}
+                    </span>
                   </div>
-                </GlowCard>
-                <GlowCard>
-                  <div className="p-5">
-                    <span className="text-sm text-slate-500">{copy.cards.budget}</span>
-                    <div className="mt-1 text-2xl font-bold text-purple-400 tabular-nums">
-                      <AnimatedCounter value={summary?.budget?.percentage ?? 0} decimals={1} suffix="%" duration={1000} />
-                    </div>
-                    <div className="mt-2 h-2 w-full rounded-full border border-surface-border bg-surface-overlay">
-                      <div
-                        className={`h-2 rounded-full transition-all ${(summary?.budget?.percentage || 0) > 80 ? 'bg-red-500' : 'bg-purple-500'}`}
-                        style={{ width: `${Math.min(summary?.budget?.percentage || 0, 100)}%` }}
-                      />
-                    </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
+                  <span className="text-sm text-slate-500">{copy.cards.tokens}</span>
+                  <div className="mt-1 text-2xl font-bold text-[#3b82c4] tabular-nums">
+                    <AnimatedCounter value={summary?.totalTokens ?? 0} decimals={0} duration={1000} />
                   </div>
-                </GlowCard>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {fillTemplate(copy.cards.inOut, {
+                      in: summary?.inputTokens?.toLocaleString(getIntlLocale(locale)) ?? 0,
+                      out: summary?.outputTokens?.toLocaleString(getIntlLocale(locale)) ?? 0,
+                    })}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/5">
+                  <span className="text-sm text-slate-500">{copy.cards.budget}</span>
+                  <div className={`mt-1 text-2xl font-bold tabular-nums ${(summary?.budget?.percentage || 0) > 80 ? 'text-orange-700' : 'text-[#3b82c4]'}`}>
+                    <AnimatedCounter value={summary?.budget?.percentage ?? 0} decimals={1} suffix="%" duration={1000} />
+                  </div>
+                  <div className="mt-2 h-2 w-full rounded-full border border-surface-border bg-surface-overlay">
+                    <div
+                      className={`h-2 rounded-full transition-all ${(summary?.budget?.percentage || 0) > 80 ? 'bg-orange-500' : 'bg-[#3b82c4]'}`}
+                      style={{ width: `${Math.min(summary?.budget?.percentage || 0, 100)}%` }}
+                    />
+                  </div>
+                </div>
               </div>
 
               {overviewTrendSection}

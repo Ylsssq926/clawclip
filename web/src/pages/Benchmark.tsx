@@ -87,29 +87,29 @@ const DIMENSION_ICONS: Record<string, typeof Pen> = {
 }
 
 const DIMENSION_COLORS: Record<string, string> = {
-  writing: 'text-pink-400',
-  coding: 'text-blue-400',
-  toolUse: 'text-cyan-400',
-  search: 'text-cyan-400',
-  safety: 'text-green-400',
-  costEfficiency: 'text-yellow-400',
+  writing: 'text-slate-500',
+  coding: 'text-[#3b82c4]',
+  toolUse: 'text-slate-500',
+  search: 'text-slate-500',
+  safety: 'text-slate-500',
+  costEfficiency: 'text-orange-700',
 }
 
 const DIMENSION_LINE_STROKES: Record<string, string> = {
-  writing: '#f472b6',
-  coding: '#60a5fa',
-  toolUse: '#fb923c',
-  search: '#22d3ee',
-  safety: '#4ade80',
-  costEfficiency: '#facc15',
+  writing: '#94a3b8',
+  coding: '#3b82c4',
+  toolUse: '#64748b',
+  search: '#60a5fa',
+  safety: '#cbd5e1',
+  costEfficiency: '#fb923c',
 }
 
 const RANK_STYLES: Record<string, { bg: string; text: string; glow: string }> = {
-  S: { bg: 'bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10', text: 'text-blue-600', glow: 'shadow-cyan-500/10 shadow-lg' },
-  A: { bg: 'bg-gradient-to-br from-green-500/20 to-emerald-500/10', text: 'text-green-400', glow: 'shadow-green-500/10 shadow-md' },
-  B: { bg: 'bg-gradient-to-br from-blue-500/20 to-cyan-500/10', text: 'text-blue-400', glow: '' },
-  C: { bg: 'bg-gradient-to-br from-slate-500/20 to-slate-500/10', text: 'text-slate-500', glow: '' },
-  D: { bg: 'bg-gradient-to-br from-red-500/20 to-red-500/10', text: 'text-red-400', glow: '' },
+  S: { bg: 'bg-gradient-to-br from-[#3b82c4]/18 via-blue-100/80 to-white', text: 'text-[#3b82c4]', glow: 'shadow-[#3b82c4]/10 shadow-lg' },
+  A: { bg: 'bg-gradient-to-br from-blue-100/70 to-white', text: 'text-[#3b82c4]', glow: 'shadow-[#3b82c4]/6 shadow-md' },
+  B: { bg: 'bg-gradient-to-br from-slate-100 to-white', text: 'text-slate-700', glow: '' },
+  C: { bg: 'bg-gradient-to-br from-slate-100 to-white', text: 'text-slate-600', glow: '' },
+  D: { bg: 'bg-gradient-to-br from-orange-100/80 to-white', text: 'text-orange-700', glow: '' },
 }
 
 const PRIMARY_SERIES_COLOR = '#3b82c4'
@@ -129,7 +129,7 @@ const chartTooltipProps = {
 }
 
 function ScoreBar({ score, color }: { score: number; color: string }) {
-  const barColor = score >= 80 ? 'bg-brand-green' : score >= 60 ? 'bg-brand-blue' : score >= 40 ? 'bg-accent' : 'bg-red-500'
+  const barColor = score >= 80 ? 'bg-[#3b82c4]' : score >= 60 ? 'bg-blue-400' : score >= 40 ? 'bg-orange-400' : 'bg-orange-500'
   return (
     <div className="flex items-center gap-3">
       <div className="flex-1 bg-surface-overlay rounded-full h-2.5 border border-surface-border">
@@ -476,11 +476,11 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
   const nextActionBody = t(`benchmark.next.${nextActionType}.body`)
   const nextActionCta = t(`benchmark.next.${nextActionType}.cta`)
   const nextActionTone = nextActionType === 'cost'
-    ? 'border-amber-200 bg-amber-50/80 text-amber-900'
+    ? 'border-orange-200 bg-orange-50/80 text-orange-900'
     : nextActionType === 'replay'
-      ? 'border-rose-200 bg-rose-50/80 text-rose-900'
+      ? 'border-orange-200 bg-orange-50/80 text-orange-900'
       : nextActionType === 'keep'
-        ? 'border-emerald-200 bg-emerald-50/80 text-emerald-900'
+        ? 'border-[#3b82c4]/18 bg-blue-50/80 text-slate-900'
         : 'border-slate-200 bg-slate-50/90 text-slate-900'
   const verdictBody = proofPrevious && proofDeltas
     ? (summaryText || t('benchmark.proof.section.body'))
@@ -587,7 +587,7 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
       {result && (
         <>
           {successMessage && (
-            <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+            <div className="mb-4 rounded-xl border border-[#3b82c4]/20 bg-blue-50 px-4 py-3 text-sm text-[#3b82c4] shadow-sm">
               {successMessage}
             </div>
           )}
@@ -647,14 +647,14 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
                       const state = getDeltaState(card.deltaValue, card.prefersLower)
                       const DeltaIcon = card.deltaValue > 0 ? ArrowUpRight : card.deltaValue < 0 ? ArrowDownRight : Minus
                       const toneClass = state === 'positive'
-                        ? 'border-emerald-200 bg-white/85'
+                        ? 'border-[#3b82c4]/18 bg-white/85'
                         : state === 'negative'
-                          ? 'border-rose-200 bg-white/85'
+                          ? 'border-orange-200 bg-white/85'
                           : 'border-slate-200 bg-white/80'
                       const badgeClass = state === 'positive'
-                        ? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+                        ? 'border-[#3b82c4]/18 bg-blue-100 text-[#3b82c4]'
                         : state === 'negative'
-                          ? 'border-rose-200 bg-rose-100 text-rose-700'
+                          ? 'border-orange-200 bg-orange-100 text-orange-700'
                           : 'border-slate-200 bg-white text-slate-500'
 
                       return (
@@ -721,7 +721,7 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
                         </button>
                       ) : (
                         <>
-                          <span className="inline-flex items-center rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm">
+                          <span className="inline-flex items-center rounded-full border border-[#3b82c4]/18 bg-white/80 px-4 py-2 text-sm font-medium text-[#3b82c4] shadow-sm">
                             {nextActionCta}
                           </span>
                           <button type="button" onClick={runBenchmark} disabled={running} className={BENCHMARK_SECONDARY_BUTTON_CLASS}>
@@ -812,7 +812,7 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
                   const label = `${dimLabel(d, t)} ${diff > 0 ? '+' : ''}${diff}`
                   if (diff > 0) {
                     return (
-                      <span key={d.dimension} className="text-[11px] px-2.5 py-1 rounded-full border border-green-500/20 text-green-600/90">
+                      <span key={d.dimension} className="text-[11px] px-2.5 py-1 rounded-full border border-[#3b82c4]/15 text-[#3b82c4]">
                         {label} ↑
                       </span>
                     )

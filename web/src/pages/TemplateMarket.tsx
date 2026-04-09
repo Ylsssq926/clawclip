@@ -88,6 +88,22 @@ function getTemplateCategoryLabel(category: string, t: TranslateFn): string {
   return key ? t(key) : category
 }
 
+function getTemplateAudienceLabel(category: string, t: TranslateFn): string {
+  const key = getCategoryI18nKey(category)
+  switch (key) {
+    case 'templates.cat.efficiency':
+      return t('templates.audience.efficiency')
+    case 'templates.cat.creative':
+      return t('templates.audience.creative')
+    case 'templates.cat.dev':
+      return t('templates.audience.dev')
+    case 'templates.cat.support':
+      return t('templates.audience.support')
+    default:
+      return t('templates.audience.general')
+  }
+}
+
 function buildMeaningfulDescription(
   template: Pick<Template, 'id' | 'name' | 'description' | 'category' | 'skills'>,
   t: TranslateFn,
@@ -154,6 +170,7 @@ export default function TemplateMarket() {
   )
 
   const getCategoryLabel = (category: string) => getTemplateCategoryLabel(category, t)
+  const getAudienceLabel = (category: string) => getTemplateAudienceLabel(category, t)
 
   useEffect(() => {
     let cancelled = false
@@ -232,17 +249,17 @@ export default function TemplateMarket() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-2">{t('templates.title')}</h2>
-      <p className="text-slate-500 text-sm mb-6">{t('templates.subtitle')}</p>
+      <h2 className="mb-2 text-2xl font-bold text-slate-900">{t('templates.title')}</h2>
+      <p className="mb-6 text-sm text-slate-500">{t('templates.subtitle')}</p>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="mb-6 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setCatIdx(0)}
-          className={`px-4 py-2 rounded-xl text-sm transition-all ${
+          className={`rounded-xl px-4 py-2 text-sm transition-colors ${
             catIdx === 0
-              ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/15'
-              : 'card text-slate-500 hover:text-slate-900'
+              ? 'bg-[#3b82c4] text-white'
+              : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
           }`}
         >
           {t('templates.cat.all')}
@@ -252,10 +269,10 @@ export default function TemplateMarket() {
             key={cat}
             type="button"
             onClick={() => setCatIdx(i + 1)}
-            className={`px-4 py-2 rounded-xl text-sm transition-all ${
+            className={`rounded-xl px-4 py-2 text-sm transition-colors ${
               catIdx === i + 1
-                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/15'
-                : 'card text-slate-500 hover:text-slate-900'
+                ? 'bg-[#3b82c4] text-white'
+                : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
             }`}
           >
             {getCategoryLabel(cat)}
@@ -264,119 +281,147 @@ export default function TemplateMarket() {
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-500/20 text-red-400 text-sm flex items-center justify-between">
+        <div className="state-surface state-surface-danger mb-4 flex items-center justify-between gap-3 px-4 py-3 text-sm text-orange-700">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => setError(null)}
-            className="text-red-400/60 hover:text-red-400 ml-3 text-xs"
+            className="text-xs text-orange-700/70 transition-colors hover:text-orange-700"
           >
             ✕
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {!loading && filtered.map(template => {
           const isExpanded = expandedId === template.id
           const detailTags = Array.isArray(template.tags) && template.tags.length > 0
             ? template.tags
             : (template.skills ?? [])
+          const isApplied = applied.has(template.id)
+          const audienceLabel = getAudienceLabel(template.category)
+          const statusLabel = isApplied ? t('templates.applied') : t('templates.status.notImported')
+          const previewTags = detailTags.slice(0, 3)
 
           return (
-            <div
-              key={template.id}
-              className="card p-6 bg-white border-slate-200 hover:border-slate-300 transition-all duration-200"
-            >
-              <div className="flex items-start justify-between mb-3 gap-3">
-                <span className="text-3xl">{template.icon}</span>
-                <span className="text-xs px-2 py-1 bg-slate-100 rounded-full text-slate-500 border border-slate-200">
-                  {getCategoryLabel(template.category)}
-                </span>
-              </div>
-              <h3 className="font-semibold text-lg mb-2 text-slate-900">{template.name}</h3>
-              <p className="text-sm text-slate-500 mb-4 leading-relaxed line-clamp-2">
-                {template.description}
-              </p>
-              <div className="flex flex-wrap gap-1 mb-4">
-                {(template.skills ?? []).map(s => (
-                  <span key={s} className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full border border-slate-200">
-                    {s}
-                  </span>
-                ))}
+            <div key={template.id} className="card flex h-full flex-col p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex items-start gap-3">
+                  <span className="text-3xl leading-none">{template.icon}</span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="truncate text-base font-semibold text-slate-900 sm:text-lg">{template.name}</h3>
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                        isApplied
+                          ? 'border-[#3b82c4]/15 bg-blue-50 text-[#3b82c4]'
+                          : 'border-slate-200 bg-slate-50 text-slate-500'
+                      }`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {getCategoryLabel(template.category)} · {audienceLabel}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => toggleExpanded(template.id)}
-                aria-expanded={isExpanded}
-                className="w-full px-4 py-2.5 mb-3 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-between"
-              >
-                <span>{isExpanded ? t('templates.details.hide') : t('templates.details.show')}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-              </button>
+              <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-600">{template.description}</p>
+
+              {previewTags.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {previewTags.map(tag => (
+                    <span
+                      key={`${template.id}-${tag}`}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-500"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {detailTags.length > previewTags.length && (
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-400">
+                      +{detailTags.length - previewTags.length}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(template.id)}
+                  aria-expanded={isExpanded}
+                  className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-800"
+                >
+                  <span>{isExpanded ? t('templates.details.hide') : t('templates.details.show')}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isApplied ? (
+                  <span className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-500">
+                    <Check className="h-4 w-4" />
+                    {t('templates.applied')}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleApply(template.id)}
+                    disabled={applying === template.id}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-[#3b82c4]/30 hover:text-[#3b82c4] disabled:cursor-not-allowed disabled:text-slate-400"
+                  >
+                    {applying === template.id ? (
+                      t('templates.applying')
+                    ) : (
+                      <>
+                        <ArrowRight className="h-4 w-4" />
+                        {t('templates.apply')}
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
 
               <div
                 className={`grid overflow-hidden transition-all duration-300 ease-out ${
-                  isExpanded ? 'grid-rows-[1fr] opacity-100 mb-4' : 'grid-rows-[0fr] opacity-0 mb-0'
+                  isExpanded ? 'mt-4 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                 }`}
               >
                 <div className="min-h-0">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <div className="state-surface space-y-4 px-4 py-4">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                         {t('templates.details.preview')}
                       </p>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                        {template.description}
-                      </p>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-600">{template.description}</p>
                     </div>
-                    {(template.category || detailTags.length > 0) && (
-                      <div className="flex flex-wrap gap-2">
-                        {template.category && (
-                          <span className="text-xs px-2.5 py-1 rounded-full border border-slate-200 bg-white text-slate-600">
-                            {getCategoryLabel(template.category)}
-                          </span>
-                        )}
-                        {detailTags.map(tag => (
-                          <span
-                            key={`${template.id}-${tag}`}
-                            className="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                    {detailTags.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          {t('templates.details.capabilities')}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {detailTags.map(tag => (
+                            <span
+                              key={`${template.id}-${tag}`}
+                              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => handleApply(template.id)}
-                disabled={applied.has(template.id) || applying === template.id}
-                className={`w-full py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                  applied.has(template.id)
-                    ? 'bg-emerald-50 text-emerald-600 cursor-default border border-emerald-100'
-                    : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:shadow-lg hover:shadow-blue-500/20'
-                }`}
-              >
-                {applied.has(template.id) ? (
-                  <><Check className="w-4 h-4" /> {t('templates.applied')}</>
-                ) : applying === template.id ? (
-                  t('templates.applying')
-                ) : (
-                  <><ArrowRight className="w-4 h-4" /> {t('templates.apply')}</>
-                )}
-              </button>
             </div>
           )
         })}
       </div>
 
       {!loading && filtered.length === 0 && (
-        <div className="text-center py-12 text-slate-500"><p>{t('templates.empty')}</p></div>
+        <div className="py-12 text-center text-slate-500"><p>{t('templates.empty')}</p></div>
       )}
       {loading && (
         <div className="space-y-4">

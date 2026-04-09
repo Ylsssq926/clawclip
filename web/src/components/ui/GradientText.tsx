@@ -13,9 +13,9 @@ export default function GradientText({
   children,
   className,
   from = '#3b82c4',
-  via = '#06b6d4',
-  to = '#10b981',
-  animate = true,
+  via = '#60a5fa',
+  to = '#93c5fd',
+  animate = false,
 }: GradientTextProps) {
   return (
     <span

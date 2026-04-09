@@ -436,7 +436,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                   {activeTab === 'benchmark' && <Benchmark onNavigate={navigateTab} />}
                   {activeTab === 'leaderboard' && <Leaderboard />}
                   {activeTab === 'cost' && <CostMonitor onOpenReplaySession={openReplaySession} />}
-                  {activeTab === 'prompt' && <PromptInsight />}
+                  {activeTab === 'prompt' && <PromptInsight onOpenReplaySession={openReplaySession} />}
                   {activeTab === 'compare' && <Compare />}
                   {activeTab === 'skills' && <SkillManager />}
                   {activeTab === 'templates' && <TemplateMarket />}

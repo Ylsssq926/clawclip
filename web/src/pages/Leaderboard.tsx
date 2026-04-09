@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Medal, Loader2, AlertCircle, X } from 'lucide-react'
+import { Medal, Loader2, AlertCircle, X, HelpCircle } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
@@ -24,18 +24,11 @@ interface BenchmarkPreview {
 }
 
 const RANK_BADGE: Record<string, string> = {
-  S: 'bg-gradient-to-r from-amber-400/25 to-yellow-500/20 text-amber-700 ring-1 ring-amber-400/40',
-  A: 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30',
-  B: 'bg-cyan-500/15 text-cyan-400 ring-1 ring-cyan-500/30',
-  C: 'bg-slate-500/15 text-slate-500 ring-1 ring-slate-500/25',
-  D: 'bg-rose-500/15 text-rose-400 ring-1 ring-rose-500/30',
-}
-
-function PodiumMedal(position: number): string {
-  if (position === 1) return '🥇'
-  if (position === 2) return '🥈'
-  if (position === 3) return '🥉'
-  return ''
+  S: 'border border-[#3b82c4]/20 bg-blue-50 text-[#3b82c4]',
+  A: 'border border-slate-200 bg-slate-100 text-slate-700',
+  B: 'border border-slate-200 bg-slate-100 text-slate-700',
+  C: 'border border-slate-200 bg-slate-100 text-slate-600',
+  D: 'border border-orange-200 bg-orange-50 text-orange-700',
 }
 
 const DEMO_LEADERBOARD_ENTRIES: LeaderboardEntry[] = [
@@ -47,7 +40,7 @@ const DEMO_LEADERBOARD_ENTRIES: LeaderboardEntry[] = [
     topModel: 'deepseek-chat',
     totalSessions: 156,
     dimensions: [],
-    submittedAt: '2026-03-18T02:30:00.000Z',
+    submittedAt: '2025-03-18T02:30:00.000Z',
   },
   {
     id: 'demo-code',
@@ -57,7 +50,7 @@ const DEMO_LEADERBOARD_ENTRIES: LeaderboardEntry[] = [
     topModel: 'gpt-4o',
     totalSessions: 98,
     dimensions: [],
-    submittedAt: '2026-03-17T14:20:00.000Z',
+    submittedAt: '2025-03-17T14:20:00.000Z',
   },
   {
     id: 'demo-eff',
@@ -67,7 +60,7 @@ const DEMO_LEADERBOARD_ENTRIES: LeaderboardEntry[] = [
     topModel: 'claude-3.5-sonnet',
     totalSessions: 210,
     dimensions: [],
-    submittedAt: '2026-03-16T09:15:00.000Z',
+    submittedAt: '2025-03-16T09:15:00.000Z',
   },
 ]
 
@@ -78,6 +71,7 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [rulesOpen, setRulesOpen] = useState(false)
   const [nickname, setNickname] = useState('')
   const [preview, setPreview] = useState<BenchmarkPreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -167,7 +161,7 @@ export default function Leaderboard() {
           totalSessions: Number(d.totalSessions),
         })
       })
-      .catch((err) => {
+      .catch(err => {
         setPreviewErr(parseApiErrorMessage(err, t('leaderboard.modal.noData')))
       })
       .finally(() => setPreviewLoading(false))
@@ -214,28 +208,28 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">{t('leaderboard.title')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('leaderboard.subtitle')}</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{t('leaderboard.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('leaderboard.subtitle')}</p>
           {showDemoBanner && (
-            <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-cyan-500/20 bg-cyan-500/[0.07] px-4 py-3">
-              <span className="text-base leading-none mt-px" aria-hidden>💡</span>
-              <p className="text-sm text-cyan-700 leading-relaxed">{t('leaderboard.demoBanner')}</p>
+            <div className="state-surface state-surface-brand mt-3 flex items-start gap-2.5 px-4 py-3">
+              <span className="mt-px text-base leading-none" aria-hidden>💡</span>
+              <p className="text-sm leading-relaxed text-[#3b82c4]">{t('leaderboard.demoBanner')}</p>
             </div>
           )}
         </div>
-        <div className="shrink-0 flex flex-col items-start sm:items-end gap-1.5">
+        <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
           <button
             type="button"
             onClick={openModal}
             disabled={!canSubmit}
             className={cn(
-              'px-5 py-2.5 rounded-xl text-sm font-medium transition-opacity disabled:pointer-events-none',
+              'rounded-xl px-5 py-2.5 text-sm font-medium transition-colors disabled:pointer-events-none',
               canSubmit
-                ? 'text-white bg-gradient-to-r from-[#3b82c4] via-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/20 hover:opacity-95'
-                : 'text-slate-400 bg-slate-200 cursor-not-allowed',
+                ? 'bg-[#3b82c4] text-white hover:bg-[#3473af]'
+                : 'cursor-not-allowed bg-slate-200 text-slate-400',
             )}
           >
             {t('leaderboard.submit')}
@@ -248,14 +242,14 @@ export default function Leaderboard() {
 
       {loading && (
         <div className="flex items-center justify-center gap-2 py-20 text-slate-500">
-          <Loader2 className="w-5 h-5 animate-spin" />
+          <Loader2 className="h-5 w-5 animate-spin" />
           <span className="text-sm">{t('leaderboard.loading')}</span>
         </div>
       )}
 
       {!loading && error && (
-        <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-rose-300 text-sm">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="state-surface state-surface-danger flex items-center gap-2 px-4 py-3 text-sm text-orange-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
@@ -263,57 +257,42 @@ export default function Leaderboard() {
       {!loading && !error && entries.length > 0 && (
         <>
           <ul className="space-y-3 md:hidden">
-            {entries.map((e, i) => {
-              const pos = i + 1
-              const isTop3 = pos <= 3
-              const medal = PodiumMedal(pos)
+            {entries.map((entry, index) => {
+              const pos = index + 1
               return (
                 <li
-                  key={e.id}
+                  key={entry.id}
                   className={cn(
-                    'rounded-2xl border px-4 py-4 transition-shadow',
-                    pos === 1 &&
-                      'border-cyan-400/30 bg-gradient-to-br from-[#3b82c4]/25 via-cyan-600/15 to-teal-600/10 shadow-lg shadow-cyan-500/10',
-                    pos === 2 && 'border-slate-300/25 bg-gradient-to-br from-slate-400/10 to-slate-600/5',
-                    pos === 3 && 'border-amber-800/30 bg-gradient-to-br from-amber-900/20 to-amber-950/10',
-                    !isTop3 && 'border-slate-200 bg-white',
+                    'rounded-2xl border bg-white px-4 py-4',
+                    pos === 1 ? 'border-[#3b82c4]/25 bg-blue-50/30' : 'border-slate-200',
                   )}
                 >
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                    <div className="flex items-center gap-2 min-w-[4.5rem] shrink-0">
-                      {medal ? (
-                        <>
-                          <span className="text-2xl leading-none" aria-hidden>
-                            {medal}
-                          </span>
-                          <span className="text-sm font-mono text-slate-500 tabular-nums">{pos}</span>
-                        </>
-                      ) : (
-                        <span className="text-base font-mono text-slate-500 tabular-nums w-10">#{pos}</span>
-                      )}
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold tabular-nums',
+                      pos === 1 ? 'border-[#3b82c4]/20 bg-white text-[#3b82c4]' : 'border-slate-200 bg-white text-slate-600',
+                    )}>
+                      {pos}
                     </div>
-                    <div className="flex-1 min-w-[120px]">
-                      <div className="font-medium text-slate-900">{e.nickname}</div>
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                        <span
-                          className={cn(
-                            'text-[10px] font-bold px-2 py-0.5 rounded-md',
-                            RANK_BADGE[e.rank] ?? RANK_BADGE.C,
-                          )}
-                        >
-                          {e.rank}
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 font-mono">
-                          {e.topModel}
-                        </span>
-                        <span className="text-[10px] text-slate-500">{e.totalSessions} {t('leaderboard.sessions')}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-slate-900">{entry.nickname}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className={cn('rounded-md px-2 py-0.5 text-[10px] font-bold', RANK_BADGE[entry.rank] ?? RANK_BADGE.C)}>
+                              {entry.rank}
+                            </span>
+                            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] text-slate-500">
+                              {entry.topModel}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-semibold tabular-nums text-slate-900">{Math.round(entry.score)}</div>
+                          <div className="mt-0.5 text-[11px] text-slate-500">{fmtRelative(entry.submittedAt)}</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right sm:ml-auto">
-                      <div className="text-2xl sm:text-3xl font-bold tabular-nums bg-gradient-to-r from-[#3b82c4] to-cyan-600 bg-clip-text text-transparent">
-                        {Math.round(e.score)}
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{fmtRelative(e.submittedAt)}</div>
+                      <p className="mt-3 text-xs text-slate-500">{entry.totalSessions} {t('leaderboard.sessions')}</p>
                     </div>
                   </div>
                 </li>
@@ -335,40 +314,27 @@ export default function Leaderboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {entries.map((e, i) => {
-                  const pos = i + 1
-                  const medal = PodiumMedal(pos)
+                {entries.map((entry, index) => {
+                  const pos = index + 1
                   return (
                     <tr
-                      key={`${e.id}-table`}
+                      key={`${entry.id}-table`}
                       className={cn(
                         'transition-colors hover:bg-slate-50',
-                        pos === 1 && 'bg-cyan-50/80',
-                        pos === 2 && 'bg-slate-50/80',
-                        pos === 3 && 'bg-amber-50/70',
+                        pos === 1 && 'bg-blue-50/40',
                       )}
                     >
-                      <td className="px-4 py-3 text-slate-600 font-mono tabular-nums">
-                        <div className="flex items-center gap-2">
-                          {medal ? <span aria-hidden>{medal}</span> : null}
-                          <span>#{pos}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{e.nickname}</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-slate-600">#{pos}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{entry.nickname}</td>
                       <td className="px-4 py-3">
-                        <span
-                          className={cn(
-                            'inline-flex text-[10px] font-bold px-2 py-0.5 rounded-md',
-                            RANK_BADGE[e.rank] ?? RANK_BADGE.C,
-                          )}
-                        >
-                          {e.rank}
+                        <span className={cn('inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold', RANK_BADGE[entry.rank] ?? RANK_BADGE.C)}>
+                          {entry.rank}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600 font-mono">{e.topModel}</td>
-                      <td className="px-4 py-3 text-slate-600 tabular-nums">{e.totalSessions}</td>
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-[#3b82c4]">{Math.round(e.score)}</td>
-                      <td className="px-4 py-3 text-right text-slate-500">{fmtRelative(e.submittedAt)}</td>
+                      <td className="px-4 py-3 font-mono text-slate-600">{entry.topModel}</td>
+                      <td className="px-4 py-3 tabular-nums text-slate-600">{entry.totalSessions}</td>
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-900">{Math.round(entry.score)}</td>
+                      <td className="px-4 py-3 text-right text-slate-500">{fmtRelative(entry.submittedAt)}</td>
                     </tr>
                   )
                 })}
@@ -379,74 +345,95 @@ export default function Leaderboard() {
       )}
 
       {!loading && !error && entries.length === 0 && (
-        <p className="text-center text-slate-500 text-sm py-12">{t('leaderboard.empty')}</p>
+        <p className="py-12 text-center text-sm text-slate-500">{t('leaderboard.empty')}</p>
       )}
+
+      <div className="card p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h4 className="text-base font-semibold text-slate-900">{t('leaderboard.rules.summaryTitle')}</h4>
+            <ul className="mt-3 space-y-2 text-sm leading-relaxed text-slate-500">
+              <li>• {t('leaderboard.rules.summary.r1')}</li>
+              <li>• {t('leaderboard.rules.summary.r2')}</li>
+              <li>• {t('leaderboard.rules.summary.r3')}</li>
+            </ul>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+          >
+            <HelpCircle className="h-4 w-4" />
+            {t('leaderboard.rules.help')}
+          </button>
+        </div>
+      </div>
 
       <AnimatePresence>
         {modalOpen && (
           <motion.div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
             onClick={() => !submitting && setModalOpen(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              initial={{ opacity: 0, scale: 0.97, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-cyan-900/10 p-6"
+              exit={{ opacity: 0, scale: 0.97, y: 10 }}
+              transition={{ duration: 0.18, ease: [0.25, 0.4, 0.25, 1] }}
+              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10"
               onClick={ev => ev.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Medal className="w-5 h-5 text-cyan-400" />
+                  <Medal className="h-5 w-5 text-[#3b82c4]" />
                   <h3 className="text-lg font-semibold text-slate-900">{t('leaderboard.modal.title')}</h3>
                 </div>
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={() => setModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                  className="rounded-lg p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
                   aria-label={t('leaderboard.modal.close')}
                 >
-                  <X className="w-5 h-5" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <label className="block text-xs text-slate-500 mb-1.5">{t('leaderboard.modal.nickname')}</label>
+              <label className="mb-1.5 block text-xs text-slate-500">{t('leaderboard.modal.nickname')}</label>
               <input
                 type="text"
                 maxLength={20}
                 value={nickname}
                 onChange={ev => setNickname(ev.target.value)}
                 placeholder={t('leaderboard.modal.nickPlaceholder')}
-                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               />
 
-              <div className="mt-5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-                <p className="text-[11px] uppercase tracking-wide text-cyan-500/80 mb-2">{t('leaderboard.modal.preview')}</p>
+              <div className="state-surface state-surface-brand mt-5 p-4">
+                <p className="mb-2 text-[11px] uppercase tracking-wide text-[#3b82c4]">{t('leaderboard.modal.preview')}</p>
                 {previewLoading && (
-                  <div className="flex items-center gap-2 text-slate-500 text-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     {t('leaderboard.modal.reading')}
                   </div>
                 )}
-                {!previewLoading && previewErr && <p className="text-sm text-amber-400/90">{previewErr}</p>}
+                {!previewLoading && previewErr && <p className="text-sm text-orange-700">{previewErr}</p>}
                 {!previewLoading && !previewErr && preview && (
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-slate-500">{t('leaderboard.modal.score')}</span>
-                      <div className="text-xl font-bold text-slate-900 tabular-nums">{Math.round(preview.overallScore)}</div>
+                      <div className="text-xl font-bold tabular-nums text-slate-900">{Math.round(preview.overallScore)}</div>
                     </div>
                     <div>
                       <span className="text-slate-500">{t('leaderboard.modal.rank')}</span>
-                      <div className="text-xl font-bold text-cyan-600">{preview.rank}</div>
+                      <div className="text-xl font-bold text-[#3b82c4]">{preview.rank}</div>
                     </div>
-                    <div className="col-span-2 text-slate-500 text-xs">
-                      {t('leaderboard.modal.model')} <span className="text-slate-700 font-mono">{preview.topModel}</span> ·{' '}
+                    <div className="col-span-2 text-xs text-slate-500">
+                      {t('leaderboard.modal.model')} <span className="font-mono text-slate-700">{preview.topModel}</span> ·{' '}
                       {preview.totalSessions} {t('leaderboard.sessions')}
                     </div>
                   </div>
@@ -454,22 +441,17 @@ export default function Leaderboard() {
               </div>
 
               {submitMsg && (
-                <p
-                  className={cn(
-                    'mt-3 text-sm',
-                    submitOk ? 'text-emerald-400' : 'text-rose-400',
-                  )}
-                >
+                <p className={cn('mt-3 text-sm', submitOk ? 'text-[#3b82c4]' : 'text-orange-700')}>
                   {submitMsg}
                 </p>
               )}
 
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex gap-3">
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={() => setModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-500 border border-slate-200 hover:bg-slate-100"
+                  className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
                 >
                   {t('leaderboard.modal.cancel')}
                 </button>
@@ -478,7 +460,7 @@ export default function Leaderboard() {
                   disabled={submitting || previewLoading || !canSubmit || !hasValidPreview}
                   onClick={submit}
                   title={submitBlocked ? submitDisabledHint : previewErr || undefined}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-[#3b82c4] to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-xl bg-[#3b82c4] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#3473af] disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   {submitting ? t('leaderboard.modal.submitting') : t('leaderboard.modal.confirm')}
                 </button>
@@ -486,20 +468,51 @@ export default function Leaderboard() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* Scoring methodology & anti-cheat notice */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 space-y-3">
-        <h4 className="text-slate-900 font-semibold text-base">{t('leaderboard.rules.title')}</h4>
-        <ul className="list-disc list-inside space-y-1.5 text-slate-500 leading-relaxed">
-          <li>{t('leaderboard.rules.r1')}</li>
-          <li>{t('leaderboard.rules.r2')}</li>
-          <li>{t('leaderboard.rules.r3')}</li>
-          <li>{t('leaderboard.rules.r4')}</li>
-          <li>{t('leaderboard.rules.r5')}</li>
-        </ul>
-        <p className="text-xs text-slate-600 pt-2 border-t border-slate-200">{t('leaderboard.rules.disclaimer')}</p>
-      </div>
+        {rulesOpen && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setRulesOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 10 }}
+              transition={{ duration: 0.18, ease: [0.25, 0.4, 0.25, 1] }}
+              className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10"
+              onClick={ev => ev.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5 text-[#3b82c4]" />
+                  <h3 className="text-lg font-semibold text-slate-900">{t('leaderboard.rules.modalTitle')}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRulesOpen(false)}
+                  className="rounded-lg p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  aria-label={t('leaderboard.rules.close')}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-sm leading-relaxed text-slate-500">
+                <p>{t('leaderboard.rules.r1')}</p>
+                <p>{t('leaderboard.rules.r2')}</p>
+                <p>{t('leaderboard.rules.r3')}</p>
+                <p>{t('leaderboard.rules.r4')}</p>
+                <p>{t('leaderboard.rules.r5')}</p>
+                <p className="border-t border-slate-200 pt-3 text-xs text-slate-600">{t('leaderboard.rules.disclaimer')}</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

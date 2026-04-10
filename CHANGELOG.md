@@ -8,6 +8,27 @@ Date-based releases below are retained as historical milestones from the pre-1.0
 
 ---
 
+## [1.2.0] — 2026-04-10
+
+This release straightens ClawClip into a clearer optimization path: replay what happened, benchmark the outcome, then move into cost decisions. It also makes the first screens calmer, the wording sharper, and the multilingual experience more complete across the app and GitHub docs.
+
+### Changed
+- Reworked the in-app flow around Replay → Benchmark → Cost so the full loop now connects end to end.
+- Rebuilt the Benchmark first screen to put the conclusion first, keep evidence immediately behind it, and add direct next-step actions into Cost or Replay.
+- Simplified the visual system by removing color-coded page identities and converging on a tighter blue + risk + neutral palette.
+- Streamlined the first screens of Prompt Insight, Knowledge, Template Market, and Leaderboard to reduce noise and make the main action clearer.
+- Restored conversational playback in Replay so session review feels like following the actual dialogue again.
+
+### Improved
+- Rewrote core product messaging to emphasize the main promise more clearly: spend less, get stronger outcomes, and compare versions with confidence.
+- Removed 150 obsolete copy keys and unified brand presence across the product.
+- Completed in-product localization across 7 languages.
+
+### Documentation
+- Synchronized the GitHub README across 5 languages and refreshed the FAQ for multilingual readers.
+
+[1.2.0]: https://github.com/Ylsssq926/clawclip/compare/1.1.0...1.2.0
+
 ## [1.1.0] — 2026-04-07
 
 ### Added

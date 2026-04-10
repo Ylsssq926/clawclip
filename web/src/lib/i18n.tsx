@@ -1,9 +1,12 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { cn } from './cn'
+import { detectBrowserLocale } from './detectBrowserLocale'
 
 export type Locale = 'zh' | 'en' | 'ja' | 'ko' | 'es' | 'fr' | 'de'
 
 type TranslateValues = Record<string, string | number>
+
+const LOCALE_STORAGE_KEY = 'clawclip-lang'
 
 const zh: Record<string, string> = {
   'app.name': '虾片',
@@ -5516,6 +5519,29 @@ function interpolateMessage(template: string, vars?: TranslateValues) {
   )
 }
 
+function readSavedLocale(): Locale | null {
+  if (typeof localStorage === 'undefined') return null
+
+  try {
+    const saved = localStorage.getItem(LOCALE_STORAGE_KEY)
+    if (saved && saved in locales) return saved as Locale
+  } catch {
+    /* private mode / quota */
+  }
+
+  return null
+}
+
+function readNavigatorLanguages(): string[] {
+  if (typeof navigator === 'undefined') return []
+
+  if (Array.isArray(navigator.languages) && navigator.languages.length > 0) {
+    return navigator.languages
+  }
+
+  return navigator.language ? [navigator.language] : []
+}
+
 interface I18nContextType {
   locale: Locale
   setLocale: (l: Locale) => void
@@ -5523,45 +5549,22 @@ interface I18nContextType {
 }
 
 const I18nContext = createContext<I18nContextType>({
-  locale: 'zh',
+  locale: 'en',
   setLocale: () => {},
   t: (key) => key,
 })
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('clawclip-lang') : null
-    if (saved && saved in locales) return saved as Locale
+    const saved = readSavedLocale()
+    if (saved) return saved
 
-    // 检查 navigator.languages（更全面）
-    const langs = typeof navigator !== 'undefined'
-      ? (navigator.languages || [navigator.language]).map(l => l?.toLowerCase() ?? '')
-      : []
-
-    for (const nav of langs) {
-      if (nav.startsWith('zh')) return 'zh'
-      if (nav.startsWith('ja')) return 'ja'
-      if (nav.startsWith('ko')) return 'ko'
-      if (nav.startsWith('es')) return 'es'
-      if (nav.startsWith('fr')) return 'fr'
-      if (nav.startsWith('de')) return 'de'
-      if (nav.startsWith('en')) return 'en'
-    }
-
-    // 时区辅助检测
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-      if (/Shanghai|Chongqing|Hong_Kong|Taipei|Macau/.test(tz)) return 'zh'
-      if (/Tokyo/.test(tz)) return 'ja'
-      if (/Seoul/.test(tz)) return 'ko'
-    } catch { /* noop */ }
-
-    return 'en'
+    return detectBrowserLocale(readNavigatorLanguages())
   })
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l)
-    try { localStorage.setItem('clawclip-lang', l) } catch { /* private mode / quota */ }
+    try { localStorage.setItem(LOCALE_STORAGE_KEY, l) } catch { /* private mode / quota */ }
   }, [])
 
   const t = useCallback((key: string, vars?: TranslateValues) => {

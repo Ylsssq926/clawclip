@@ -251,7 +251,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/85 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
-              <span className="select-none text-lg leading-none" aria-hidden="true">🍤</span>
+              <img src="/clawclip-logo-32.png" alt="" aria-hidden="true" className="h-5 w-5 object-contain" />
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">{brandName}</h1>

@@ -82,7 +82,7 @@ export default function Landing({ onEnterDemo }: Props) {
         <nav className="relative mx-auto flex max-w-7xl items-center justify-between gap-3 px-6 py-4 lg:px-16">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/85 p-1.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
-              <img src="/clawclip-logo.png" alt="" className="h-full w-full object-contain" />
+              <img src="/clawclip-logo-64.png" alt="" className="h-full w-full object-contain" />
             </div>
             <span className="truncate text-lg font-bold text-slate-900">{brandName}</span>
           </div>
@@ -313,7 +313,7 @@ export default function Landing({ onEnterDemo }: Props) {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/85 p-1.5 shadow-sm shadow-slate-200/50 ring-1 ring-slate-200/80">
-              <img src="/clawclip-logo.png" alt="" className="h-full w-full object-contain" />
+              <img src="/clawclip-logo-32.png" alt="" className="h-full w-full object-contain" />
             </div>
             <span className="truncate text-sm font-medium text-slate-700">{brandName}</span>
           </div>

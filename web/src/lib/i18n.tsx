@@ -10,6 +10,7 @@ const LOCALE_STORAGE_KEY = 'clawclip-lang'
 
 const zh: Record<string, string> = {
   'app.name': '虾片',
+  'language.selector': '选择语言',
   'app.subtitle': '回放 · 评测 · 省钱',
   'app.demo': '演示',
   'app.realData': '实况',
@@ -45,11 +46,11 @@ const zh: Record<string, string> = {
   'dashboard.entry.eyebrow': '判断入口',
   'dashboard.entry.title': '先决定下一步看哪里',
   'dashboard.entry.body.connected': '先看最新运行、最值得先修的问题，以及最近最可能白花的钱。',
-  'dashboard.entry.body.demo': '先用 Demo 熟悉这个判断入口；接入真实会话后，这里会优先指向你的最新运行、问题和花费。',
+  'dashboard.entry.body.demo': '先拿示例热个身：看一条运行、看它哪里白烧钱，再决定下一步盯哪块。',
   'dashboard.entry.body.processing': '最近运行已经读到；先看最新入口、待修问题和可能白花的钱，再决定下一步。',
   'dashboard.entry.latest': '最近最该看的运行',
   'dashboard.entry.latest.emptyTitle': '先去跑一次真实运行',
-  'dashboard.entry.latest.emptyBody': '有了最新会话后，这里会直接把你带进运行洞察，而不是只给你一堆统计数字。',
+  'dashboard.entry.latest.emptyBody': '有了最新会话后，这里会直接把你带进运行洞察，而不是只给你一堆数字。',
   'dashboard.entry.latest.cta': '进入这次运行',
   'dashboard.entry.issue': '最近最值得先修的问题',
   'dashboard.entry.issue.cta.cost': '查看成本线索',
@@ -67,10 +68,10 @@ const zh: Record<string, string> = {
   'dashboard.diagnostics.emptyBody': '如果后续出现解析缺口，会在这里提示，但不再压过主内容。',
   'dashboard.connection.label': '会话接入',
   'dashboard.connection.connected': '已连接',
-  'dashboard.connection.connectedHint': '真实会话已接入，运行洞察、成绩单和成本报告都会优先使用你的真实会话。',
-  'dashboard.connection.demo': '当前为演示数据',
-  'dashboard.connection.demoTitle': '接入你的第一批会话',
-  'dashboard.connection.demoHint': '先跑几次 OpenClaw / ZeroClaw 任务，再重启虾片（ClawClip），真实会话就会自动出现。',
+  'dashboard.connection.connectedHint': '真实会话接上了，洞察、成绩单和成本报告现在都看你自己的数据。',
+  'dashboard.connection.demo': '先看示例',
+  'dashboard.connection.demoTitle': '先拿示例热个身',
+  'dashboard.connection.demoHint': '先用内置样本熟悉一下路子；跑几次 OpenClaw / ZeroClaw 任务后重启虾片，页面就会自动换成你的真实会话。',
   'dashboard.connection.processing': '已发现最近运行',
   'dashboard.connection.processingHint': '最近的运行记录已经读到，整理完成后会自动出现在首页和运行洞察里。',
   'dashboard.keywords.empty': '暂无数据',
@@ -84,7 +85,7 @@ const zh: Record<string, string> = {
   'replay.empty.hint': '先跑几个任务，或接入你的会话目录，这里就会出现回放。',
   'replay.empty.filtered': '这个标签下暂时没有会话',
   'replay.error.list': '拿不到会话列表，看看后端有没有启动？',
-  'replay.error.detail': '加载这条会话时出了点问题',
+  'replay.error.detail': '这条会话加载不出来，试试刷新，或者检查一下后端',
   'replay.empty.steps': '未找到会话步骤，日志文件可能为空或格式不兼容。',
   'replay.back': '返回列表',
   'replay.share': '分享卡片',
@@ -120,7 +121,7 @@ const zh: Record<string, string> = {
   'demo.hint.benchmark': '当前展示 Demo；接入真实会话后再看你的成绩变化。',
   'benchmark.subtitle': "先看这次改动有没有变好，再决定下一步怎么改",
   'benchmark.empty.title': "先生成第一张成绩单",
-  'benchmark.empty.desc': '先跑几次任务，再点一次评测，成绩单会自动生成。',
+  'benchmark.empty.desc': '先跑几次任务，再点一次评测，成绩单就出来了。',
   'benchmark.runStart': '生成成绩单',
   'benchmark.running': '评测中…',
   'benchmark.rerun': '再跑一次',
@@ -140,7 +141,7 @@ const zh: Record<string, string> = {
   'benchmark.curve.oneLiner': '看每次评测后的综合分是往上走、持平，还是回落。',
   'benchmark.curve.toggle': '怎么看这条线',
   'benchmark.curve.long': '横轴是每次评测的时间，纵轴是综合分。连续上升说明改动在起作用；来回波动说明还不稳定；改完后回落就值得回头检查。',
-  'benchmark.curve.demo': '当前是 Demo 数据：这条线只展示页面效果；接入真实会话后，才会留下你自己的变化轨迹。',
+  'benchmark.curve.demo': '这条线先给你看个读法；接上真实会话后，才会开始长出你自己的轨迹。',
   'benchmark.curve.real': '这是你自己的历史记录；每做一次改动再跑一次，更容易看出趋势。',
   'benchmark.compare.label': '对比历史评测',
   'benchmark.compare.none': '不对比',
@@ -150,7 +151,7 @@ const zh: Record<string, string> = {
   'benchmark.footer': '先看最近两次对比，再看长期趋势；两边都向好，这次改动通常就值。',
   'benchmark.lastRun': '上次评测',
   'benchmark.error.load': '获取评测数据失败',
-  'benchmark.error.run': '评测执行失败，请检查后端是否运行',
+  'benchmark.error.run': '评测跑不起来，看看后端有没有启动',
   'dashboard.stat.monthCost': '近 30 天成本',
   'dashboard.stat.sessionsLabel': '真实会话',
   'dashboard.stat.sessions.realSub': '可直接在运行洞察中查看',
@@ -178,14 +179,14 @@ const zh: Record<string, string> = {
   'templates.apply': '一键导入',
   'templates.applying': '导入中…',
   'templates.applied': '已导入',
-  'templates.empty': '该分类暂无模板',
+  'templates.empty': '这个分类还没有模板',
   'templates.error.apply': '导入失败，请重试',
   'templates.error.network': '网络错误，请检查后端是否运行',
   'knowledge.title': '知识库',
   'knowledge.search': '搜索',
   'knowledge.search.btn': '搜索',
   'knowledge.search.loading': '搜索中…',
-  'knowledge.search.error': '搜索失败，请检查网络或后端服务',
+  'knowledge.search.error': '搜不出来，看看网络或后端有没有问题',
   'knowledge.export.json': '导出 JSON',
   'knowledge.export.md': '导出 Markdown',
   'knowledge.export.error': '导出失败，请稍后重试',
@@ -234,7 +235,7 @@ const zh: Record<string, string> = {
   'knowledge.stats.retry': '重试',
   'knowledge.search.recommended': '推荐搜索',
   'knowledge.search.emptyTitle': '没找到相关会话',
-  'knowledge.search.emptyDesc': '没有找到和“{query}”相关的会话，可以换个关键词，或试试更宽泛的话题。',
+  'knowledge.search.emptyDesc': '没找到和"{query}"相关的会话，换个关键词试试，或者搜宽一点。',
   'knowledge.search.emptyHint': '你可以点上方推荐搜索词，或先导入更多会话，让知识库更容易搜到内容。',
   'knowledge.search.openReplay': '查看回放',
   'knowledge.import.successDetail': '已导入 {imported} 条会话，知识库共 {total} 条。',
@@ -262,6 +263,7 @@ const zh: Record<string, string> = {
 
 const en: Record<string, string> = {
   'app.name': 'ClawClip',
+  'language.selector': 'Select language',
   'app.subtitle': 'Replay · Benchmark · Savings',
   'app.demo': 'Demo',
   'app.realData': 'Live',
@@ -296,12 +298,12 @@ const en: Record<string, string> = {
   'dashboard.recent.all': 'View all →',
   'dashboard.entry.eyebrow': 'Decision entry',
   'dashboard.entry.title': 'Decide what to look at next',
-  'dashboard.entry.body.connected': 'Start with the latest run, the issue most worth fixing first, and the spend most likely being wasted.',
+  'dashboard.entry.body.connected': 'Check the latest run, the issue that matters most, and where you\'re probably burning money.',
   'dashboard.entry.body.demo': 'Use the demo to learn this decision entry first; once real sessions are connected, it will point you to your latest run, issue, and spend.',
   'dashboard.entry.body.processing': 'Recent runs were found. Check the latest entry, the next issue to fix, and the spend most likely being wasted before deciding what to do next.',
   'dashboard.entry.latest': 'Latest run worth opening',
   'dashboard.entry.latest.emptyTitle': 'Run one real session first',
-  'dashboard.entry.latest.emptyBody': 'Once a fresh session appears, this card will take you straight into Replay instead of showing generic dashboard stats.',
+  'dashboard.entry.latest.emptyBody': 'Once a fresh session appears, this card will take you straight into Replay instead of showing generic stats.',
   'dashboard.entry.latest.cta': 'Open this run',
   'dashboard.entry.issue': 'Issue worth fixing first',
   'dashboard.entry.issue.cta.cost': 'Open cost clues',
@@ -319,10 +321,10 @@ const en: Record<string, string> = {
   'dashboard.diagnostics.emptyBody': 'If new parsing gaps show up later, they will surface here without taking over the page.',
   'dashboard.connection.label': 'Session source',
   'dashboard.connection.connected': 'Connected',
-  'dashboard.connection.connectedHint': 'Replay, scorecard, and cost views are now using your real sessions first.',
+  'dashboard.connection.connectedHint': 'Your real sessions are live — Replay, scorecards, and cost reports now show your own data.',
   'dashboard.connection.demo': 'Demo data for now',
-  'dashboard.connection.demoTitle': 'Bring in your first sessions',
-  'dashboard.connection.demoHint': 'Run a few OpenClaw or ZeroClaw tasks, then restart ClawClip. Your real sessions will appear automatically.',
+  'dashboard.connection.demoTitle': 'Warm up on the sample',
+  'dashboard.connection.demoHint': 'Use the built-in sample to get the feel first; after a few OpenClaw or ZeroClaw runs, restart ClawClip and the page will switch to your real sessions automatically.',
   'dashboard.connection.processing': 'Recent runs found',
   'dashboard.connection.processingHint': 'We found recent runs. They will show up here and in Replay automatically once organizing finishes.',
   'dashboard.keywords.empty': 'No data yet',
@@ -336,7 +338,7 @@ const en: Record<string, string> = {
   'replay.empty.hint': "Run a few tasks or connect your session folder, and replays will show up here.",
   'replay.empty.filtered': 'No sessions with this tag',
   'replay.error.list': 'Could not load sessions — is the backend running?',
-  'replay.error.detail': 'Something went wrong loading this session',
+  'replay.error.detail': 'This session won\'t load — try refreshing or check the backend',
   'replay.empty.steps': 'No steps found in this session. The log file may be empty or in an unrecognized format.',
   'replay.back': 'Back to list',
   'replay.share': 'Share card',
@@ -372,7 +374,7 @@ const en: Record<string, string> = {
   'demo.hint.benchmark': 'Showing demo data; connect real sessions to see your own score changes.',
   'benchmark.subtitle': "See whether this change actually made things better",
   'benchmark.empty.title': "Generate your first scorecard",
-  'benchmark.empty.desc': 'Run a few tasks, then benchmark once. The scorecard will appear automatically.',
+  'benchmark.empty.desc': 'Run a few tasks, hit benchmark once, and the scorecard shows up.',
   'benchmark.runStart': 'Generate scorecard',
   'benchmark.running': 'Running…',
   'benchmark.rerun': 'Run again',
@@ -391,8 +393,8 @@ const en: Record<string, string> = {
   'benchmark.curve.title': 'Score trend',
   'benchmark.curve.oneLiner': 'See whether the overall score is climbing, flat, or slipping after each benchmark run.',
   'benchmark.curve.toggle': 'How to read this',
-  'benchmark.curve.long': 'X is run time. Y is overall score. A steady climb means the change is helping; swings mean it is still unstable; a drop means the change is worth revisiting.',
-  'benchmark.curve.demo': 'Demo data only: this line shows the UI pattern. Your own trend starts once you connect real sessions.',
+  'benchmark.curve.long': 'X is when you ran it, Y is the score. Steady climb? Your change is working. Big swings? Still unstable. Drop after a change? Time to look again.',
+  'benchmark.curve.demo': 'This line is just here to show you how to read it; your own trend starts growing once real sessions are connected.',
   'benchmark.curve.real': 'This is your own history. Re-run after each change to make the trend easier to judge.',
   'benchmark.compare.label': 'Compare with past run',
   'benchmark.compare.none': 'None',
@@ -402,14 +404,14 @@ const en: Record<string, string> = {
   'benchmark.footer': 'Check the latest before/after first, then the longer trend. If both move in the right direction, the change is usually worth keeping.',
   'benchmark.lastRun': 'Last run',
   'benchmark.error.load': 'Could not load benchmark data',
-  'benchmark.error.run': 'Benchmark failed — is the backend running?',
+  'benchmark.error.run': 'Benchmark won\'t run — is the backend up?',
   'dashboard.stat.monthCost': 'Last 30 days',
   'dashboard.stat.sessionsLabel': 'Real sessions',
   'dashboard.stat.sessions.realSub': 'Ready to open in Replay',
   'dashboard.stat.sessions.demoSub': 'Your real sessions will appear here after connection',
   'dashboard.stat.sessions.processingSub': 'Runs found and organizing now',
   'savings.hint.title': 'Saving starts with visibility',
-  'savings.hint.body': 'For now, ClawClip surfaces suggestions from local logs, such as heavy tasks and model mix. Automatic reconfiguration is still on the roadmap.',
+  'savings.hint.body': 'For now, ClawClip surfaces suggestions from local logs, such as heavy tasks and model mix. Automatic reconfiguration is on the roadmap.',
   'skills.title': 'Add skills',
   'skills.placeholder': 'Enter skill name to install (e.g. web-search)',
   'skills.install': 'Install',
@@ -430,14 +432,14 @@ const en: Record<string, string> = {
   'templates.apply': 'Import',
   'templates.applying': 'Importing…',
   'templates.applied': 'Imported',
-  'templates.empty': 'No templates in this category',
+  'templates.empty': 'No templates here yet',
   'templates.error.apply': 'Import failed — please retry',
   'templates.error.network': 'Network error — is the backend running?',
   'knowledge.title': 'Knowledge base',
   'knowledge.search': 'Search',
   'knowledge.search.btn': 'Search',
   'knowledge.search.loading': 'Searching…',
-  'knowledge.search.error': 'Search failed — check your network or backend',
+  'knowledge.search.error': 'Search won\'t work — check your network or backend',
   'knowledge.export.json': 'Export JSON',
   'knowledge.export.md': 'Export Markdown',
   'knowledge.export.error': 'Export failed — please retry later',
@@ -486,7 +488,7 @@ const en: Record<string, string> = {
   'knowledge.stats.retry': 'Retry',
   'knowledge.search.recommended': 'Recommended searches',
   'knowledge.search.emptyTitle': 'No matching sessions found',
-  'knowledge.search.emptyDesc': 'No sessions matched “{query}”. Try adjusting the keyword or switching to a broader topic.',
+  'knowledge.search.emptyDesc': 'Nothing matched "{query}". Try a different keyword or go broader.',
   'knowledge.search.emptyHint': 'You can click the recommended searches above, or import more sessions to enrich the knowledge base first.',
   'knowledge.search.openReplay': 'Open replay',
   'knowledge.import.successDetail': 'Imported {imported} session(s), {total} total in library.',
@@ -1007,65 +1009,65 @@ const de: Record<string, string> = {
 
 const LANDING_PAGE_COPY: Record<Locale, Record<string, string>> = {
   zh: {
-    'landing.hero.eyebrow': '省钱 · 变强 · 找出差距',
-    'landing.hero.title': '你的 Agent，是真变强了，还是只是更贵了？',
-    'landing.hero.kicker': '找出 token 浪费在哪，对比哪个模型真的值这个钱，只保留让 Agent 更强的改动。',
-    'landing.hero.meta': '先看 Demo，再接你自己的日志。',
+    'landing.hero.eyebrow': '省钱 · 变强 · 别再猜',
+    'landing.hero.title': '你的 Agent 是真变强了，还是只是更贵了？',
+    'landing.hero.kicker': '重试循环、膨胀的 Prompt、拿贵模型干轻活——虾片告诉你钱死在哪，让你砍掉浪费，留下真正让它变强的东西。',
+    'landing.hero.meta': '本地跑，读现有日志，不上传。',
     'landing.hero.source': 'GitHub',
     'landing.cta.demoPrimary': '看示例回放',
     'landing.hero.media.badge': '精选样本',
-    'landing.hero.media.caption': '这段样本把一次运行的回放、评分和花费放在一起给你看。',
+    'landing.hero.media.caption': '一次运行，三个答案：发生了什么、撑住没、值不值。',
     'landing.hero.media.pill.score': '74 / 100',
-    'landing.flow.eyebrow': '顺着一次运行往下看',
-    'landing.flow.title': '找到浪费，对比差距，只留真正有用的改动。',
-    'landing.flow.subtitle': '从头看到尾，token 烧在哪一步、哪个模型更值，一目了然。',
+    'landing.flow.eyebrow': '顺着一次运行看下来',
+    'landing.flow.title': '钱烧在哪、哪个模型更值，看完就清楚。',
+    'landing.flow.subtitle': '回放、评分、成本放一起，该换模型、改 Prompt 还是直接停，自己就有数。',
     'landing.feature.replay.desc': '逐步回放每一次工具调用、重试和推理，找到烧钱却没结果的那一步。',
     'landing.feature.replay.note': '找到问题出在哪一步',
     'landing.feature.benchmark.desc': '改完之后，前后对比分数、token 数和成本，一句话告诉你这次改动值不值。',
     'landing.feature.benchmark.note': '证明这次改动有没有用',
     'landing.feature.cost.desc': '按模型和任务拆解花费，找出重试循环、Prompt 膨胀和用错模型这些悄悄烧钱的地方。',
     'landing.feature.cost.note': '找出钱烧在哪里',
-    'landing.preview.eyebrow': '看完之后',
-    'landing.preview.title': '哪里在浪费、哪个模型更值，看完就清楚了。',
-    'landing.preview.desc': '回放、评分、成本放在一起，该换模型、改 Prompt 还是直接停，自己就有数了。',
+    'landing.preview.eyebrow': '看完一次运行',
+    'landing.preview.title': '哪里在浪费、哪个模型更值，一眼就知道。',
+    'landing.preview.desc': '回放、评分、成本摆一起，该换模型、改 Prompt 还是直接停，自己就有数。',
     'landing.preview.quote': '一次运行，看完就知道钱花在哪、该怎么省。',
     'landing.preview.card.retries.title': '哪一步一直在重试',
-    'landing.preview.card.retries.desc': '重试循环是最常见的 token 黑洞，一眼就能看到，不用翻日志猜。',
+    'landing.preview.card.retries.desc': '重试循环是最常见的 token 黑洞，一眼就能看到。',
     'landing.preview.card.risk.title': '这次改动真的有效吗',
     'landing.preview.card.risk.desc': '分数涨了但成本也涨了？还是两边都没动？马上能判断。',
     'landing.preview.card.cost.title': '哪个模型最值这个钱',
-    'landing.preview.card.cost.desc': '同样的任务，不同模型的成本和效果并排摆，选哪个一目了然。',
-    'landing.install.sub': '直接读你现有的 OpenClaw / ZeroClaw 日志，本地跑起来只要几步。',
+    'landing.preview.card.cost.desc': '同样任务，不同模型的成本和效果并排摆，选哪个一目了然。',
+    'landing.install.sub': '读你现有的 OpenClaw / ZeroClaw 日志，本地跑起来只要几步。',
     'landing.install.badge': '本地运行',
     'landing.footer.more': '更多作品',
   },
   en: {
-    'landing.hero.eyebrow': 'Save tokens · Prove improvement · Pick the right model',
-    'landing.hero.title': 'Did your agent get better, or just get more expensive?',
-    'landing.hero.kicker': 'Find where tokens are wasted, compare which model actually earns its cost, and keep only the changes that make your agent stronger.',
-    'landing.hero.meta': 'Start with the demo, then plug in your own logs.',
+    'landing.hero.eyebrow': 'Cut waste · Prove improvement · Pick the right model',
+    'landing.hero.title': 'Did your agent get better, or just more expensive?',
+    'landing.hero.kicker': 'Retry loops. Bloated prompts. Expensive models doing lightweight work. ClawClip shows you where the money is going — so you can cut the waste and keep what actually makes it stronger.',
+    'landing.hero.meta': 'Runs locally. Reads your existing logs. No upload.',
     'landing.hero.source': 'GitHub',
     'landing.cta.demoPrimary': 'Watch demo replay',
     'landing.hero.media.badge': 'Featured sample',
-    'landing.hero.media.caption': 'This sample puts the replay, the score, and the cost for one run in one view.',
+    'landing.hero.media.caption': 'One run, three answers: what happened, did it hold up, was it worth it.',
     'landing.hero.media.pill.score': '74 / 100',
-    'landing.flow.eyebrow': 'Follow one run',
-    'landing.flow.title': 'Find the waste, compare the gap, keep only what actually helps.',
-    'landing.flow.subtitle': 'Go through it from start to finish. Where tokens burned without result — and which model was worth it — becomes obvious.',
+    'landing.flow.eyebrow': 'Follow one run through',
+    'landing.flow.title': 'Where the money burned and which model was worth it — one pass makes it clear.',
+    'landing.flow.subtitle': 'Replay, score, and cost together. Whether to swap the model, trim the prompt, or keep going tends to answer itself.',
     'landing.feature.replay.desc': 'Step through every tool call, retry, and reasoning block. Find the exact step that burned tokens without moving forward.',
     'landing.feature.replay.note': 'Find the step that went wrong',
     'landing.feature.benchmark.desc': 'After a change, compare score, token count, and cost before and after. One plain verdict: better, worse, or no real difference.',
     'landing.feature.benchmark.note': 'Prove whether the change worked',
     'landing.feature.cost.desc': 'Break spend down by model and task. Surface retry loops, prompt bloat, and expensive models doing lightweight work.',
     'landing.feature.cost.note': 'Find where the money went',
-    'landing.preview.eyebrow': 'After one pass',
-    'landing.preview.title': 'Where the waste is and which model is worth it — one pass makes it clear.',
+    'landing.preview.eyebrow': 'After one run',
+    'landing.preview.title': 'Where the waste is and which model is worth it — you will know at a glance.',
     'landing.preview.desc': 'Replay, score, and cost together. Whether to swap the model, trim the prompt, or keep going tends to answer itself.',
     'landing.preview.quote': 'One run. One pass. You know where the money went and what to fix.',
     'landing.preview.card.retries.title': 'Which step kept retrying?',
-    'landing.preview.card.retries.desc': 'Retry loops are the most common token drain. Spot them without digging through raw logs.',
+    'landing.preview.card.retries.desc': 'Retry loops are the most common token drain. Spot them at a glance.',
     'landing.preview.card.risk.title': 'Did the change actually work?',
-    'landing.preview.card.risk.desc': 'Score went up but cost went up more? Or nothing moved at all? You\'ll see it immediately.',
+    'landing.preview.card.risk.desc': 'Score went up but cost went up more? Or nothing moved? You will see it immediately.',
     'landing.preview.card.cost.title': 'Which model is worth the price?',
     'landing.preview.card.cost.desc': 'Same task, different models — cost and quality side by side. The right choice becomes obvious.',
     'landing.install.sub': 'Reads your existing OpenClaw / ZeroClaw logs. Local setup takes a few steps.',
@@ -1252,7 +1254,7 @@ const dashboardOverrides: Record<Locale, Record<string, string>> = {
     'dashboard.connection.badge.connected.other': '已连接 · {count} 个会话',
     'dashboard.common.demoDataSuffix': ' · Demo 数据',
     'dashboard.issue.analyzingTitle': '正在判断先修哪一类问题',
-    'dashboard.issue.analyzingBody': '正在检查最近 30 天的重试循环、Prompt 冗余和模型错配。',
+    'dashboard.issue.analyzingBody': '正在看最近 30 天有没有重试、Prompt 冗余或者模型用错了。',
     'dashboard.issue.wasteSignalsBody': '最近 30 天出现了 {count} 个浪费信号，建议先修这类问题再做更大范围优化{suffix}。',
     'dashboard.issue.cleanupTitle': '有些运行还没整理好',
     'dashboard.issue.cleanupBody': '发现了 {count} 个运行，但它们还不能完整回放。',
@@ -3759,6 +3761,8 @@ const replayBenchmarkOverrides: Record<Locale, Record<string, string>> = {
     'benchmark.dimension.search': '信息检索',
     'benchmark.dimension.safety': '安全合规',
     'benchmark.dimension.costEfficiency': '成本效率',
+    'benchmark.dimension.reliability': '可靠性',
+    'benchmark.dimension.reliability.desc': '工具调用成功率、错误恢复能力和重试循环控制',
     'benchmark.dimension.currentScore': '当前分数 {score}/{maxScore}',
     'benchmark.curve.points': '{count} 个数据点',
     'benchmark.summary.firstContact': '初次接触，Agent 还不知道该干什么。',
@@ -3842,6 +3846,8 @@ const replayBenchmarkOverrides: Record<Locale, Record<string, string>> = {
     'benchmark.dimension.search': 'Search',
     'benchmark.dimension.safety': 'Safety',
     'benchmark.dimension.costEfficiency': 'Cost efficiency',
+    'benchmark.dimension.reliability': 'Reliability',
+    'benchmark.dimension.reliability.desc': 'Tool call success rate, error recovery, and retry loop control',
     'benchmark.dimension.currentScore': 'Current score {score}/{maxScore}',
     'benchmark.curve.points': '{count} points',
     'benchmark.summary.firstContact': 'First contact — the Agent does not quite know what to do yet.',
@@ -3958,6 +3964,8 @@ const replayBenchmarkOverrides: Record<Locale, Record<string, string>> = {
     'benchmark.dimension.search': '検索',
     'benchmark.dimension.safety': '安全性',
     'benchmark.dimension.costEfficiency': 'コスト効率',
+    'benchmark.dimension.reliability': '信頼性',
+    'benchmark.dimension.reliability.desc': 'ツール呼び出し成功率、エラー回復能力、再試行ループ制御',
     'benchmark.dimension.currentScore': '現在のスコア {score}/{maxScore}',
     'benchmark.curve.points': '{count} 個のデータ点',
     'benchmark.summary.firstContact': 'まだ手探りで、Agent は何をすべきかをつかみきれていません。',
@@ -4074,6 +4082,8 @@ const replayBenchmarkOverrides: Record<Locale, Record<string, string>> = {
     'benchmark.dimension.search': '검색',
     'benchmark.dimension.safety': '안전성',
     'benchmark.dimension.costEfficiency': '비용 효율',
+    'benchmark.dimension.reliability': '신뢰성',
+    'benchmark.dimension.reliability.desc': '도구 호출 성공률, 오류 복구 능력, 재시도 루프 제어',
     'benchmark.dimension.currentScore': '현재 점수 {score}/{maxScore}',
     'benchmark.curve.points': '데이터 포인트 {count}개',
     'benchmark.summary.firstContact': '아직은 첫 단계라 Agent가 무엇을 해야 하는지 완전히 잡지 못했습니다.',
@@ -4190,6 +4200,8 @@ const replayBenchmarkOverrides: Record<Locale, Record<string, string>> = {
     'benchmark.dimension.search': 'Búsqueda',
     'benchmark.dimension.safety': 'Seguridad',
     'benchmark.dimension.costEfficiency': 'Rentabilidad',
+    'benchmark.dimension.reliability': 'Fiabilidad',
+    'benchmark.dimension.reliability.desc': 'Tasa de éxito de llamadas a herramientas, recuperación de errores y control de bucles de reintento',
     'benchmark.dimension.currentScore': 'Puntuación actual {score}/{maxScore}',
     'benchmark.curve.points': '{count} puntos',
     'benchmark.summary.firstContact': 'Primer contacto: el Agent todavía no tiene claro qué debe hacer.',
@@ -4306,6 +4318,8 @@ const replayBenchmarkOverrides: Record<Locale, Record<string, string>> = {
     'benchmark.dimension.search': 'Recherche',
     'benchmark.dimension.safety': 'Sécurité',
     'benchmark.dimension.costEfficiency': 'Efficacité coût',
+    'benchmark.dimension.reliability': 'Fiabilité',
+    'benchmark.dimension.reliability.desc': 'Taux de réussite des appels d\'outils, récupération d\'erreurs et contrôle des boucles de retry',
     'benchmark.dimension.currentScore': 'Score actuel {score}/{maxScore}',
     'benchmark.curve.points': '{count} points',
     'benchmark.summary.firstContact': 'Premier contact : l’Agent ne sait pas encore vraiment quoi faire.',
@@ -4422,6 +4436,8 @@ const replayBenchmarkOverrides: Record<Locale, Record<string, string>> = {
     'benchmark.dimension.search': 'Suche',
     'benchmark.dimension.safety': 'Sicherheit',
     'benchmark.dimension.costEfficiency': 'Kosten-Effizienz',
+    'benchmark.dimension.reliability': 'Zuverlässigkeit',
+    'benchmark.dimension.reliability.desc': 'Tool-Aufruf-Erfolgsrate, Fehlerwiederherstellung und Retry-Loop-Kontrolle',
     'benchmark.dimension.currentScore': 'Aktueller Wert {score}/{maxScore}',
     'benchmark.curve.points': '{count} Punkte',
     'benchmark.summary.firstContact': 'Erstkontakt: Der Agent weiß noch nicht so recht, was er tun soll.',
@@ -5445,70 +5461,27 @@ const pageRefreshCopy: Record<Locale, Record<string, string>> = {
   },
 }
 
-const locales: Record<Locale, Record<string, string>> = {
-  zh: {
-    ...zh,
-    ...LANDING_PAGE_COPY.zh,
-    ...dashboardOverrides.zh,
-    ...replayBenchmarkOverrides.zh,
-    ...comparePageCopy.zh,
-    ...promptInsightPageCopy.zh,
-    ...pageRefreshCopy.zh,
-  },
-  en: {
-    ...en,
-    ...LANDING_PAGE_COPY.en,
-    ...dashboardOverrides.en,
-    ...replayBenchmarkOverrides.en,
-    ...comparePageCopy.en,
-    ...promptInsightPageCopy.en,
-    ...pageRefreshCopy.en,
-  },
-  ja: {
-    ...ja,
-    ...LANDING_PAGE_COPY.ja,
-    ...dashboardOverrides.ja,
-    ...replayBenchmarkOverrides.ja,
-    ...comparePageCopy.ja,
-    ...promptInsightPageCopy.ja,
-    ...pageRefreshCopy.ja,
-  },
-  ko: {
-    ...ko,
-    ...LANDING_PAGE_COPY.ko,
-    ...dashboardOverrides.ko,
-    ...replayBenchmarkOverrides.ko,
-    ...comparePageCopy.ko,
-    ...promptInsightPageCopy.ko,
-    ...pageRefreshCopy.ko,
-  },
-  es: {
-    ...es,
-    ...LANDING_PAGE_COPY.es,
-    ...dashboardOverrides.es,
-    ...replayBenchmarkOverrides.es,
-    ...comparePageCopy.es,
-    ...promptInsightPageCopy.es,
-    ...pageRefreshCopy.es,
-  },
-  fr: {
-    ...fr,
-    ...LANDING_PAGE_COPY.fr,
-    ...dashboardOverrides.fr,
-    ...replayBenchmarkOverrides.fr,
-    ...comparePageCopy.fr,
-    ...promptInsightPageCopy.fr,
-    ...pageRefreshCopy.fr,
-  },
-  de: {
-    ...de,
-    ...LANDING_PAGE_COPY.de,
-    ...dashboardOverrides.de,
-    ...replayBenchmarkOverrides.de,
-    ...comparePageCopy.de,
-    ...promptInsightPageCopy.de,
-    ...pageRefreshCopy.de,
-  },
+// 懒加载工厂函数：按需构建语言包
+function buildLocaleMessages(locale: Locale): Record<string, string> {
+  const baseMessages = {
+    zh,
+    en,
+    ja,
+    ko,
+    es,
+    fr,
+    de,
+  }[locale]
+
+  return {
+    ...baseMessages,
+    ...LANDING_PAGE_COPY[locale],
+    ...dashboardOverrides[locale],
+    ...replayBenchmarkOverrides[locale],
+    ...comparePageCopy[locale],
+    ...promptInsightPageCopy[locale],
+    ...pageRefreshCopy[locale],
+  }
 }
 
 function interpolateMessage(template: string, vars?: TranslateValues) {
@@ -5524,7 +5497,8 @@ function readSavedLocale(): Locale | null {
 
   try {
     const saved = localStorage.getItem(LOCALE_STORAGE_KEY)
-    if (saved && saved in locales) return saved as Locale
+    const validLocales: Locale[] = ['zh', 'en', 'ja', 'ko', 'es', 'fr', 'de']
+    if (saved && validLocales.includes(saved as Locale)) return saved as Locale
   } catch {
     /* private mode / quota */
   }
@@ -5562,15 +5536,39 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return detectBrowserLocale(readNavigatorLanguages())
   })
 
+  // 懒加载缓存：只加载已使用的语言
+  const [loadedLocales, setLoadedLocales] = useState<Partial<Record<Locale, Record<string, string>>>>(() => {
+    const initialLocale = (() => {
+      const saved = readSavedLocale()
+      if (saved) return saved
+      return detectBrowserLocale(readNavigatorLanguages())
+    })()
+
+    // 启动时只加载当前语言 + en fallback
+    const initial: Partial<Record<Locale, Record<string, string>>> = {
+      en: buildLocaleMessages('en'),
+    }
+    if (initialLocale !== 'en') {
+      initial[initialLocale] = buildLocaleMessages(initialLocale)
+    }
+    return initial
+  })
+
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l)
     try { localStorage.setItem(LOCALE_STORAGE_KEY, l) } catch { /* private mode / quota */ }
+
+    // 懒加载目标语言（如果还没加载）
+    setLoadedLocales((prev) => {
+      if (prev[l]) return prev
+      return { ...prev, [l]: buildLocaleMessages(l) }
+    })
   }, [])
 
   const t = useCallback((key: string, vars?: TranslateValues) => {
-    const template = locales[locale]?.[key] ?? locales.en[key] ?? locales.zh[key] ?? key
+    const template = loadedLocales[locale]?.[key] ?? loadedLocales.en?.[key] ?? key
     return interpolateMessage(template, vars)
-  }, [locale])
+  }, [locale, loadedLocales])
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t])
 
@@ -5586,14 +5584,14 @@ export function useI18n() {
 }
 
 export function LanguageSwitcher({ variant = 'shell' }: { variant?: 'shell' | 'landing' }) {
-  const { locale, setLocale } = useI18n()
+  const { locale, setLocale, t } = useI18n()
   return (
     <div className="relative inline-flex items-center">
       <span className="absolute left-2 text-[11px] pointer-events-none">🌐</span>
       <select
         value={locale}
         onChange={(e) => setLocale(e.target.value as Locale)}
-        aria-label="Language"
+        aria-label={t('language.selector')}
         className={cn(
           'text-[11px] rounded-lg pl-6 pr-2 py-1.5 outline-none cursor-pointer appearance-none transition-[color,background-color,border-color,box-shadow]',
           variant === 'landing'

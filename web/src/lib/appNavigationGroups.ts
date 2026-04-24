@@ -40,7 +40,7 @@ export const APP_NAVIGATION_GROUPS: readonly AppNavigationGroupDefinition[] = [
     tabIds: TOOL_NAV_TAB_IDS,
     tone: 'secondary',
     collapsible: true,
-    defaultCollapsed: true,
+    defaultCollapsed: false,
   },
 ]
 

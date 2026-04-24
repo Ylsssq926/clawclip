@@ -123,12 +123,8 @@ function saveImportedSessions(replays: SessionReplay[]): void {
 }
 
 function getMergedReplays(): SessionReplay[] {
-  const metas = sessionParser.getSessions();
-  const fromParser: SessionReplay[] = [];
-  for (const m of metas) {
-    const r = sessionParser.getSessionReplay(m.id);
-    if (r) fromParser.push(r);
-  }
+  // 先批量拿到当前可见 replay，避免对每个 meta 再触发一次整批 repriced replays 重建。
+  const fromParser = sessionParser.getSessionReplays();
   const imported = loadImportedSessions();
   const byNorm = new Map<string, SessionReplay>();
   for (const r of fromParser) {

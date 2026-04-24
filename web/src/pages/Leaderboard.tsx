@@ -384,7 +384,7 @@ export default function Leaderboard() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 10 }}
               transition={{ duration: 0.18, ease: [0.25, 0.4, 0.25, 1] }}
-              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10"
+              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10"
               onClick={ev => ev.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">
@@ -483,7 +483,7 @@ export default function Leaderboard() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 10 }}
               transition={{ duration: 0.18, ease: [0.25, 0.4, 0.25, 1] }}
-              className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10"
+              className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-900/10"
               onClick={ev => ev.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">

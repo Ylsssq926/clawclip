@@ -98,7 +98,7 @@ export default function Landing({ onEnterDemo }: Props) {
             transition={{ duration: 0.6, ease: [0.25, 0.4, 0.25, 1] }}
             className="max-w-2xl"
           >
-            <div className="inline-flex rounded-full border border-blue-100 bg-white/85 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 shadow-sm shadow-blue-100/60">
+            <div className="inline-flex rounded-full border border-blue-100 bg-white/85 px-4 py-1.5 text-xs font-medium tracking-[0.12em] text-slate-500 shadow-sm shadow-blue-100/60">
               {copy('landing.hero.eyebrow')}
             </div>
             <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-slate-900 lg:text-6xl lg:leading-[1.04]">
@@ -107,7 +107,7 @@ export default function Landing({ onEnterDemo }: Props) {
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-700 lg:text-xl">
               {copy('landing.hero.kicker')}
             </p>
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-slate-500 lg:text-base">
+            <p className="mt-3 max-w-lg text-sm leading-relaxed text-slate-400 lg:text-base">
               {copy('landing.hero.meta')}
             </p>
 
@@ -306,6 +306,27 @@ export default function Landing({ onEnterDemo }: Props) {
               </div>
             ))}
           </div>
+        </motion.div>
+      </section>
+
+      <section className="relative z-10 mx-auto max-w-7xl px-6 pb-20 lg:px-16">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.45 }}
+          className="flex flex-col items-center gap-5 rounded-3xl border border-blue-100/70 bg-gradient-to-br from-white via-blue-50/40 to-cyan-50/30 px-8 py-10 text-center shadow-[0_16px_60px_-40px_rgba(59,130,196,0.35)]"
+        >
+          <p className="text-xl font-bold text-slate-900 lg:text-2xl">{copy('landing.hero.title')}</p>
+          <button
+            type="button"
+            onClick={() => onEnterDemo('replay')}
+            className="group flex items-center gap-3 rounded-2xl bg-gradient-to-r from-accent to-cyan-500 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[#3b82c4]/25 transition-[transform,box-shadow] duration-200 ease-out hover:scale-[1.02] hover:shadow-xl hover:shadow-[#3b82c4]/35 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/55 focus-visible:ring-offset-2"
+          >
+            <Play className="h-5 w-5" />
+            {copy('landing.cta.demoPrimary')}
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </button>
         </motion.div>
       </section>
 

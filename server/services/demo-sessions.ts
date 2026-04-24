@@ -251,44 +251,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 5,
-          timestamp: new Date('2026-03-17T06:40:55.000Z'),
-          type: 'tool_call' as const,
-          model: 'gpt-4o-mini',
-          content: '',
-          toolName: 'file_write',
-          toolInput: JSON.stringify({ path: 'src/utils/validate.ts', content: `// 输入校验工具函数
-export function isNonEmptyString(val: unknown): val is string {
-  return typeof val === 'string' && val.trim().length > 0;
-}
-
-export function isPositiveNumber(val: unknown): val is number {
-  return typeof val === 'number' && isFinite(val) && val > 0;
-}
-
-export function assertDefined<T>(val: T | undefined | null, name: string): T {
-  if (val == null) throw new Error(\`\${name} is required\`);
-  return val;
-}
-` }),
-          inputTokens: 1050,
-          outputTokens: 120,
-          cost: 0,
-          durationMs: 0,
-        },
-        {
-          index: 6,
-          timestamp: new Date('2026-03-17T06:41:02.000Z'),
-          type: 'tool_result' as const,
-          content: '',
-          toolOutput: JSON.stringify({ ok: true, path: 'src/utils/validate.ts', message: '文件写入成功，共 312 字节。' }),
-          inputTokens: 0,
-          outputTokens: 0,
-          cost: 0,
-          durationMs: 0,
-        },
-        {
-          index: 7,
-          timestamp: new Date('2026-03-17T06:41:45.000Z'),
+          timestamp: new Date('2026-03-17T06:41:08.000Z'),
           type: 'response' as const,
           model: 'gpt-4o-mini',
           content: `这段代码在大列表上慢，主要来自 **三类性能瓶颈**：
@@ -308,6 +271,7 @@ export function assertDefined<T>(val: T | undefined | null, name: string): T {
 
 \`\`\`python
 from collections import Counter
+
 
 def find_duplicates(items):
     count = Counter(items)
@@ -333,14 +297,13 @@ def find_duplicates_set(items):
     return list(dup)
 \`\`\`
 
-上面第二种平均 **O(n)** 时间、**O(n)** 额外空间。若你需要与原版完全一致的「第一次两两相等即收录」语义，告诉我业务规则我可以把版本收紧到逐行等价。
-
-另外已顺手生成了 \`src/utils/validate.ts\`，包含 \`isNonEmptyString\`、\`isPositiveNumber\`、\`assertDefined\` 三个常用校验函数，可按需引入。`,
+上面第二种平均 **O(n)** 时间、**O(n)** 额外空间。若你需要与原版完全一致的「第一次两两相等即收录」语义，告诉我业务规则，我可以把版本收紧到逐行等价。`,
           inputTokens: 1120,
-          outputTokens: 420,
+          outputTokens: 390,
           cost: 0,
           durationMs: 0,
         },
+
       ];
     })(),
   }),
@@ -756,9 +719,9 @@ export function List() {
         type: 'thinking',
         model: 'gpt-4o-mini',
         content:
-          '典型原因：items 初始为 undefined，首屏 render 在 fetch 完成前就执行 items.map。read_file 确认路径与依赖是否一致，再给出空数组默认值或可选链 + 加载态。',
-        inputTokens: 380,
-        outputTokens: 98,
+          '典型原因：items 初始为 undefined，首屏 render 在 fetch 完成前就执行 items.map。先尝试 read_file 对上项目里的真实路径；如果连续读不到，再退回用户贴的代码做判断。',
+        inputTokens: 410,
+        outputTokens: 112,
         cost: 0,
         durationMs: 0,
       },
@@ -770,14 +733,90 @@ export function List() {
         content: '',
         toolName: 'read_file',
         toolInput: JSON.stringify({ path: 'src/components/List.tsx', offset: 0, limit: 200 }),
-        inputTokens: 500,
-        outputTokens: 62,
+        inputTokens: 540,
+        outputTokens: 68,
         cost: 0,
         durationMs: 0,
       },
       {
         index: 3,
         timestamp: new Date('2026-03-13T11:42:18.000Z'),
+        type: 'tool_result',
+        content: '',
+        toolOutput: 'ENOENT: no such file or directory, open "src/components/List.tsx"',
+        error: 'ENOENT: no such file or directory, open "src/components/List.tsx"',
+        isError: true,
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 4,
+        timestamp: new Date('2026-03-13T11:42:24.000Z'),
+        type: 'thinking',
+        model: 'gpt-4o-mini',
+        content:
+          '第一条路径读不到，可能在 app 子目录里；再试一次 app/src/components/List.tsx。如果还是失败，就别继续猜太多层目录了。',
+        inputTokens: 620,
+        outputTokens: 128,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 5,
+        timestamp: new Date('2026-03-13T11:42:31.000Z'),
+        type: 'tool_call',
+        model: 'gpt-4o-mini',
+        content: '',
+        toolName: 'read_file',
+        toolInput: JSON.stringify({ path: 'app/src/components/List.tsx', offset: 0, limit: 200 }),
+        inputTokens: 690,
+        outputTokens: 70,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 6,
+        timestamp: new Date('2026-03-13T11:42:38.000Z'),
+        type: 'tool_result',
+        content: '',
+        toolOutput: 'ENOENT: no such file or directory, open "app/src/components/List.tsx"',
+        error: 'ENOENT: no such file or directory, open "app/src/components/List.tsx"',
+        isError: true,
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 7,
+        timestamp: new Date('2026-03-13T11:42:45.000Z'),
+        type: 'thinking',
+        model: 'gpt-4o-mini',
+        content:
+          '已经连续两次读文件失败，最后只再试一次 frontend/src/components/List.tsx；不管成不成功，都直接回到用户贴的组件代码给修法，避免继续空转。',
+        inputTokens: 760,
+        outputTokens: 150,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 8,
+        timestamp: new Date('2026-03-13T11:42:54.000Z'),
+        type: 'tool_call',
+        model: 'gpt-4o-mini',
+        content: '',
+        toolName: 'read_file',
+        toolInput: JSON.stringify({ path: 'frontend/src/components/List.tsx', offset: 0, limit: 200 }),
+        inputTokens: 730,
+        outputTokens: 72,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 9,
+        timestamp: new Date('2026-03-13T11:43:02.000Z'),
         type: 'tool_result',
         content: '',
         toolOutput: `import { useEffect, useState } from "react";
@@ -805,58 +844,8 @@ export function List() {
         durationMs: 0,
       },
       {
-        index: 4,
-        timestamp: new Date('2026-03-13T11:42:32.000Z'),
-        type: 'thinking',
-        model: 'gpt-4o-mini',
-        content:
-          '确认问题不在 useEffect 依赖而在首屏：`useState(undefined)` 导致第一次 render 时 items 为 undefined。修复：① 初值改为 []；② 或渲染用 items?.map；③ 加分支加载/错误态。推荐①+简单加载 flag。',
-        inputTokens: 780,
-        outputTokens: 165,
-        cost: 0,
-        durationMs: 0,
-      },
-      {
-        index: 5,
-        timestamp: new Date('2026-03-13T11:42:48.000Z'),
-        type: 'tool_call',
-        model: 'gpt-4o-mini',
-        content: '',
-        toolName: 'shell',
-        toolInput: 'npm test -- --run',
-        inputTokens: 820,
-        outputTokens: 55,
-        cost: 0,
-        durationMs: 0,
-      },
-      {
-        index: 6,
-        timestamp: new Date('2026-03-13T11:43:05.000Z'),
-        type: 'tool_result',
-        content: '',
-        toolOutput: `> react-app@0.1.0 test
-> vitest --run
-
- RUN  v1.6.0
-
- ✓ src/components/List.test.tsx (2 tests) 312ms
-   ✓ renders loading state initially
-   ✗ renders items after fetch
-
- FAIL  src/components/List.test.tsx > renders items after fetch
-TypeError: Cannot read properties of undefined (reading 'map')
-    at List (src/components/List.tsx:14:12)
-
-Test Files  1 failed (1)
-Tests       1 failed | 1 passed (2)`,
-        inputTokens: 0,
-        outputTokens: 0,
-        cost: 0,
-        durationMs: 0,
-      },
-      {
-        index: 7,
-        timestamp: new Date('2026-03-13T11:43:18.000Z'),
+        index: 10,
+        timestamp: new Date('2026-03-13T11:43:16.000Z'),
         type: 'response',
         model: 'gpt-4o-mini',
         content: `## 原因
@@ -878,7 +867,7 @@ const [items, setItems] = useState<string[]>([]);
 
 ## 可选写法
 
-若短期不想改类型，也可用可选链（仍会渲染空列表，体验略弱）：
+若短期不想改类型，也可用可选链：
 
 \`\`\`tsx
 {(items ?? []).map((x) => (
@@ -889,8 +878,8 @@ const [items, setItems] = useState<string[]>([]);
 ## 额外建议
 
 确认 \`/api/items\` 返回的是 **数组**；若返回 \`{ data: [...] }\`，需要在 \`.then\` 里取对字段再 \`setItems\`，否则后续会变成「map 不是函数」类错误。`,
-        inputTokens: 980,
-        outputTokens: 380,
+        inputTokens: 1_020,
+        outputTokens: 360,
         cost: 0,
         durationMs: 0,
       },
@@ -1024,7 +1013,7 @@ const [items, setItems] = useState<string[]>([]);
     ],
   }),
 
-  /* 8 — 求职邮件（email-helper / qwen-max）总时长约 28s */
+  /* 8 — 求职邮件（email-helper / claude-sonnet-4.6）总时长约 28s */
   finalizeReplay({
     meta: {
       id: encodeURIComponent('demo/email-helper'),
@@ -1047,7 +1036,7 @@ const [items, setItems] = useState<string[]>([]);
         index: 1,
         timestamp: new Date('2026-03-16T07:50:06.000Z'),
         type: 'thinking',
-        model: 'claude-3.5-sonnet',
+        model: 'claude-sonnet-4.6',
         content:
           '了解了，需要突出 React/TypeScript、工程化与业务落地；结构：主题行、称呼、自我介绍、与岗位匹配的三点、作品集/简历、收尾与联系方式；避免夸大，用可核实表述。',
         inputTokens: 260,
@@ -1059,7 +1048,7 @@ const [items, setItems] = useState<string[]>([]);
         index: 2,
         timestamp: new Date('2026-03-16T07:50:28.000Z'),
         type: 'response',
-        model: 'claude-3.5-sonnet',
+        model: 'claude-sonnet-4.6',
         content: `**邮件主题**：应聘前端工程师—张三—4年React/TypeScript经验
 
 尊敬的招聘负责人：
@@ -1081,7 +1070,7 @@ const [items, setItems] = useState<string[]>([]);
 张三  
 手机：138-xxxx-xxxx  
 邮箱：zhangsan@example.com  
-日期：2026 年 3 月 24 日`,
+日期：2026 年 3 月 16 日`,
         inputTokens: 420,
         outputTokens: 380,
         cost: 0,

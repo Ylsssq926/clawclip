@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ExternalLink } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -15,6 +16,7 @@ import { cn } from '../lib/cn'
 import { apiGet, apiPost, parseApiErrorMessage } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { formatDuration } from '../lib/formatSession'
+import type { Tab } from '../App'
 import type { SessionMeta } from '../types/session'
 
 interface CompareSession {
@@ -96,7 +98,13 @@ function MetricBar({
   )
 }
 
-export default function Compare() {
+interface CompareProps {
+  onNavigate?: (tab: Tab) => void
+  onOpenReplaySession?: (id: string) => void
+}
+
+export default function Compare({ onOpenReplaySession }: CompareProps) {
+
   const { t, locale } = useI18n()
   const [slots, setSlots] = useState<string[]>(['', ''])
   const [loading, setLoading] = useState(false)
@@ -540,9 +548,22 @@ export default function Compare() {
                       <th className="text-left py-3 px-4 text-slate-500 font-medium w-40">{t('compare.col.metric')}</th>
                       {sessions.map((s, i) => (
                         <th key={s.id + String(i)} className="text-left py-3 px-4 text-slate-500 font-medium min-w-[140px]">
-                          <span className="line-clamp-2" title={s.id}>
-                            {s.label || s.id}
-                          </span>
+                          <div className="flex items-start gap-1.5">
+                            <span className="line-clamp-2 min-w-0 flex-1" title={s.id}>
+                              {s.label || s.id}
+                            </span>
+                            {s.id && onOpenReplaySession && (
+                              <button
+                                type="button"
+                                onClick={() => onOpenReplaySession(s.id)}
+                                className="inline-flex shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+                                title={locale === 'zh' ? '打开回放' : 'Open replay'}
+                                aria-label={locale === 'zh' ? '打开回放' : 'Open replay'}
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </th>
                       ))}
                     </tr>

@@ -321,7 +321,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                   className={cn(
                     'space-y-1',
                     group.tone === 'overview' && 'rounded-2xl bg-white/55 p-1.5',
-                    group.tone === 'primary' && 'rounded-[26px] border border-[#3b82c4]/12 bg-white p-2 shadow-sm shadow-slate-200/60',
+                    group.tone === 'primary' && 'rounded-2xl border border-slate-200/60 bg-white p-2',
                     group.tone === 'secondary' && 'rounded-2xl border border-slate-200/60 bg-slate-50/55 p-2',
                     isToolGroup && isCollapsed && 'bg-transparent shadow-none',
                   )}
@@ -349,7 +349,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                     <p
                       className={cn(
                         'px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em]',
-                        group.tone === 'primary' && 'text-[#3b82c4]',
+                        group.tone === 'primary' && 'text-slate-500',
                         group.tone === 'overview' && 'text-slate-400',
                       )}
                     >
@@ -432,13 +432,14 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                     <Replay
                       initialSessionId={replayInitialSessionId}
                       onInitialSessionHandled={clearReplayInitialSession}
+                      onNavigate={navigateTab}
                     />
                   )}
                   {activeTab === 'benchmark' && <Benchmark onNavigate={navigateTab} />}
                   {activeTab === 'leaderboard' && <Leaderboard />}
-                  {activeTab === 'cost' && <CostMonitor onOpenReplaySession={openReplaySession} />}
+                  {activeTab === 'cost' && <CostMonitor onNavigate={navigateTab} onOpenReplaySession={openReplaySession} />}
                   {activeTab === 'prompt' && <PromptInsight onOpenReplaySession={openReplaySession} />}
-                  {activeTab === 'compare' && <Compare />}
+                  {activeTab === 'compare' && <Compare onNavigate={navigateTab} onOpenReplaySession={openReplaySession} />}
                   {activeTab === 'skills' && <SkillManager />}
                   {activeTab === 'templates' && <TemplateMarket />}
                   {activeTab === 'knowledge' && (

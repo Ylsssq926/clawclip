@@ -4,9 +4,9 @@
 
 # ClawClip 🍤
 
-**Cut your OpenClaw / ZeroClaw token bill. Find which model actually earns its cost. Keep the changes that make your agent stronger.**
+**Your agent's burning tokens on retry loops, bloated prompts, and expensive models doing lightweight work. ClawClip shows you where — so you can cut the waste and keep what actually makes it stronger.**
 
-Local · No upload · Works with your existing logs
+Runs locally · Reads your existing logs · No upload
 
 <p>
   <a href="https://clawclip.luelan.online">Live Demo</a> ·
@@ -34,9 +34,9 @@ Local · No upload · Works with your existing logs
 
 ---
 
-**If you run OpenClaw or ZeroClaw, you already know the problem:** token costs compound silently, retries burn budget without warning, and after every model swap or prompt change you're left guessing whether it actually helped.
+**You're running OpenClaw or ZeroClaw. Token costs keep climbing. You swap models, tweak prompts, and hope it helped — but you're never sure.**
 
-ClawClip gives you the answer. It reads your local session logs, replays each run step by step, scores the result, and breaks down exactly where the money went — so you can cut waste, pick the right model for each task, and only keep the changes that genuinely make your agent stronger.
+ClawClip ends the guessing. It reads your session logs, replays what actually happened, scores the result, and shows you exactly where the money went. Cut the waste. Pick models that earn their cost. Keep only the changes that make your agent genuinely stronger.
 
 <a id="visual-proof"></a>
 
@@ -51,24 +51,24 @@ ClawClip gives you the answer. It reads your local session logs, replays each ru
 ## What it does
 
 ### Find where tokens are being wasted
-ClawClip scans your sessions for retry loops, bloated prompts, verbose outputs, and expensive models doing lightweight work. It surfaces the patterns that quietly inflate your bill — and tells you which ones to fix first.
+Retry loops. Bloated prompts. Verbose outputs. Expensive models doing lightweight work. ClawClip finds the patterns quietly inflating your bill — and tells you which ones to fix first.
 
-### Compare models and agent configs side by side
-Run the same task with different models or prompts, then compare them directly: which one scored higher, which one cost less, which one actually improved. No more guessing after a model swap.
+### Compare models and configs side by side
+Run the same task with different models or prompts. Compare them directly: which scored higher, which cost less, which actually improved. No more guessing after a swap.
 
 ### Prove whether an optimization worked
-Every benchmark run is saved. After a change, you get a before/after comparison — score, token count, cost — with a plain verdict: better, worse, or no real difference. If the score went up but the bill went up more, you'll see that too.
+Every benchmark run is saved. After a change, you get before/after proof: score, tokens, cost. Plain verdict: better, worse, or no real difference. If the score went up but the bill went up more, you'll see that too.
 
-### Replay any run like a conversation
-Step through what your agent actually did: every tool call, retry, reasoning block, and response, in order. Find the exact step where it went sideways without digging through raw JSONL.
+### Replay any run step by step
+See what your agent actually did: every tool call, retry, reasoning block, and response, in order. Find where it went sideways without digging through raw JSONL.
 
 ---
 
 ## The three questions it answers
 
-| What you want to know | What ClawClip shows you |
+| What you actually want to know | What ClawClip shows you |
 | --- | --- |
-| **Where is my token budget going?** | **Cost Report** breaks spend by model, task type, and session — with waste signals and savings suggestions |
+| **Where's my token budget going?** | **Cost Report** breaks spend by model, task, and session — with waste signals and savings suggestions |
 | **Is my agent actually getting better?** | **Agent Scorecard** gives a six-dimension verdict after each run, with before/after proof when you make a change |
 | **What exactly happened in that run?** | **Run Insights** replays every step so you can find the problem without reading raw logs |
 
@@ -90,9 +90,9 @@ Step through what your agent actually did: every tool call, retry, reasoning blo
 
 ## What stays on your machine
 
-- Session discovery, parsing, and all analysis run locally.
-- ClawClip does **not** upload your agent run data.
-- Pricing refresh is optional — it only updates cost reference numbers, never sends session content.
+- Session discovery, parsing, and all analysis run locally
+- ClawClip does **not** upload your agent run data
+- Pricing refresh is optional — it only updates cost reference numbers, never sends session content
 
 <a id="quick-start"></a>
 

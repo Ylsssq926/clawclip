@@ -82,6 +82,23 @@ function finiteNumber(v: unknown): number | undefined {
   return undefined;
 }
 
+/** 字段别名映射：支持不同版本的字段名 */
+const FIELD_ALIASES: Record<string, string[]> = {
+  contextTokens: ['context_tokens', 'contextTokens'],
+  totalTokens: ['total_tokens', 'totalTokens'],
+  inputTokens: ['input_tokens', 'inputTokens'],
+  outputTokens: ['output_tokens', 'outputTokens'],
+};
+
+/** 版本感知字段读取：按别名列表依次尝试 */
+function readField(obj: Record<string, unknown>, key: string): unknown {
+  const aliases = FIELD_ALIASES[key] ?? [key];
+  for (const alias of aliases) {
+    if (obj[alias] !== undefined) return obj[alias];
+  }
+  return undefined;
+}
+
 function storeModelFromEntry(e: Record<string, unknown>): string {
   const m = e.model ?? e.modelOverride;
   if (typeof m === 'string' && m.trim()) return m.trim();
@@ -125,9 +142,9 @@ export function enrichSessionMetaFromStore(
   const u = updatedAtMs(e);
   if (u != null) meta.storeUpdatedAt = u;
 
-  const ctx = finiteNumber(e.contextTokens);
+  const ctx = finiteNumber(readField(e, 'contextTokens'));
   if (ctx != null) meta.storeContextTokens = ctx;
-  const tt = finiteNumber(e.totalTokens);
+  const tt = finiteNumber(readField(e, 'totalTokens'));
   if (tt != null) meta.storeTotalTokens = tt;
   const sm = storeModelFromEntry(e);
   if (sm) meta.storeModel = sm;

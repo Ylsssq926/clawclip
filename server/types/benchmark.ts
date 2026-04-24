@@ -7,7 +7,8 @@ export type BenchmarkDimension =
   | 'toolUse'
   | 'search'
   | 'safety'
-  | 'costEfficiency';
+  | 'costEfficiency'
+  | 'reliability';
 
 export interface DimensionScore {
   dimension: BenchmarkDimension;
@@ -49,6 +50,7 @@ export const DIMENSION_LABELS: Record<BenchmarkDimension, string> = {
   search: '信息检索',
   safety: '安全合规',
   costEfficiency: '性价比',
+  reliability: '可靠性',
 };
 
 export const DIMENSION_LABELS_EN: Record<BenchmarkDimension, string> = {
@@ -58,4 +60,5 @@ export const DIMENSION_LABELS_EN: Record<BenchmarkDimension, string> = {
   search: 'Retrieval',
   safety: 'Safety',
   costEfficiency: 'Cost Efficiency',
+  reliability: 'Reliability',
 };

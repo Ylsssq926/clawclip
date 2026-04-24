@@ -19,6 +19,7 @@ interface BenchmarkProofResponse {
   latest: BenchmarkResult;
   previous: BenchmarkResult | null;
   deltas: BenchmarkProofDeltas | null;
+  sampleComparison?: boolean;
   verdictZh?: string;
   verdictEn?: string;
 }
@@ -65,9 +66,18 @@ function resolveBenchmarkFreshness(latest: BenchmarkResult | null): {
   };
 }
 
+function roundDelta(value: number, digits = 6): number {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
 function resolveDeltaPct(current: number, previous: number): number | undefined {
   if (!Number.isFinite(previous) || previous === 0) return undefined;
   return Number((((current - previous) / previous) * 100).toFixed(1));
+}
+
+function isDemoComparison(latest: BenchmarkResult, previous: BenchmarkResult | null): boolean {
+  return latest.dataSource === 'demo' || previous?.dataSource === 'demo';
 }
 
 function resolveProofVerdict(scoreDelta: number, costDelta: number): { zh: string; en: string } {
@@ -128,10 +138,21 @@ function buildBenchmarkProof(latest: BenchmarkResult, previous: BenchmarkResult 
     };
   }
 
+  if (isDemoComparison(latest, previous)) {
+    return {
+      latest,
+      previous: null,
+      deltas: null,
+      sampleComparison: true,
+      verdictZh: '当前展示的是内置 demo 样本，只用于示例说明，不提供会误导前端的真实前后对比 delta。',
+      verdictEn: 'This is built-in demo data for illustration only, so no real before/after deltas are returned.',
+    };
+  }
+
   const deltas: BenchmarkProofDeltas = {
-    score: latest.overallScore - previous.overallScore,
-    tokens: latest.totalTokens - previous.totalTokens,
-    cost: latest.totalCost - previous.totalCost,
+    score: roundDelta(latest.overallScore - previous.overallScore),
+    tokens: roundDelta(latest.totalTokens - previous.totalTokens),
+    cost: roundDelta(latest.totalCost - previous.totalCost),
     tokensPct: resolveDeltaPct(latest.totalTokens, previous.totalTokens),
     costPct: resolveDeltaPct(latest.totalCost, previous.totalCost),
   };

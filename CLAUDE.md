@@ -9,5 +9,5 @@
 @./.claude/rules/shared/02-runtime-and-operations.md
 @./.claude/rules/shared/03-subagents-and-quality.md
 @./.claude/rules/shared/04-brand-and-admin.md
-@./.claude/rules/shared/05-governance-and-exclusions.md
+@./.claude/rules/shared/05-workflow-and-governance.md
 @./.claude/rules/project/01-project-local.md

@@ -30,6 +30,8 @@ interface SessionProfile {
   replay: SessionReplay;
   sessionId: string;
   sessionLabel: string;
+  userChars: number;
+  responseChars: number;
   outputInputRatio: number;
   avgOutputLength: number;
   responseCount: number;
@@ -94,6 +96,34 @@ function findExpensiveModel(models: string[]): string | undefined {
   });
 }
 
+function isToolResultError(step: SessionStep): boolean {
+  if (step.type !== 'tool_result') return false;
+  const haystack = `${step.error ?? ''}\n${step.toolOutput ?? ''}\n${step.content ?? ''}`;
+  return step.isError === true || Boolean(step.error) || /(error|enoent|timeout|failed|exception|denied|not found)/i.test(haystack);
+}
+
+function sortDiagnostics(diagnostics: TokenWasteDiagnostic[]): TokenWasteDiagnostic[] {
+  return diagnostics.sort((a, b) => b.estimatedWasteCost - a.estimatedWasteCost || b.estimatedWasteTokens - a.estimatedWasteTokens);
+}
+
+function mergeDemoDiagnostics(primary: TokenWasteDiagnostic[], fallback: TokenWasteDiagnostic[]): TokenWasteDiagnostic[] {
+  const merged = new Map<string, TokenWasteDiagnostic>();
+
+  for (const diagnostic of primary) {
+    const key = `${diagnostic.type}|${diagnostic.sessionId ?? ''}|${diagnostic.sessionLabel ?? ''}`;
+    merged.set(key, diagnostic);
+  }
+
+  for (const diagnostic of fallback) {
+    const key = `${diagnostic.type}|${diagnostic.sessionId ?? ''}|${diagnostic.sessionLabel ?? ''}`;
+    if (!merged.has(key)) {
+      merged.set(key, diagnostic);
+    }
+  }
+
+  return sortDiagnostics(Array.from(merged.values()));
+}
+
 function buildProfile(replay: SessionReplay): SessionProfile {
   let userChars = 0;
   let responseChars = 0;
@@ -134,6 +164,8 @@ function buildProfile(replay: SessionReplay): SessionProfile {
     replay,
     sessionId: replay.meta.id,
     sessionLabel: getSessionLabel(replay),
+    userChars,
+    responseChars,
     outputInputRatio: userChars > 0 ? +(responseChars / userChars).toFixed(2) : 0,
     avgOutputLength: responseCount > 0 ? Math.round(responseChars / responseCount) : 0,
     responseCount,
@@ -172,10 +204,17 @@ function detectRetryLoops(replays: SessionReplay[]): TokenWasteDiagnostic[] {
 
       const repeatedCalls: SessionStep[] = [current];
       let lastMatchedIndex = i;
+      let failureCount = 0;
 
       for (let j = i + 1; j < steps.length; j += 1) {
         const step = steps[j];
         if (step.type === 'user' || step.type === 'response') break;
+
+        if (isToolResultError(step)) {
+          failureCount += 1;
+          continue;
+        }
+
         if (step.type !== 'tool_call') continue;
         if (step.toolName !== current.toolName) break;
         repeatedCalls.push(step);
@@ -183,15 +222,24 @@ function detectRetryLoops(replays: SessionReplay[]): TokenWasteDiagnostic[] {
       }
 
       if (repeatedCalls.length >= 3) {
-        const estimatedWasteTokens = repeatedCalls.reduce((sum, step) => sum + step.inputTokens + step.outputTokens, 0);
-        const estimatedWasteCost = repeatedCalls.reduce((sum, step) => sum + step.cost, 0);
+        const retryWindow = steps.slice(i, lastMatchedIndex + 1).filter(step => step.type !== 'user' && step.type !== 'response');
+        const estimatedWasteTokens = retryWindow.reduce((sum, step) => sum + step.inputTokens + step.outputTokens, 0);
+        const estimatedWasteCost = retryWindow.reduce((sum, step) => sum + step.cost, 0);
+        const descZh =
+          failureCount > 0
+            ? `同一工具 “${current.toolName}” 在 ${failureCount} 次失败结果后仍连续重试了 ${repeatedCalls.length} 次，像是在失败后原地打转。`
+            : `同一工具 “${current.toolName}” 在没有新用户输入的情况下重复调用了 ${repeatedCalls.length} 次，像是在原地重试。`;
+        const descEn =
+          failureCount > 0
+            ? `Tool "${current.toolName}" was retried ${repeatedCalls.length} times after ${failureCount} failed result(s), which looks like a loop after failure.`
+            : `Tool "${current.toolName}" was called ${repeatedCalls.length} times without new user input, which looks like a retry loop.`;
         diagnostics.push(
           makeDiagnostic({
             type: 'retry-loop',
             titleZh: '工具重试循环',
             titleEn: 'Tool retry loop',
-            descZh: `同一工具 “${current.toolName}” 在没有新用户输入的情况下重复调用了 ${repeatedCalls.length} 次，像是在原地重试。`,
-            descEn: `Tool "${current.toolName}" was called ${repeatedCalls.length} times without new user input, which looks like a retry loop.`,
+            descZh,
+            descEn,
             estimatedWasteTokens,
             estimatedWasteCost,
             sessionId: replay.meta.id,
@@ -300,18 +348,20 @@ function detectDemoFallbackDiagnostics(profiles: SessionProfile[]): TokenWasteDi
   const diagnostics: TokenWasteDiagnostic[] = [];
 
   for (const profile of profiles) {
-    if (profile.longPromptCount > 0 && profile.outputInputRatio < 1.5) {
+    const effectivePromptChars = profile.longPromptChars > 0 ? profile.longPromptChars : profile.userChars;
+
+    if (effectivePromptChars >= 320 && profile.outputInputRatio < 1.6) {
       const estimatedWasteTokens = Math.min(
         profile.replay.meta.totalTokens,
-        Math.round(profile.longPromptChars * Math.max(0.6, 1.6 - profile.outputInputRatio)),
+        Math.round(effectivePromptChars * Math.max(0.5, 1.6 - profile.outputInputRatio)),
       );
       diagnostics.push(
         makeDiagnostic({
           type: 'long-prompt',
           titleZh: '长 Prompt 低产出',
           titleEn: 'Long prompt, weak payoff',
-          descZh: `本会话出现超长用户输入，且输出/输入比只有 ${profile.outputInputRatio}，已经能看到明显的低产出倾向。`,
-          descEn: `This session contains a very long user prompt and the output/input ratio is only ${profile.outputInputRatio}, which already shows a weak payoff pattern.`,
+          descZh: `本会话输入已经偏长（约 ${effectivePromptChars} 字符），但输出/输入比只有 ${profile.outputInputRatio}，在 demo 样本里已经能看出明显的低产出倾向。`,
+          descEn: `This session already has a fairly long prompt (~${effectivePromptChars} chars) while the output/input ratio is only ${profile.outputInputRatio}, which is enough to show a weak payoff pattern in demo data.`,
           estimatedWasteTokens,
           estimatedWasteCost: estimateCostFromTokens(profile.replay, estimatedWasteTokens),
           sessionId: profile.sessionId,
@@ -320,11 +370,11 @@ function detectDemoFallbackDiagnostics(profiles: SessionProfile[]): TokenWasteDi
       );
     }
 
-    if (profile.avgOutputLength > 550 && profile.outputInputRatio > 7) {
+    if (profile.avgOutputLength > 550 && profile.outputInputRatio > 5) {
       const estimatedWasteTokens = Math.min(
         profile.replay.meta.totalTokens,
         Math.round(
-          Math.max(0, profile.avgOutputLength - 550) * Math.max(profile.responseCount, 1) * Math.min(1.4, profile.outputInputRatio / 7),
+          Math.max(0, profile.avgOutputLength - 550) * Math.max(profile.responseCount, 1) * Math.min(1.5, profile.outputInputRatio / 5),
         ),
       );
       diagnostics.push(
@@ -332,8 +382,28 @@ function detectDemoFallbackDiagnostics(profiles: SessionProfile[]): TokenWasteDi
           type: 'verbose-output',
           titleZh: '输出明显过长',
           titleEn: 'Overly verbose output',
-          descZh: `本会话回复平均长度约 ${profile.avgOutputLength} 字符，输出/输入比达到 ${profile.outputInputRatio}，已经出现“回答比需求更长”的迹象。`,
-          descEn: `Average response length is about ${profile.avgOutputLength} chars while the output/input ratio reaches ${profile.outputInputRatio}. The answer is already noticeably longer than the request needs.`,
+          descZh: `本会话回复平均长度约 ${profile.avgOutputLength} 字符，输出/输入比达到 ${profile.outputInputRatio}，在 demo 模式下已经足够说明回答偏长。`,
+          descEn: `Average response length is about ${profile.avgOutputLength} chars and the output/input ratio reaches ${profile.outputInputRatio}; that is already enough to flag verbose answers in demo mode.`,
+          estimatedWasteTokens,
+          estimatedWasteCost: estimateCostFromTokens(profile.replay, estimatedWasteTokens),
+          sessionId: profile.sessionId,
+          sessionLabel: profile.sessionLabel,
+        }),
+      );
+    }
+
+    if (profile.replay.meta.stepCount >= 3 && profile.avgTokensPerStep > 700) {
+      const estimatedWasteTokens = Math.min(
+        profile.replay.meta.totalTokens,
+        Math.round((profile.avgTokensPerStep - 700) * profile.replay.meta.stepCount),
+      );
+      diagnostics.push(
+        makeDiagnostic({
+          type: 'context-bloat',
+          titleZh: '上下文膨胀',
+          titleEn: 'Context bloat',
+          descZh: `本会话虽然轮次不多，但平均每步已经约 ${Math.round(profile.avgTokensPerStep)} tokens，说明 demo 样本里的上下文负担已经偏重。`,
+          descEn: `This session is not very long, but it already averages about ${Math.round(profile.avgTokensPerStep)} tokens per step, which is enough to show context drag in demo data.`,
           estimatedWasteTokens,
           estimatedWasteCost: estimateCostFromTokens(profile.replay, estimatedWasteTokens),
           sessionId: profile.sessionId,
@@ -355,21 +425,27 @@ export class TokenWasteAnalyzer {
     const replays = filterByDays(sourceReplays, days, referenceNow);
     const profiles = replays.map(buildProfile);
 
-    let allDiagnostics = [
-      ...detectRetryLoops(replays),
-      ...detectLongPrompts(profiles),
-      ...detectVerboseOutputs(profiles),
-      ...detectExpensiveModels(profiles),
-      ...detectContextBloat(profiles),
-    ]
-      .filter(diagnostic => diagnostic.estimatedWasteTokens > 0 || diagnostic.estimatedWasteCost > 0)
-      .sort((a, b) => b.estimatedWasteCost - a.estimatedWasteCost || b.estimatedWasteTokens - a.estimatedWasteTokens);
+    const primaryDiagnostics = sortDiagnostics(
+      [
+        ...detectRetryLoops(replays),
+        ...detectLongPrompts(profiles),
+        ...detectVerboseOutputs(profiles),
+        ...detectExpensiveModels(profiles),
+        ...detectContextBloat(profiles),
+      ].filter(diagnostic => diagnostic.estimatedWasteTokens > 0 || diagnostic.estimatedWasteCost > 0),
+    );
 
-    if (usingDemo && allDiagnostics.length === 0) {
-      allDiagnostics = detectDemoFallbackDiagnostics(profiles)
-        .filter(diagnostic => diagnostic.estimatedWasteTokens > 0 || diagnostic.estimatedWasteCost > 0)
-        .sort((a, b) => b.estimatedWasteCost - a.estimatedWasteCost || b.estimatedWasteTokens - a.estimatedWasteTokens);
-    }
+    const fallbackDiagnostics = usingDemo
+      ? sortDiagnostics(
+          detectDemoFallbackDiagnostics(profiles).filter(
+            diagnostic => diagnostic.estimatedWasteTokens > 0 || diagnostic.estimatedWasteCost > 0,
+          ),
+        )
+      : [];
+
+    const allDiagnostics = usingDemo
+      ? mergeDemoDiagnostics(primaryDiagnostics, fallbackDiagnostics)
+      : primaryDiagnostics;
 
     const diagnostics = allDiagnostics.slice(0, DIAGNOSTIC_LIMIT);
     const estimatedWasteTokens = allDiagnostics.reduce((sum, diagnostic) => sum + diagnostic.estimatedWasteTokens, 0);

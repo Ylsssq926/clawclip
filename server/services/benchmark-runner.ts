@@ -19,12 +19,13 @@ function historyPath(): string {
 }
 
 const DEFAULT_WEIGHTS: Record<BenchmarkDimension, number> = {
-  writing: 0.2,
-  coding: 0.15,
-  toolUse: 0.2,
-  search: 0.15,
-  safety: 0.15,
-  costEfficiency: 0.15,
+  writing: 0.18,
+  coding: 0.13,
+  toolUse: 0.18,
+  search: 0.13,
+  safety: 0.13,
+  costEfficiency: 0.13,
+  reliability: 0.12,
 };
 
 /**
@@ -496,6 +497,130 @@ function scoreCostEfficiency(replays: SessionReplay[]): DimensionScore {
   };
 }
 
+function findNearestToolResultIndex(
+  steps: SessionStep[],
+  callIndex: number,
+  consumedToolResults: Set<number>,
+  expectedToolCallId?: string,
+): number | null {
+  for (let i = callIndex + 1; i < steps.length; i += 1) {
+    const step = steps[i];
+    if (step.type !== 'tool_result' || consumedToolResults.has(i)) continue;
+    if (expectedToolCallId && step.toolCallId && step.toolCallId !== expectedToolCallId) continue;
+    return i;
+  }
+  return null;
+}
+
+function findPairedToolResultIndex(
+  steps: SessionStep[],
+  callIndex: number,
+  consumedToolResults: Set<number>,
+): number | null {
+  const toolCallId = steps[callIndex]?.toolCallId;
+
+  if (toolCallId) {
+    for (let i = callIndex + 1; i < steps.length; i += 1) {
+      const step = steps[i];
+      if (step.type !== 'tool_result' || consumedToolResults.has(i)) continue;
+      if (step.toolCallId === toolCallId) return i;
+    }
+  }
+
+  return findNearestToolResultIndex(steps, callIndex, consumedToolResults, toolCallId);
+}
+
+function scoreReliability(replays: SessionReplay[]): DimensionScore {
+  let totalToolCalls = 0;
+  let failedToolCalls = 0;
+  let totalSteps = 0;
+  let retryLoops = 0;
+  let errorSteps = 0;
+  let recoveredErrors = 0;
+
+  for (const r of replays) {
+    const steps = r.steps;
+    const consumedToolResults = new Set<number>();
+    totalSteps += steps.length;
+
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+
+      // 统计工具调用失败
+      if (s.type === 'tool_call') {
+        totalToolCalls += 1;
+        const pairedToolResultIndex = findPairedToolResultIndex(steps, i, consumedToolResults);
+        if (pairedToolResultIndex == null) {
+          failedToolCalls += 1;
+        } else {
+          consumedToolResults.add(pairedToolResultIndex);
+        }
+      }
+
+      // 统计错误步骤
+      if (s.isError || s.error) {
+        errorSteps += 1;
+        // 检查后续是否有恢复（后续有正常的 response 或 tool_call）
+        for (let j = i + 1; j < Math.min(i + 4, steps.length); j++) {
+          const nextStep = steps[j];
+          if (nextStep.type === 'response' || nextStep.type === 'tool_call') {
+            recoveredErrors += 1;
+            break;
+          }
+        }
+      }
+
+      // 检测重试循环：连续的相似工具调用
+      if (s.type === 'tool_call' && i > 0) {
+        const prev = steps[i - 1];
+        if (prev.type === 'tool_call' && prev.toolName === s.toolName) {
+          retryLoops += 1;
+        }
+      }
+    }
+  }
+
+  const failedRate = totalToolCalls > 0 ? failedToolCalls / totalToolCalls : 0;
+  const retryDensity = totalSteps > 0 ? retryLoops / totalSteps : 0;
+  const recoveryRate = errorSteps > 0 ? recoveredErrors / errorSteps : 1;
+
+  const evidence =
+    totalToolCalls === 0
+      ? '未检测到工具调用，可靠性维度按 60 分保守给分。'
+      : `${totalToolCalls} 次工具调用，失败率 ${Math.round(failedRate * 100)}%，错误恢复率 ${Math.round(recoveryRate * 100)}%`;
+  const evidenceEn =
+    totalToolCalls === 0
+      ? 'No tool calls detected, so reliability receives a conservative score of 60.'
+      : `${totalToolCalls} tool calls, ${Math.round(failedRate * 100)}% failure rate, ${Math.round(recoveryRate * 100)}% error recovery`;
+
+  let score =
+    totalToolCalls === 0
+      ? 60
+      : 100 - (failedRate * 40 + retryDensity * 40 + (1 - recoveryRate) * 20);
+  score = clamp(Math.round(score), 0, 100);
+
+  const details =
+    totalToolCalls === 0
+      ? '日志里没有足够的工具调用-结果链路样本，可靠性评分先按 60 分保守估计，不直接给满分。'
+      : `共 ${totalToolCalls} 次工具调用，约 ${Math.round(failedRate * 100)}% 未能正常衔接结果；检测到 ${retryLoops} 处重试循环；${errorSteps} 个错误步骤中约 ${Math.round(recoveryRate * 100)}% 成功恢复。`;
+
+  const detailsEn =
+    totalToolCalls === 0
+      ? 'There are not enough tool call/result traces in the logs, so reliability is conservatively set to 60 instead of a full score.'
+      : `${totalToolCalls} tool calls total, ~${Math.round(failedRate * 100)}% failed to pair with results; detected ${retryLoops} retry loops; ~${Math.round(recoveryRate * 100)}% of ${errorSteps} error steps recovered successfully.`;
+
+  return {
+    dimension: 'reliability',
+    label: DIMENSION_LABELS.reliability,
+    score,
+    maxScore: 100,
+    details,
+    detailsEn,
+    evidence,
+    evidenceEn,
+  };
+}
+
 function pickTopModel(replays: SessionReplay[]): string {
   const counts = new Map<string, number>();
   for (const r of replays) {
@@ -567,8 +692,9 @@ function computeFromReplays(
   const search = scoreSearch(replays);
   const safety = scoreSafety(replays);
   const costEfficiency = scoreCostEfficiency(replays);
+  const reliability = scoreReliability(replays);
 
-  const dimensions = [writing, coding, toolUse, search, safety, costEfficiency];
+  const dimensions = [writing, coding, toolUse, search, safety, costEfficiency, reliability];
   for (const d of dimensions) {
     d.labelEn = DIMENSION_LABELS_EN[d.dimension];
   }
@@ -633,59 +759,60 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
     se: number;
     sa: number;
     ce: number;
+    rel: number;
     summary: string;
     summaryEn: string;
     topModel: string;
     totalSessions: number;
     totalTokens: number;
     totalCost: number;
-    dimDetails: [string, string, string, string, string, string];
-    dimDetailsEn: [string, string, string, string, string, string];
+    dimDetails: [string, string, string, string, string, string, string];
+    dimDetailsEn: [string, string, string, string, string, string, string];
   }> = [
     {
       daysAgo: 60,
       index: 1,
       overallScore: 32,
       rank: 'D',
-      w: 25, c: 20, tu: 35, se: 30, sa: 45, ce: 38,
+      w: 25, c: 20, tu: 35, se: 30, sa: 45, ce: 38, rel: 40,
       summary: '初次接触，Agent 还不知道该干什么。',
       summaryEn: 'First contact — the Agent doesn\'t quite know what to do yet.',
       topModel: 'gpt-3.5-turbo',
       totalSessions: 3,
       totalTokens: 12_000,
       totalCost: 0.8,
-      dimDetails: ['写作刚起步', '几乎没有代码', '工具调用初探', '无检索行为', '基础安全', '成本偏高'],
-      dimDetailsEn: ['Writing just getting started', 'Almost no code', 'Tool calls in early exploration', 'No retrieval behavior', 'Basic safety', 'Cost on the high side'],
+      dimDetails: ['写作刚起步', '几乎没有代码', '工具调用初探', '无检索行为', '基础安全', '成本偏高', '工具失败较多'],
+      dimDetailsEn: ['Writing just getting started', 'Almost no code', 'Tool calls in early exploration', 'No retrieval behavior', 'Basic safety', 'Cost on the high side', 'Many tool failures'],
     },
     {
       daysAgo: 50,
       index: 2,
       overallScore: 40,
       rank: 'D',
-      w: 35, c: 28, tu: 42, se: 38, sa: 52, ce: 45,
+      w: 35, c: 28, tu: 42, se: 38, sa: 52, ce: 45, rel: 48,
       summary: '开始有模有样了，但各维度都还很弱。',
       summaryEn: 'Starting to take shape, but still weak across all dimensions.',
       topModel: 'gpt-3.5-turbo',
       totalSessions: 5,
       totalTokens: 25_000,
       totalCost: 1.5,
-      dimDetails: ['写作略有进步', '偶尔产出代码', '工具调用增多', '尝试引用来源', '安全意识萌芽', '成本控制一般'],
-      dimDetailsEn: ['Writing slightly improved', 'Occasional code output', 'More tool calls', 'Attempting source citations', 'Safety awareness emerging', 'Average cost control'],
+      dimDetails: ['写作略有进步', '偶尔产出代码', '工具调用增多', '尝试引用来源', '安全意识萌芽', '成本控制一般', '错误恢复在改善'],
+      dimDetailsEn: ['Writing slightly improved', 'Occasional code output', 'More tool calls', 'Attempting source citations', 'Safety awareness emerging', 'Average cost control', 'Error recovery improving'],
     },
     {
       daysAgo: 42,
       index: 3,
       overallScore: 48,
       rank: 'C',
-      w: 42, c: 35, tu: 50, se: 45, sa: 58, ce: 55,
+      w: 42, c: 35, tu: 50, se: 45, sa: 58, ce: 55, rel: 55,
       summary: '突破 D 段进入 C 段，开始找到感觉。',
       summaryEn: 'Broke through D-rank into C-rank — starting to find the groove.',
       topModel: 'gpt-4o-mini',
       totalSessions: 6,
       totalTokens: 35_000,
       totalCost: 2.0,
-      dimDetails: ['中文回复更流畅', '代码块开始出现', '工具链基本成型', '有检索痕迹', '安全表现稳定', '换模型省了钱'],
-      dimDetailsEn: ['Chinese replies more fluent', 'Code blocks appearing', 'Tool chain taking shape', 'Retrieval traces present', 'Stable safety performance', 'Model switch saved money'],
+      dimDetails: ['中文回复更流畅', '代码块开始出现', '工具链基本成型', '有检索痕迹', '安全表现稳定', '换模型省了钱', '工具调用更稳定'],
+      dimDetailsEn: ['Chinese replies more fluent', 'Code blocks appearing', 'Tool chain taking shape', 'Retrieval traces present', 'Stable safety performance', 'Model switch saved money', 'Tool calls more stable'],
     },
     {
       daysAgo: 30,
@@ -698,6 +825,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
       se: 48,
       sa: 65,
       ce: 60,
+      rel: 62,
       summary: '刚开始跑，还在适应中，各方面都比较生疏。',
       summaryEn: 'Just getting started — still adapting, rough around the edges in every dimension.',
       topModel: 'gpt-4o',
@@ -711,6 +839,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         '检索类工具与引用痕迹偏少。',
         '未发现明显红线指令，基础安全意识尚可。',
         '成本与模型选择还在试水，性价比一般。',
+        '工具失败率下降，重试循环减少。',
       ],
       dimDetailsEn: [
         'Just starting out — response length and Chinese ratio still being calibrated.',
@@ -719,6 +848,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         'Retrieval tools and citation traces are sparse.',
         'No obvious red-line commands detected; basic safety awareness is acceptable.',
         'Cost and model choices are still experimental; cost-efficiency is average.',
+        'Tool failure rate dropping, retry loops decreasing.',
       ],
     },
     {
@@ -732,6 +862,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
       se: 55,
       sa: 70,
       ce: 68,
+      rel: 70,
       summary: '有进步了！工具调用和安全性提升明显，但写作和代码还需要练。',
       summaryEn: 'Progress! Tool use and safety improved noticeably, but writing and coding still need work.',
       topModel: 'gpt-4o',
@@ -745,6 +876,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         '开始出现检索工具名或链接痕迹。',
         '安全扫描无异常，步数结构更健康。',
         '对便宜模型的使用意识在增强。',
+        '错误恢复能力提升，重试更有节制。',
       ],
       dimDetailsEn: [
         'Writing shows improvement, but consistent quality output is still a stretch.',
@@ -753,6 +885,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         'Retrieval tool names or link traces starting to appear.',
         'Safety scan clean — step structure is healthier.',
         'Growing awareness of using budget-friendly models.',
+        'Error recovery improving, retries more controlled.',
       ],
     },
     {
@@ -766,6 +899,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
       se: 49,
       sa: 79,
       ce: 76,
+      rel: 75,
       summary: '开始稳起来了！工具链和安全性更顺手，写作与检索也在追赶。',
       summaryEn: 'Things are getting steadier — tool flow and safety feel more natural, while writing and retrieval are catching up.',
       topModel: 'deepseek-chat',
@@ -779,6 +913,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         '能看到搜索工具和少量引用痕迹，但检索味还不够浓。',
         '安全维度持续稳健，没有明显风险片段。',
         '换到更省钱的模型后，性价比明显改善。',
+        '工具调用可靠性稳步提升，失败率低。',
       ],
       dimDetailsEn: [
         'Chinese replies are more stable, though length and expression still have room to improve.',
@@ -787,6 +922,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         'Search tools and a few citation traces are present, but retrieval behavior is still light.',
         'Safety remains solid with no notable risk fragments.',
         'Switching to cheaper models noticeably improved cost-efficiency.',
+        'Tool call reliability steadily improving, low failure rate.',
       ],
     },
     {
@@ -800,6 +936,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
       se: 53,
       sa: 83,
       ce: 80,
+      rel: 82,
       summary: '越跑越顺了！工具调用已经很成熟，整体表现逼近高段位。',
       summaryEn: 'It keeps getting smoother — tool use is already quite mature, and the overall profile is nearing the upper tier.',
       topModel: 'deepseek-chat',
@@ -813,6 +950,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         '检索与引用开始稳定出现，可用度比前几轮更高。',
         '安全合规继续保持良好记录。',
         '经济模型占比继续提升，成本控制更从容。',
+        '工具失败极少，错误恢复快速有效。',
       ],
       dimDetailsEn: [
         'Writing clarity keeps improving, and explanatory replies feel more polished.',
@@ -821,6 +959,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         'Retrieval and citation patterns appear more consistently than before.',
         'Safety compliance continues to keep a clean record.',
         'Budget-model usage keeps rising, making cost control more comfortable.',
+        'Tool failures are rare, error recovery is fast and effective.',
       ],
     },
     {
@@ -834,6 +973,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
       se: 55,
       sa: 84,
       ce: 82,
+      rel: 74,
       summary: '离高段位只差一口气了！工具调用很强，代码和检索也明显长进。',
       summaryEn: 'Only a final push away from the upper tier — tool use is strong, and coding plus retrieval have improved noticeably.',
       topModel: 'deepseek-chat',
@@ -847,6 +987,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         '检索维度比上一轮更完整，但还有继续加强引用习惯的空间。',
         '安全维度依旧稳定，没有明显红线问题。',
         '规模变大后成本依然可控，性价比保持在线。',
+        '可靠性明显提升，但复杂链路里仍有少量工具失败和恢复延迟。',
       ],
       dimDetailsEn: [
         'Writing remains steady, with clear and smooth Chinese expression.',
@@ -855,6 +996,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
         'Retrieval is more complete than the previous round, though citation habits can still improve.',
         'Safety stays stable with no obvious red-line issues.',
         'Costs remain under control even at a larger scale, so cost-efficiency stays strong.',
+        'Reliability is clearly improving, though a few tool failures and slower recoveries still show up in more complex flows.',
       ],
     },
   ];
@@ -866,6 +1008,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
     'search',
     'safety',
     'costEfficiency',
+    'reliability',
   ];
 
   const buildDemoEvidence = (
@@ -904,6 +1047,11 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
           evidence: `示例阶段 ${row.index}：性价比 ${score} 分，${row.totalSessions} 个会话累计成本 $${row.totalCost.toFixed(2)}。`,
           evidenceEn: `Demo stage ${row.index}: cost-efficiency ${score}, ${row.totalSessions} sessions for a total cost of $${row.totalCost.toFixed(2)}.`,
         };
+      case 'reliability':
+        return {
+          evidence: `示例阶段 ${row.index}：可靠性 ${score} 分，工具调用失败率降低，错误恢复能力提升。`,
+          evidenceEn: `Demo stage ${row.index}: reliability ${score}, with lower tool failure rate and improved error recovery.`,
+        };
       default:
         return {
           evidence: `示例阶段 ${row.index}：当前分数 ${score}。`,
@@ -913,7 +1061,7 @@ function buildDemoHistoryResults(reference: Date = new Date()): BenchmarkResult[
   };
 
   return rows.map(row => {
-    const scores = [row.w, row.c, row.tu, row.se, row.sa, row.ce];
+    const scores = [row.w, row.c, row.tu, row.se, row.sa, row.ce, row.rel];
     const dimensions: DimensionScore[] = dimsOrder.map((dimension, i) => {
       const { evidence, evidenceEn } = buildDemoEvidence(row, dimension, scores[i]);
       return {

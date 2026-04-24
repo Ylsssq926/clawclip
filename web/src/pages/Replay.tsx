@@ -6,6 +6,7 @@ import { useI18n, formatI18n } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
 import { getReplayDetailSections } from './replayDetailSections'
 import { getSupportingElementPriority } from './supportingElementPriority'
+import type { Tab } from '../App'
 import type { SessionMeta } from '../types/session'
 import { apiGet, apiGetSafe } from '../lib/api'
 
@@ -97,14 +98,23 @@ function formatStepOffset(stepTime: string, startTime: string): string {
   return `+${m}:${s.toString().padStart(2, '0')}`
 }
 
+const LOCALE_MAP: Record<string, string> = {
+  zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR',
+  es: 'es-ES', fr: 'fr-FR', de: 'de-DE',
+}
+
+function toLocaleNum(n: number, locale: string) {
+  return n.toLocaleString(LOCALE_MAP[locale] ?? 'en-US')
+}
+
 const STEP_STYLES: Record<SessionStep['type'], { color: string; border: string; bg: string }> = {
-  user:        { color: 'text-[#3b82c4]', border: 'border-l-[#3b82c4]', bg: 'bg-blue-50' },
-  thinking:    { color: 'text-slate-600', border: 'border-l-slate-300', bg: 'bg-slate-100' },
-  tool_call:   { color: 'text-slate-700', border: 'border-l-slate-400', bg: 'bg-slate-100' },
-  tool_result: { color: 'text-slate-700', border: 'border-l-slate-400', bg: 'bg-slate-100' },
-  response:    { color: 'text-[#3b82c4]', border: 'border-l-[#3b82c4]', bg: 'bg-blue-50' },
-  system:      { color: 'text-slate-500', border: 'border-l-slate-300', bg: 'bg-slate-100' },
-  error:       { color: 'text-orange-700', border: 'border-l-orange-400', bg: 'bg-orange-50' },
+  user:        { color: 'text-[#3b82c4]',    border: 'border-l-[#3b82c4]',    bg: 'bg-blue-50' },
+  thinking:    { color: 'text-slate-500',    border: 'border-l-slate-300',    bg: 'bg-slate-50' },
+  tool_call:   { color: 'text-violet-700',   border: 'border-l-violet-400',   bg: 'bg-violet-50/60' },
+  tool_result: { color: 'text-emerald-700',  border: 'border-l-emerald-400',  bg: 'bg-emerald-50/60' },
+  response:    { color: 'text-[#3b82c4]',    border: 'border-l-[#3b82c4]',    bg: 'bg-blue-50' },
+  system:      { color: 'text-slate-500',    border: 'border-l-slate-300',    bg: 'bg-slate-50' },
+  error:       { color: 'text-orange-700',   border: 'border-l-orange-400',   bg: 'bg-orange-50' },
 }
 
 function CollapsibleText({
@@ -127,7 +137,7 @@ function CollapsibleText({
   return (
     <div>
       <pre className={`text-sm text-slate-500 whitespace-pre-wrap break-words ${!expanded ? 'line-clamp-3' : ''}`}>{text}</pre>
-      <button type="button" onClick={() => setExpanded(!expanded)} className="text-xs text-accent hover:opacity-80 mt-1 flex items-center gap-1">
+      <button type="button" onClick={() => setExpanded(!expanded)} className="text-xs text-accent hover:opacity-80 mt-1 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1">
         {expanded ? <><ChevronUp className="w-3 h-3" />{collapseLabel}</> : <><ChevronDown className="w-3 h-3" />{expandLabel}</>}
       </button>
     </div>
@@ -144,7 +154,7 @@ function ReasoningBlock({ reasoning }: { reasoning: string }) {
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
-        className="flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-800"
+        className="flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
       >
         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         <span>{label}</span>
@@ -159,7 +169,7 @@ function ReasoningBlock({ reasoning }: { reasoning: string }) {
 }
 
 function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; startTime: string; totalCost?: number }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const tokens = step.inputTokens + step.outputTokens
   const typeKey = `replay.step.${step.type}`
   const defaultLabel = step.type === 'error' ? t('replay.step.error') : t('replay.step.system')
@@ -190,7 +200,7 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
       <div
         className={cn(
           'mb-2.5 flex-1 rounded-lg border border-l-4 bg-white px-3.5 py-2.5 shadow-[0_8px_24px_-24px_rgba(15,23,42,0.18)]',
-          isFailureStep && 'border-orange-200 bg-orange-50/60',
+          isFailureStep && 'border-orange-300 bg-orange-100/80',
           config.border,
         )}
       >
@@ -260,7 +270,7 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
 
         {(tokens > 0 || step.cost > 0) && (
           <div className="mt-2 flex flex-wrap items-center gap-2.5 text-[10px] text-slate-400">
-            {tokens > 0 && <span>{tokens.toLocaleString()} {t('replay.list.tokensUnit')}</span>}
+            {tokens > 0 && <span>{toLocaleNum(tokens, locale)} {t('replay.list.tokensUnit')}</span>}
             {step.cost > 0 && <span>${step.cost.toFixed(4)}</span>}
           </div>
         )}
@@ -319,18 +329,24 @@ function DetailSkeleton() {
   )
 }
 
+function isAbortError(error: unknown): boolean {
+  return (error as { name?: string } | null)?.name === 'AbortError'
+}
+
 interface ReplayProps {
   initialSessionId?: string
   onInitialSessionHandled?: () => void
+  onNavigate?: (tab: Tab) => void
 }
 
-export default function Replay({ initialSessionId, onInitialSessionHandled }: ReplayProps) {
+export default function Replay({ initialSessionId, onInitialSessionHandled, onNavigate }: ReplayProps) {
   const { t, locale } = useI18n()
   const [view, setView] = useState<'list' | 'detail'>('list')
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [sessionTags, setSessionTags] = useState<Record<string, string[]>>({})
   const [tagInfos, setTagInfos] = useState<TagInfo[]>([])
   const [selectedTag, setSelectedTag] = useState(TAG_ALL)
+  const [openSessionId, setOpenSessionId] = useState<string | null>(null)
   const [replay, setReplay] = useState<SessionReplay | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -344,6 +360,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
   const [showAllSteps, setShowAllSteps] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(false)
   const lastVisibleStepRef = useRef<HTMLDivElement | null>(null)
+  const currentSessionIdRef = useRef<string | null>(null)
 
   const tagColorByTag = useMemo(() => {
     const m = new Map<string, string>()
@@ -358,8 +375,11 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
 
   useEffect(() => {
     if (view !== 'list') return
+    
+    let cancelled = false
     setLoading(true)
     setError(null)
+    
     const parseSessionTags = (data: unknown): Record<string, string[]> => {
       if (!data || typeof data !== 'object' || Array.isArray(data)) return {}
       const out: Record<string, string[]> = {}
@@ -368,6 +388,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
       }
       return out
     }
+    
     Promise.all([
       apiGet<SessionMeta[]>('/api/replay/sessions?limit=20'),
       apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
@@ -380,16 +401,29 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
         .catch(() => [] as TagInfo[]),
     ])
       .then(([sess, isDemoData, st, tags]) => {
+        if (cancelled) return
         setSessions(Array.isArray(sess) ? sess : [])
         setDemoReplayHint(Boolean(isDemoData) && Array.isArray(sess) && sess.length > 0)
         setSessionTags(st)
         setTagInfos(tags)
       })
-      .catch(() => setError(t('replay.error.list')))
-      .finally(() => setLoading(false))
+      .catch(() => {
+        if (cancelled) return
+        setError(t('replay.error.list'))
+      })
+      .finally(() => {
+        if (cancelled) return
+        setLoading(false)
+      })
+    
+    return () => {
+      cancelled = true
+    }
   }, [view, t])
 
   const openSession = useCallback((id: string) => {
+    currentSessionIdRef.current = id
+    setOpenSessionId(id)
     setView('detail')
     setLoading(true)
     setError(null)
@@ -402,33 +436,66 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
     setSpeed('normal')
     setShowAllSteps(false)
     setControlsVisible(false)
+  }, [])
+
+  useEffect(() => {
+    if (view !== 'detail' || !openSessionId) return
+
+    const id = openSessionId
     const encoded = encodeURIComponent(id)
+    const controller = new AbortController()
 
     const loadReplay = async () => {
       try {
-        return await apiGet<SessionReplay>(`/api/replay/sessions/${encoded}`)
-      } catch {
-        return await apiGet<SessionReplay>(`/api/knowledge/session/${encoded}`)
+        return await apiGet<SessionReplay>(`/api/replay/sessions/${encoded}`, { signal: controller.signal })
+      } catch (error) {
+        if (isAbortError(error)) throw error
+        return await apiGet<SessionReplay>(`/api/knowledge/session/${encoded}`, { signal: controller.signal })
       }
     }
 
     const loadInsights = async () => {
-      const replayInsights = await apiGetSafe<{ insights: typeof insights }>(`/api/replay/sessions/${encoded}/insights`)
+      const replayInsights = await apiGetSafe<{ insights: typeof insights }>(
+        `/api/replay/sessions/${encoded}/insights`,
+        { signal: controller.signal },
+      )
       if (replayInsights) return replayInsights
-      return apiGetSafe<{ insights: typeof insights }>(`/api/knowledge/session/${encoded}/insights`)
+      return apiGetSafe<{ insights: typeof insights }>(`/api/knowledge/session/${encoded}/insights`, {
+        signal: controller.signal,
+      })
     }
 
     void loadReplay()
-      .then(setReplay)
-      .catch(() => setError(t('replay.error.detail')))
-      .finally(() => setLoading(false))
+      .then(data => {
+        if (controller.signal.aborted || currentSessionIdRef.current !== id) return
+        setReplay(data)
+      })
+      .catch(error => {
+        if (controller.signal.aborted || isAbortError(error) || currentSessionIdRef.current !== id) return
+        setError(t('replay.error.detail'))
+      })
+      .finally(() => {
+        if (controller.signal.aborted || currentSessionIdRef.current !== id) return
+        setLoading(false)
+      })
 
     void loadInsights()
       .then(d => {
+        if (controller.signal.aborted || currentSessionIdRef.current !== id) return
         setInsights(Array.isArray(d?.insights) ? d.insights : [])
       })
-      .finally(() => setInsightsLoading(false))
-  }, [t])
+      .catch(error => {
+        if (controller.signal.aborted || isAbortError(error) || currentSessionIdRef.current !== id) return
+      })
+      .finally(() => {
+        if (controller.signal.aborted || currentSessionIdRef.current !== id) return
+        setInsightsLoading(false)
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [openSessionId, view, t])
 
   useEffect(() => {
     const nextSessionId = initialSessionId?.trim()
@@ -544,15 +611,19 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
           <button
             type="button"
             onClick={() => {
+              currentSessionIdRef.current = null
+              setOpenSessionId(null)
               setView('list')
               setReplay(null)
+              setInsights([])
+              setInsightsLoading(false)
               setAutoPlay(false)
               setVisibleSteps(0)
               setSpeed('normal')
               setShowAllSteps(false)
               setControlsVisible(false)
             }}
-            className="flex items-center gap-2 text-slate-500 transition-colors hover:text-slate-900"
+            className="flex items-center gap-2 text-slate-500 transition-colors hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
           >
             <ArrowLeft className="h-4 w-4" /> {t('replay.back')}
           </button>
@@ -618,7 +689,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                 </div>
                 <div>
                   <span className="text-slate-500">{t('replay.metric.tokens')}</span>
-                  <div className="text-blue-400 font-medium">{replay.meta.totalTokens.toLocaleString()}</div>
+                  <div className="text-blue-400 font-medium">{toLocaleNum(replay.meta.totalTokens, locale)}</div>
                 </div>
               </div>
 
@@ -673,7 +744,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                         <button
                           type="button"
                           onClick={handleShowAllSteps}
-                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
                         >
                           {t('replay.autoplay.viewAll')}
                         </button>
@@ -701,7 +772,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                           <button
                             type="button"
                             onClick={handleTogglePlayback}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
                           >
                             {autoPlay ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                             <span>{autoPlay ? t('replay.autoplay.pause') : t('replay.autoplay.play')}</span>
@@ -709,7 +780,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                           <button
                             type="button"
                             onClick={handleReplay}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
                           >
                             <RotateCcw className="h-3.5 w-3.5" />
                             <span>{t('replay.autoplay.replay')}</span>
@@ -717,7 +788,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                           <button
                             type="button"
                             onClick={handleShowAllSteps}
-                            className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4]"
+                            className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:border-[#3b82c4]/25 hover:text-[#3b82c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
                           >
                             {t('replay.autoplay.viewAll')}
                           </button>
@@ -730,7 +801,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                               type="button"
                               onClick={() => setSpeed(option)}
                               className={cn(
-                                'rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                                'rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
                                 speed === option
                                   ? 'border-[#3b82c4]/20 bg-[#3b82c4]/10 text-[#3b82c4]'
                                   : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700',
@@ -754,7 +825,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                   <button
                     type="button"
                     onClick={() => setInsightsOpen(v => !v)}
-                    className={cn('flex items-center gap-2 font-medium transition-colors mb-3', getSupportingElementPriority('replayInsightToggle').className)}
+                    className={cn('flex items-center gap-2 font-medium transition-colors mb-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1', getSupportingElementPriority('replayInsightToggle').className)}
                   >
                     <Lightbulb className="w-3.5 h-3.5" />
                     {t('replay.insights.title')}
@@ -792,6 +863,24 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                           </div>
                         )
                       })}
+                      {!insightsLoading && insights.length > 0 && (
+                        <div className="ml-6 flex flex-wrap items-center gap-4 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => onNavigate?.('benchmark')}
+                            className="text-sm font-medium text-slate-500 transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
+                          >
+                            {locale === 'zh' ? '去 Benchmark 验证' : 'Validate in Benchmark'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onNavigate?.('cost')}
+                            className="text-sm font-medium text-slate-500 transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
+                          >
+                            {locale === 'zh' ? '查看成本报告' : 'View cost report'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </section>
@@ -820,7 +909,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
             type="button"
             onClick={() => setSelectedTag(TAG_ALL)}
             className={cn(
-              'px-4 py-2 rounded-lg text-sm transition-colors',
+              'px-4 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
               selectedTag === TAG_ALL ? 'bg-accent text-white' : 'glass-raised text-slate-500 hover:text-slate-900 hover:bg-surface-overlay',
             )}
           >
@@ -832,7 +921,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
               type="button"
               onClick={() => setSelectedTag(ti.tag)}
               className={cn(
-                'rounded-lg px-4 py-2 text-sm transition-colors',
+                'rounded-lg px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
                 selectedTag === ti.tag
                   ? 'bg-[#3b82c4] text-white'
                   : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900',
@@ -868,7 +957,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                 <button
                   type="button"
                   onClick={() => openSession(session.id)}
-                  className="group w-full rounded-xl border-0 bg-transparent p-5 text-left text-inherit"
+                  className="group w-full rounded-xl border-0 bg-transparent p-5 text-left text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
                 >
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <div className="min-w-0 pr-4">
@@ -889,7 +978,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                       <span>{formatRelativeTime(session.startTime, locale)}</span>
                     </div>
                   </div>
-                  <div className={cn('mb-3 flex items-center gap-4', getSupportingElementPriority('replayListMeta').className)}>
+                  <div className={cn('mb-3 flex flex-wrap items-center gap-4', getSupportingElementPriority('replayListMeta').className)}>
                     <span className="flex items-center gap-1"><Bot className="h-3 w-3" />{session.agentName}</span>
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDuration(session.durationMs, locale)}</span>
                     <span className="flex items-center gap-1"><Play className="h-3 w-3" />{session.stepCount} {t('replay.list.steps')}</span>
@@ -916,7 +1005,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled }: Re
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span>
-                        {session.totalTokens.toLocaleString()} {t('replay.list.tokensUnit')}
+                        {toLocaleNum(session.totalTokens, locale)} {t('replay.list.tokensUnit')}
                       </span>
                       <span>${session.totalCost.toFixed(4)}</span>
                     </div>

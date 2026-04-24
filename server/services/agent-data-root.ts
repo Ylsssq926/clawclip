@@ -107,6 +107,18 @@ function envOpenclawStateDirRoot(): string | null {
   return homeDir;
 }
 
+/** Hermes 默认状态目录；可通过 CLAWCLIP_HERMES_HOME 覆盖 */
+export function getHermesHomeDir(): string | null {
+  const raw = process.env.CLAWCLIP_HERMES_HOME?.trim();
+  const homeDir = expandHome(raw || '~/.hermes');
+  try {
+    if (!fs.existsSync(homeDir) || !fs.statSync(homeDir).isDirectory()) return null;
+  } catch {
+    return null;
+  }
+  return homeDir;
+}
+
 /**
  * 返回可用于读取各代理 sessions 目录的数据根列表（去重、仅存在目录）。
  * 顺序：环境变量优先，再默认 ~/.openclaw、~/.zeroclaw 等。

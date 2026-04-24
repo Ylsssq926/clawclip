@@ -17,8 +17,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function apiGet<T = unknown>(url: string): Promise<T> {
-  return request<T>(url);
+export function apiGet<T = unknown>(url: string, init?: RequestInit): Promise<T> {
+  return request<T>(url, init);
 }
 
 export function apiPost<T = unknown>(url: string, body?: unknown): Promise<T> {
@@ -29,10 +29,13 @@ export function apiPost<T = unknown>(url: string, body?: unknown): Promise<T> {
   });
 }
 
-export async function apiGetSafe<T = unknown>(url: string): Promise<T | null> {
+export async function apiGetSafe<T = unknown>(url: string, init?: RequestInit): Promise<T | null> {
   try {
-    return await apiGet<T>(url);
-  } catch {
+    return await apiGet<T>(url, init);
+  } catch (error) {
+    if ((error as { name?: string })?.name === 'AbortError') {
+      throw error;
+    }
     return null;
   }
 }

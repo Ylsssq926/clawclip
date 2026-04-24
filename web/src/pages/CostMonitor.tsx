@@ -20,6 +20,7 @@ import {
   type CostReconciliationSortKey,
 } from '../lib/costReconciliationRows'
 import { splitCostMonitorSections, type CostMonitorSectionId } from './costMonitorSectionOrder'
+import type { Tab } from '../App'
 
 interface DailyData {
   date: string
@@ -515,6 +516,7 @@ function CostSkeleton() {
 
 interface Props {
   onOpenReplaySession: (sessionId: string) => void
+  onNavigate?: (tab: Tab) => void
 }
 
 interface CostMonitorRenderableSection {
@@ -522,7 +524,7 @@ interface CostMonitorRenderableSection {
   content: ReactNode
 }
 
-export default function CostMonitor({ onOpenReplaySession }: Props) {
+export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) {
   const { locale, t } = useI18n()
   const copy = getCostMonitorCopy(locale)
   const [daily, setDaily] = useState<DailyData[]>([])
@@ -572,9 +574,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       const normalizedModels: ModelBreakdown = {}
       if (models && typeof models === 'object' && !Array.isArray(models)) {
         for (const [model, data] of Object.entries(models)) {
-          normalizedModels[model] = {
-            cost: Number(data?.cost ?? 0),
-            tokens: Number(data?.tokens ?? 0),
+          if (data && typeof data === 'object' && 'cost' in data && 'tokens' in data) {
+            normalizedModels[model] = {
+              cost: Number(data.cost ?? 0),
+              tokens: Number(data.tokens ?? 0),
+            }
           }
         }
       }
@@ -597,7 +601,11 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       setSavings(sav)
       setTokenWaste(waste?.summary ? waste : null)
       setModelBreakdown(normalizedModels)
-      setModelValueRows(Array.isArray(modelValue?.rows) ? modelValue.rows : [])
+      setModelValueRows(
+        Array.isArray(modelValue?.rows)
+          ? modelValue.rows.filter((row): row is NonNullable<typeof row> => row != null && typeof row === 'object')
+          : [],
+      )
       setBudgetConfig(normalizedBudget)
     } catch {
       setError(copy.errorLoad)
@@ -696,6 +704,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
     )),
   )
   const replayActionLabel = copy.replayAction
+  const benchmarkActionLabel = locale === 'zh' ? '在 Benchmark 对比' : 'Compare in Benchmark'
   const canOpenReplaySession = (sessionId?: string): sessionId is string => Boolean(sessionId?.trim())
   const reconciliationSortOptions: Array<{ value: CostReconciliationSortKey; label: string }> = [
     { value: 'abs-delta', label: copy.reconciliation.sortOptions['abs-delta'] },
@@ -863,12 +872,33 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
                           <span className="font-medium text-slate-700">{sug.alternativeModel}</span>
                         </p>
                       ) : <span />}
-                      {isReplayLinkable && (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 transition-all group-hover:gap-1.5 group-hover:text-slate-900">
-                          {replayActionLabel}
-                          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        {isReplayLinkable && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              onOpenReplaySession(replaySessionId)
+                            }}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 transition-all hover:gap-1.5 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2"
+                          >
+                            {replayActionLabel}
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </button>
+                        )}
+                        {onNavigate && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              onNavigate('benchmark')
+                            }}
+                            className="text-xs font-medium text-slate-500 transition-colors hover:text-[#3b82c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2"
+                          >
+                            {benchmarkActionLabel}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
@@ -880,17 +910,25 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
 
               if (isReplayLinkable) {
                 return (
-                  <button
+                  <div
                     key={`${sug.reasonType ?? 'suggestion'}-${replaySessionId ?? sug.currentModel ?? i}`}
-                    type="button"
+                    tabIndex={0}
+                    role="button"
                     onClick={() => onOpenReplaySession(replaySessionId)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        onOpenReplaySession(replaySessionId)
+                      }
+                    }}
                     className={cn(
                       'group w-full rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#3b82c4]/35 hover:bg-white/95 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2',
+                      'cursor-pointer',
                       getSavingCardClass(sug.priority),
                     )}
                   >
                     {content}
-                  </button>
+                  </div>
                 )
               }
 
@@ -1609,7 +1647,7 @@ export default function CostMonitor({ onOpenReplaySession }: Props) {
       </div>
 
       {demoCostHint && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-700/90">
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/70 px-4 py-3 text-sm text-blue-700/90">
           {copy.demoHint}
         </div>
       )}

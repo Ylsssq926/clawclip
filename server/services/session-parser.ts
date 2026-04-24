@@ -16,6 +16,7 @@ import {
 } from './agent-data-root.js';
 import { enrichSessionMetaFromStore, loadOpenclawSessionStore } from './session-store.js';
 import { log } from './logger.js';
+import { hermesParser } from './parsers/hermes-parser.js';
 
 /** session id：sourceId/agent/文件名（无后缀），再 URL 编码；多根并存时不撞车 */
 export function makeSessionId(sourceId: string, agentName: string, fileBase: string): string {
@@ -30,7 +31,7 @@ export function normalizeSessionId(raw: string): string {
   }
 }
 
-const KNOWN_SOURCE_PREFIXES = new Set(['openclaw', 'zeroclaw', 'claw', 'demo']);
+const KNOWN_SOURCE_PREFIXES = new Set(['openclaw', 'zeroclaw', 'claw', 'demo', 'hermes']);
 
 /** 兼容旧版 id（仅 agent/file），补全为 openclaw/agent/file */
 export function canonicalReplayIdVariants(decoded: string): string[] {
@@ -287,25 +288,26 @@ function extractToolResultCallId(...records: Array<Record<string, unknown> | und
   return undefined;
 }
 
+/** 字段别名映射：支持不同版本的字段名 */
+const FIELD_ALIASES: Record<string, string[]> = {
+  inputTokens: ['input_tokens', 'inputTokens', 'prompt_tokens', 'promptTokens'],
+  outputTokens: ['output_tokens', 'outputTokens', 'completion_tokens', 'completionTokens'],
+};
+
+/** 版本感知字段读取：按别名列表依次尝试 */
+function readField(obj: Record<string, unknown>, key: string): unknown {
+  const aliases = FIELD_ALIASES[key] ?? [key];
+  for (const alias of aliases) {
+    if (obj[alias] !== undefined) return obj[alias];
+  }
+  return undefined;
+}
+
 function readUsage(obj: JsonlLine): { input: number; output: number } {
   const usage = obj.usage as Record<string, unknown> | undefined;
   if (!usage) return { input: 0, output: 0 };
-  const input =
-    Number(
-      usage.input_tokens ??
-        usage.prompt_tokens ??
-        usage.inputTokens ??
-        usage.promptTokens ??
-        0,
-    ) || 0;
-  const output =
-    Number(
-      usage.output_tokens ??
-        usage.completion_tokens ??
-        usage.outputTokens ??
-        usage.completionTokens ??
-        0,
-    ) || 0;
+  const input = Number(readField(usage, 'inputTokens')) || 0;
+  const output = Number(readField(usage, 'outputTokens')) || 0;
   return { input, output };
 }
 
@@ -799,6 +801,8 @@ function loadRealReplaysIncremental(): SessionReplay[] {
     }
   }
 
+  out.push(...hermesParser.loadReplays());
+
   for (const key of fileCache.keys()) {
     if (!seenPaths.has(key)) fileCache.delete(key);
   }
@@ -852,6 +856,22 @@ export class SessionParser {
     return this.applySessionLimit(this.sortSessionMetas(list), limit);
   }
 
+  /** 批量取当前列表对应的整条会话，避免调用方按 id 循环时重复重建 repriced replays。 */
+  getSessionReplays(limit?: number): SessionReplay[] {
+    const { real, demo } = this.getRepricedCollections();
+    const list = real.length === 0 ? demo : real;
+    const sorted = [...list].sort((a, b) => {
+      const sa = a.meta.storeUpdatedAt ?? a.meta.endTime.getTime();
+      const sb = b.meta.storeUpdatedAt ?? b.meta.endTime.getTime();
+      if (sb !== sa) return sb - sa;
+      return b.meta.endTime.getTime() - a.meta.endTime.getTime();
+    });
+    if (limit != null && limit > 0) {
+      return sorted.slice(0, limit);
+    }
+    return sorted;
+  }
+
   /**
    * 用于需要“至少有几条可选会话”的页面（如 Compare / Prompt Insight）。
    * 真实会话不足时，保留真实会话并补齐 Demo，避免页面只剩 0~1 条不可体验。
@@ -900,14 +920,16 @@ export class SessionParser {
   }
 
   /**
-   * 统一 jsonl 文件数与可解析会话数。若已调用 `countSessionJsonlFiles()`，传入其 `total` 可避免重复扫盘。
+   * 统一 OpenClaw JSONL 数与可解析会话数；Hermes JSONL 导出会追加到总数里。
+   * 若已调用 `countSessionJsonlFiles()`，传入其 `total` 可避免重复扫盘。
    */
   getJsonlVersusParsableStats(precomputedTotalJsonl?: number): {
     totalJsonlFiles: number;
     parsableSessionCount: number;
   } {
-    const totalJsonlFiles = precomputedTotalJsonl ?? countSessionJsonlFiles().total;
-    return { totalJsonlFiles, parsableSessionCount: this.getRealReplays().length };
+    const replays = this.getRealReplays();
+    const totalJsonlFiles = (precomputedTotalJsonl ?? countSessionJsonlFiles().total) + hermesParser.getSourceCount();
+    return { totalJsonlFiles, parsableSessionCount: replays.length };
   }
 
   getDiagnostics(): {
@@ -926,7 +948,7 @@ export class SessionParser {
   } {
     const replays = this.getRealReplays();
     return {
-      totalJsonlFiles: countSessionJsonlFiles().total,
+      totalJsonlFiles: countSessionJsonlFiles().total + hermesParser.getSourceCount(),
       parsableCount: replays.length,
       skippedLargeFiles: getSkippedLargeFiles(),
       sessions: replays

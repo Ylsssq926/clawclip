@@ -36,6 +36,7 @@ import { buildCostMeta, resolveModelDetail, repriceStep } from './pricing-utils.
 import type { PricingSnapshot } from './pricing-fetcher.js';
 import type { SessionReplay } from '../types/replay.js';
 import { tokenWasteAnalyzer, type TokenWasteDiagnostic } from './token-waste-analyzer.js';
+import { log } from './logger.js';
 
 interface ModelBreakdownEntry {
   inputTokens: number;
@@ -50,6 +51,51 @@ const ALT_TIERS: { threshold: number; models: string[] }[] = [
   { threshold: 5, models: ['gpt-5-mini', 'deepseek-chat', 'gemini-2.5-flash'] },
   { threshold: 1, models: ['deepseek-chat', 'qwen-turbo', 'yi-lightning'] },
 ];
+
+const LARGE_LOG_FILE_BYTES = 50 * 1024 * 1024;
+const LARGE_LOG_FILE_TAIL_LINES = 10_000;
+const TAIL_READ_CHUNK_BYTES = 64 * 1024;
+
+/** 超大 .log 只读尾部，避免全量 readFileSync + split 长时间阻塞服务线程。 */
+function readUtf8TailLines(filePath: string, lineLimit: number, fileSize: number): string {
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    let position = fileSize;
+    let newlineCount = 0;
+    const chunks: Buffer[] = [];
+
+    while (position > 0 && newlineCount <= lineLimit) {
+      const chunkSize = Math.min(TAIL_READ_CHUNK_BYTES, position);
+      position -= chunkSize;
+      const chunk = Buffer.alloc(chunkSize);
+      const bytesRead = fs.readSync(fd, chunk, 0, chunkSize, position);
+      const slice = bytesRead === chunkSize ? chunk : chunk.subarray(0, bytesRead);
+      chunks.unshift(slice);
+      for (let i = 0; i < slice.length; i += 1) {
+        if (slice[i] === 0x0a) newlineCount += 1;
+      }
+    }
+
+    const normalized = Buffer.concat(chunks).toString('utf-8').replace(/\r\n/g, '\n');
+    const lines = normalized.endsWith('\n') ? normalized.slice(0, -1).split('\n') : normalized.split('\n');
+    return lines.length > lineLimit ? lines.slice(-lineLimit).join('\n') : normalized;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function readUsageLogContent(filePath: string): string {
+  const stat = fs.statSync(filePath);
+  if (stat.size <= LARGE_LOG_FILE_BYTES) {
+    return fs.readFileSync(filePath, 'utf-8');
+  }
+
+  // 超过 50MB 时只解析最后 10000 行，避免单个超大日志把整个请求线程卡住。
+  log.warn(
+    `[cost-parser] oversized usage log ${filePath} (${(stat.size / 1024 / 1024).toFixed(1)}MB), only parsing last ${LARGE_LOG_FILE_TAIL_LINES} lines`,
+  );
+  return readUtf8TailLines(filePath, LARGE_LOG_FILE_TAIL_LINES, stat.size);
+}
 
 function suggestAlternativeDetailed(
   currentModel: string,
@@ -464,7 +510,7 @@ export class CostParser {
       const filePath = path.join(dir, file);
       let content: string;
       try {
-        content = fs.readFileSync(filePath, 'utf-8');
+        content = readUsageLogContent(filePath);
       } catch {
         continue;
       }
@@ -1111,6 +1157,8 @@ export class CostParser {
       list.sort((a, b) => b.cost - a.cost);
     }
 
+    const suggestionFloor = batch.isDemo ? 0.001 : 0.01;
+
     const buildWasteSuggestion = (
       diagnostic: TokenWasteDiagnostic,
       reasonType: Exclude<SavingReasonType, 'switch-model'>,
@@ -1120,7 +1168,7 @@ export class CostParser {
       const currentModel = resolvePrimaryModel(sessionSummary);
       const currentCost = roundSuggestionMoney(sessionSummary?.cost ?? diagnostic.estimatedWasteCost);
       const saving = roundSuggestionMoney(Math.min(diagnostic.estimatedWasteCost, currentCost));
-      if (saving <= 0.01) return null;
+      if (saving < suggestionFloor) return null;
 
       const subjectZh = sessionLabel ? `「${sessionLabel}」` : '这类任务';
       const subjectEn = sessionLabel ? `"${sessionLabel}"` : 'this task type';
@@ -1135,6 +1183,11 @@ export class CostParser {
         reasonEn = `Most waste in ${subjectEn} comes from repeated retries after a failure, so fixing the retry loop should pay off before changing models.`;
         actionZh = '先给工具失败加退出条件、错误分类和 fallback，把连续重试压到 1 次内，再决定是否要换模型。';
         actionEn = 'Add exit conditions, error classification, and fallback paths so failed tool calls stop looping before you revisit model choice.';
+      } else if (reasonType === 'trim-prompt' && diagnostic.type === 'context-bloat') {
+        reasonZh = `${subjectZh} 的成本更多浪费在越滚越大的历史上下文里，先瘦身上下文通常比换模型更稳。`;
+        reasonEn = `${subjectEn} is wasting spend on ever-growing context history, so trimming context is usually safer than swapping models first.`;
+        actionZh = '优先截断历史、做阶段性总结，或把长链路拆成多个短回合，避免把整段上下文反复带进后续步骤。';
+        actionEn = 'Trim historical context, add checkpoint summaries, or split the workflow into shorter rounds so the whole transcript does not keep getting replayed.';
       } else if (reasonType === 'trim-prompt') {
         reasonZh = `${subjectZh} 投入了很长的上下文，但有效产出偏低，先减输入通常比换模型更值得。`;
         reasonEn = `${subjectEn} spends a lot of context for weak payoff, so trimming the prompt is usually more valuable than changing models first.`;
@@ -1173,6 +1226,7 @@ export class CostParser {
     const wasteReasonMap: Partial<Record<TokenWasteDiagnostic['type'], Exclude<SavingReasonType, 'switch-model'>>> = {
       'retry-loop': 'reduce-retries',
       'long-prompt': 'trim-prompt',
+      'context-bloat': 'trim-prompt',
       'verbose-output': 'trim-output',
     };
     const wasteSuggestions = new Map<Exclude<SavingReasonType, 'switch-model'>, EnhancedSavingSuggestion>();
@@ -1188,7 +1242,7 @@ export class CostParser {
       if (!suggestion) continue;
 
       wasteSuggestions.set(reasonType, suggestion);
-      if (suggestion.sessionId) {
+      if (suggestion.sessionId && suggestion.reasonType === 'reduce-retries') {
         blockedSessionIds.add(suggestion.sessionId);
       }
     }
@@ -1201,9 +1255,10 @@ export class CostParser {
       if (!alternative) continue;
 
       const scopedCandidates = modelSessionRankings.get(model) ?? [];
-      const scopedUsage =
-        scopedCandidates.find(candidate => candidate.sessionId && !blockedSessionIds.has(candidate.sessionId)) ??
-        scopedCandidates[0];
+      const scopedUsage = scopedCandidates.find(
+        candidate => candidate.sessionId && !blockedSessionIds.has(candidate.sessionId),
+      );
+      if (scopedCandidates.length > 0 && !scopedUsage) continue;
 
       const currentCost = roundSuggestionMoney(scopedUsage?.cost ?? data.cost);
       const alternativeCost = roundSuggestionMoney(
@@ -1212,7 +1267,7 @@ export class CostParser {
           : alternative.cost,
       );
       const saving = roundSuggestionMoney(Math.max(currentCost - alternativeCost, 0));
-      if (saving <= 0.01) continue;
+      if (saving < suggestionFloor) continue;
 
       const sharePct = stats.totalCost > 0 ? (data.cost / stats.totalCost) * 100 : 0;
       const sessionLabel = scopedUsage?.sessionLabel;

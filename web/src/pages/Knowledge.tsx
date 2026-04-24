@@ -112,6 +112,13 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
     try {
       const res = await fetch(`/api/knowledge/export-all?format=${format}`)
       if (!res.ok) throw new Error(`${t('knowledge.export.failStatus')} (${res.status})`)
+      
+      const contentType = res.headers.get('content-type')
+      const expectedType = format === 'json' ? 'application/json' : 'text/markdown'
+      if (contentType && !contentType.includes(expectedType) && !contentType.includes('application/octet-stream')) {
+        throw new Error(t('knowledge.export.error'))
+      }
+      
       const blob = await res.blob()
       const name = format === 'json' ? 'knowledge-sessions.json' : 'knowledge-sessions.md'
       triggerBlobDownload(blob, name)

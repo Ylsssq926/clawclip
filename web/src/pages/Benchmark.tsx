@@ -73,6 +73,7 @@ interface BenchmarkProof {
   latest: BenchmarkResult
   previous: BenchmarkResult | null
   deltas: BenchmarkProofDeltas | null
+  sampleComparison?: boolean
   verdictZh?: string
   verdictEn?: string
 }
@@ -322,6 +323,8 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
+    let cancelled = false
+    
     try {
       const [latest, histBody, meta, proofBody] = await Promise.all([
         apiGet<BenchmarkResult>('/api/benchmark/latest').catch((e) =>
@@ -333,19 +336,31 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
           e instanceof ApiError && e.status === 404 ? null : Promise.reject(e),
         ),
       ])
+      
+      if (cancelled) return
+      
       setBenchmarkMeta(meta)
       setProof(proofBody)
       setResult(latest)
       setHistory(Array.isArray(histBody.results) ? histBody.results : [])
     } catch {
+      if (cancelled) return
       setError(t('benchmark.error.load'))
     } finally {
+      if (cancelled) return
       setLoading(false)
+    }
+    
+    return () => {
+      cancelled = true
     }
   }, [t])
 
   useEffect(() => {
-    void loadData()
+    const cleanup = loadData()
+    return () => {
+      cleanup?.then(fn => fn?.())
+    }
   }, [loadData])
 
   useEffect(() => {
@@ -435,6 +450,7 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
   const proofLatest = proof?.latest ?? result
   const proofPrevious = proof?.previous ?? null
   const proofDeltas = proof?.deltas ?? null
+  const isSampleProof = Boolean(proof?.sampleComparison)
   const proofVerdict = proofDeltas ? t(resolveProofVerdictKey(proofDeltas.score, proofDeltas.cost)) : t('benchmark.proof.verdict.smallChange')
   const summaryText = result ? localizeBenchmarkSummary(result.summary, result.summaryEn, t) : ''
   const proofMetricCards = proofLatest && proofPrevious && proofDeltas
@@ -471,9 +487,9 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
         },
       ]
     : []
-  const nextActionType = resolveBenchmarkNextActionType(proofDeltas, Boolean(proofPrevious))
+  const nextActionType = isSampleProof ? 'rerun' : resolveBenchmarkNextActionType(proofDeltas, Boolean(proofPrevious))
   const nextActionTitle = t(`benchmark.next.${nextActionType}.title`)
-  const nextActionBody = t(`benchmark.next.${nextActionType}.body`)
+  const nextActionBody = isSampleProof ? t('demo.hint.benchmark') : t(`benchmark.next.${nextActionType}.body`)
   const nextActionCta = t(`benchmark.next.${nextActionType}.cta`)
   const nextActionTone = nextActionType === 'cost'
     ? 'border-orange-200 bg-orange-50/80 text-orange-900'
@@ -482,11 +498,16 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
       : nextActionType === 'keep'
         ? 'border-[#3b82c4]/18 bg-blue-50/80 text-slate-900'
         : 'border-slate-200 bg-slate-50/90 text-slate-900'
-  const verdictBody = proofPrevious && proofDeltas
-    ? (summaryText || t('benchmark.proof.section.body'))
-    : (proofLatest
-        ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
-        : t('benchmark.proof.runAgainBodyEmpty'))
+  const localizedSampleVerdict = isZh
+    ? (proof?.verdictZh || proof?.verdictEn || t('demo.hint.benchmark'))
+    : (proof?.verdictEn || proof?.verdictZh || t('demo.hint.benchmark'))
+  const verdictBody = isSampleProof
+    ? localizedSampleVerdict
+    : proofPrevious && proofDeltas
+      ? (summaryText || t('benchmark.proof.section.body'))
+      : (proofLatest
+          ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
+          : t('benchmark.proof.runAgainBodyEmpty'))
 
   if (loading) {
     return (
@@ -615,12 +636,21 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
                             <AnimatedCounter value={result.overallScore} duration={1500} decimals={0} />
                             <span className="ml-1 text-slate-500">/ 100</span>
                           </span>
+                          {isSampleProof && (
+                            <span className="inline-flex items-center rounded-full border border-white/70 bg-white/75 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
+                              {t('app.demo')}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                           {t('benchmark.proof.verdictLabel')}
                         </p>
                         <h3 className="max-w-3xl text-2xl font-semibold leading-tight text-slate-900 md:text-[1.9rem]">
-                          {proofPrevious && proofDeltas ? proofVerdict : t('benchmark.proof.runAgainTitle')}
+                          {isSampleProof
+                            ? t('benchmark.curve.demo')
+                            : proofPrevious && proofDeltas
+                              ? proofVerdict
+                              : t('benchmark.proof.runAgainTitle')}
                         </h3>
                         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">{verdictBody}</p>
                       </div>
@@ -686,12 +716,14 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
                 ) : (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-4 py-6 text-center">
                     <p className="text-sm font-medium text-slate-700">
-                      {t('benchmark.proof.runAgainTitle')}
+                      {isSampleProof ? t('app.demo') : t('benchmark.proof.runAgainTitle')}
                     </p>
                     <p className="mt-2 text-xs text-slate-500">
-                      {proofLatest
-                        ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
-                        : t('benchmark.proof.runAgainBodyEmpty')}
+                      {isSampleProof
+                        ? localizedSampleVerdict
+                        : proofLatest
+                          ? formatI18n(t('benchmark.proof.runAgainBodyLatest'), { time: formatProofTime(proofLatest.runAt, locale) })
+                          : t('benchmark.proof.runAgainBodyEmpty')}
                     </p>
                   </div>
                 )}
@@ -895,23 +927,25 @@ export default function Benchmark({ onNavigate }: BenchmarkProps) {
               </p>
             )}
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-4">
-              <label className="flex items-center gap-2 text-sm text-slate-500 shrink-0">
-                <span>{t('benchmark.compare.label')}</span>
-                <select
-                  value={compareId ?? ''}
-                  onChange={e => setCompareId(e.target.value || null)}
-                  className="glass-raised border border-surface-border rounded-lg px-3 py-2 text-slate-800 text-sm min-w-[200px] max-w-full bg-white"
-                >
-                  <option value="">{t('benchmark.compare.none')}</option>
-                  {compareOptions.map(h => (
-                    <option key={h.id} value={h.id}>
-                      {formatRunDate(h.runAt)} · {h.rank}{t('benchmark.rankSuffix')} · {h.overallScore}{t('benchmark.scoreUnit')}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            {dataSource !== 'demo' && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-4">
+                <label className="flex items-center gap-2 text-sm text-slate-500 shrink-0">
+                  <span>{t('benchmark.compare.label')}</span>
+                  <select
+                    value={compareId ?? ''}
+                    onChange={e => setCompareId(e.target.value || null)}
+                    className="glass-raised border border-surface-border rounded-lg px-3 py-2 text-slate-800 text-sm min-w-[200px] max-w-full bg-white"
+                  >
+                    <option value="">{t('benchmark.compare.none')}</option>
+                    {compareOptions.map(h => (
+                      <option key={h.id} value={h.id}>
+                        {formatRunDate(h.runAt)} · {h.rank}{t('benchmark.rankSuffix')} · {h.overallScore}{t('benchmark.scoreUnit')}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
 
             {overallTrendData.length === 0 ? (
               <p className="text-sm text-slate-500 py-8 text-center">{t('benchmark.noHistory')}</p>

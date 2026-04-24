@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEMO_SESSIONS } from '../services/demo-sessions.js';
-import { TokenWasteAnalyzer } from '../services/token-waste-analyzer.js';
+import { TokenWasteAnalyzer, detectBadCycle } from '../services/token-waste-analyzer.js';
 import { sessionParser } from '../services/session-parser.js';
 import type { SessionReplay, SessionStep } from '../types/replay.js';
 
@@ -67,6 +67,26 @@ describe('TokenWasteAnalyzer', () => {
     expect(diagnostic).toBeTruthy();
     expect(diagnostic?.descZh).toContain('失败');
     expect(diagnostic?.estimatedWasteTokens).toBeGreaterThan(1_000);
+  });
+
+  it('uses the hybrid detector to classify repeated tool paths with confidence', () => {
+    const steps: SessionStep[] = [
+      makeStep({ index: 0, type: 'user', content: '帮我把文件读出来。' }),
+      makeStep({ index: 1, type: 'tool_call', content: '', toolName: 'read_file', toolInput: JSON.stringify({ path: 'src/List.tsx' }) }),
+      makeStep({ index: 2, type: 'tool_result', content: '', toolOutput: 'ENOENT: src/List.tsx', error: 'ENOENT: src/List.tsx', isError: true }),
+      makeStep({ index: 3, type: 'thinking', content: '路径不对，再试一次。' }),
+      makeStep({ index: 4, type: 'tool_call', content: '', toolName: 'read_file', toolInput: JSON.stringify({ path: 'app/src/List.tsx' }) }),
+      makeStep({ index: 5, type: 'tool_result', content: '', toolOutput: 'ENOENT: app/src/List.tsx', error: 'ENOENT: app/src/List.tsx', isError: true }),
+      makeStep({ index: 6, type: 'thinking', content: '还是不对，再换一个常见路径。' }),
+      makeStep({ index: 7, type: 'tool_call', content: '', toolName: 'read_file', toolInput: JSON.stringify({ path: 'frontend/src/List.tsx' }) }),
+      makeStep({ index: 8, type: 'response', content: '我先根据报错推断原因。' }),
+    ];
+
+    const detection = detectBadCycle(steps);
+
+    expect(detection.detected).toBe(true);
+    expect(['high', 'medium']).toContain(detection.confidence);
+    expect(detection.pattern).toContain('read_file');
   });
 
   it('adds demo fallback diagnostics for sparse demo replays instead of returning an empty list', () => {

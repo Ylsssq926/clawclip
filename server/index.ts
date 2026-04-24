@@ -11,9 +11,11 @@ import benchmarkRouter from './routes/benchmark.js';
 import shareRouter from './routes/share.js';
 import analyticsRouter from './routes/analytics.js';
 import knowledgeRouter from './routes/knowledge.js';
+import evalRouter from './routes/eval.js';
 import leaderboardRouter from './routes/leaderboard.js';
 import exportRouter from './routes/export.js';
 import alertsRouter from './routes/alerts.js';
+import otelRouter from './routes/otel.js';
 import { initPricingFetcher } from './services/pricing-fetcher.js';
 import { log } from './services/logger.js';
 
@@ -45,9 +47,11 @@ app.use('/api/replay', replayRouter);
 app.use('/api/benchmark', benchmarkRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/knowledge', knowledgeRouter);
+app.use('/api/eval', evalRouter);
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
+app.use('/api/otel', otelRouter);
 
 app.use('/share', shareRouter);
 

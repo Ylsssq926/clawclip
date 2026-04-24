@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { benchmarkRunner } from '../services/benchmark-runner.js';
-import { sessionParser } from '../services/session-parser.js';
+import { analyzeConsistency } from '../services/consistency-tracker.js';
+import { findReplayById } from '../services/replay-repository.js';
+import { normalizeSessionId, sessionParser } from '../services/session-parser.js';
 import type { BenchmarkResult } from '../types/benchmark.js';
 
 const router = Router();
@@ -237,6 +239,55 @@ router.get('/proof', (_req, res) => {
     res.json(buildBenchmarkProof(latest, previous));
   } catch (e) {
     res.status(500).json({ error: '获取优化前后证明失败 / Failed to get benchmark proof', detail: String(e) });
+  }
+});
+
+/** GET /api/benchmark/consistency?sessionIds=id1,id2,id3 — 分析同任务多次运行的一致性 */
+router.get('/consistency', (req, res) => {
+  try {
+    const rawSessionIds = Array.isArray(req.query.sessionIds)
+      ? req.query.sessionIds.join(',')
+      : typeof req.query.sessionIds === 'string'
+        ? req.query.sessionIds
+        : '';
+    const sessionIds = rawSessionIds
+      .split(',')
+      .map(id => id.trim())
+      .filter(Boolean);
+
+    if (sessionIds.length === 0) {
+      res.status(400).json({ error: '请通过 sessionIds 传入至少一个会话 ID / Provide at least one session ID via sessionIds' });
+      return;
+    }
+
+    const missingSessionIds: string[] = [];
+    const seen = new Set<string>();
+    const sessions: Parameters<typeof analyzeConsistency>[0] = [];
+
+    for (const sessionId of sessionIds) {
+      const replay = findReplayById(sessionId);
+      if (!replay) {
+        missingSessionIds.push(sessionId);
+        continue;
+      }
+
+      const normalizedId = normalizeSessionId(replay.meta.id);
+      if (seen.has(normalizedId)) continue;
+      seen.add(normalizedId);
+      sessions.push(replay);
+    }
+
+    if (missingSessionIds.length > 0) {
+      res.status(404).json({
+        error: '部分会话不存在 / Some sessions were not found',
+        missingSessionIds,
+      });
+      return;
+    }
+
+    res.json(analyzeConsistency(sessions));
+  } catch (e) {
+    res.status(500).json({ error: '获取一致性分析失败 / Failed to analyze consistency', detail: String(e) });
   }
 });
 

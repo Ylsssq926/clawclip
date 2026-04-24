@@ -62,6 +62,10 @@ Every benchmark run is saved. After a change, you get before/after proof: score,
 ### Replay any run step by step
 See what your agent actually did: every tool call, retry, reasoning block, and response, in order. Find where it went sideways without digging through raw JSONL.
 
+## About the diagnostics
+
+> The Agent Run Diagnostics is a **heuristic diagnostic** — not a standardized benchmark. It reads signals from your actual sessions (response quality, tool use, safety patterns, cost structure) to help you compare iterations faster. Use it for relative improvement tracking, not absolute rankings.
+
 ---
 
 ## The three questions it answers
@@ -69,7 +73,7 @@ See what your agent actually did: every tool call, retry, reasoning block, and r
 | What you actually want to know | What ClawClip shows you |
 | --- | --- |
 | **Where's my token budget going?** | **Cost Report** breaks spend by model, task, and session — with waste signals and savings suggestions |
-| **Is my agent actually getting better?** | **Agent Scorecard** gives a six-dimension verdict after each run, with before/after proof when you make a change |
+| **Is my agent actually getting better?** | **Agent Run Diagnostics** reads behavioral signals from your sessions (tool use patterns, retry loops, cost structure) to help you spot regressions faster. Use it for relative tracking, not absolute rankings. |
 | **What exactly happened in that run?** | **Run Insights** replays every step so you can find the problem without reading raw logs |
 
 ---
@@ -125,10 +129,31 @@ CLAWCLIP_LOBSTER_DIRS=/path/to/your/sessions npm start
 | `CLAWCLIP_LOBSTER_DIRS` | Add extra folders (comma or semicolon separated) |
 | Built-in demo sessions | Available immediately, no real data needed |
 | ZeroClaw exports / other JSONL | Supported progressively |
+| **OpenTelemetry (OTLP/HTTP)** | LangGraph / AutoGen via OTEL exporter (see below) |
 
-## About the scorecard
+## LangGraph / AutoGen Integration
 
-> The Agent Scorecard is a **heuristic diagnostic** — not a standardized benchmark. It reads signals from your actual sessions (response quality, tool use, safety patterns, cost structure) to help you compare iterations faster. Use it for relative improvement tracking, not absolute rankings.
+ClawClip can receive traces from LangGraph and AutoGen via OpenTelemetry.
+
+### LangGraph
+```bash
+pip install langsmith[otel]
+export LANGSMITH_OTEL_ENABLED=true
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:8080/api/otel/v1/traces
+export OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/json
+```
+
+### AutoGen
+```python
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(
+    SimpleSpanProcessor(OTLPSpanExporter(endpoint="http://localhost:8080/api/otel/v1/traces"))
+)
+```
 
 <a id="roadmap"></a>
 

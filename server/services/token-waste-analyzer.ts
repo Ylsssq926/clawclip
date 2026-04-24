@@ -102,6 +102,298 @@ function isToolResultError(step: SessionStep): boolean {
   return step.isError === true || Boolean(step.error) || /(error|enoent|timeout|failed|exception|denied|not found)/i.test(haystack);
 }
 
+interface CycleSegment {
+  start: number;
+  end: number;
+  steps: SessionStep[];
+}
+
+interface CallstackCycleAnalysis {
+  detected: boolean;
+  pattern: string | null;
+  count: number;
+}
+
+interface SemanticCycleAnalysis {
+  detected: boolean;
+  pattern: string | null;
+  similarity: number;
+}
+
+interface InternalBadCycleAnalysis {
+  detected: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  pattern: string | null;
+  similarity: number;
+  repetitionCount: number;
+}
+
+const SEMANTIC_STEP_TYPES: Array<Extract<SessionStep['type'], 'tool_call' | 'tool_result' | 'thinking' | 'response'>> = [
+  'tool_call',
+  'tool_result',
+  'thinking',
+  'response',
+];
+
+function splitCycleSegments(steps: SessionStep[]): CycleSegment[] {
+  const segments: CycleSegment[] = [];
+  let start = -1;
+
+  const flush = (endExclusive: number): void => {
+    if (start < 0 || endExclusive <= start) {
+      start = -1;
+      return;
+    }
+
+    const segmentSteps = steps.slice(start, endExclusive);
+    if (segmentSteps.some(step => step.type === 'tool_call')) {
+      segments.push({ start, end: endExclusive - 1, steps: segmentSteps });
+    }
+    start = -1;
+  };
+
+  for (let i = 0; i < steps.length; i += 1) {
+    const step = steps[i];
+    if (step.type === 'user' || step.type === 'response') {
+      flush(i);
+      continue;
+    }
+    if (start < 0) start = i;
+  }
+
+  flush(steps.length);
+  return segments;
+}
+
+function tokenizeSemanticText(text: string): Set<string> {
+  const normalized = text
+    .toLowerCase()
+    .replace(/[`"'“”‘’]/g, ' ')
+    .replace(/[\\]+/g, '/')
+    .replace(/\b\d+\b/g, '#');
+  const matches = normalized.match(/[\p{Script=Han}]|[\p{Letter}\p{Number}_./:-]+/gu) ?? [];
+  return new Set(matches.map(token => token.trim()).filter(Boolean));
+}
+
+function jaccardSimilarity(left: string, right: string): number {
+  const leftTokens = tokenizeSemanticText(left);
+  const rightTokens = tokenizeSemanticText(right);
+  if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
+
+  let intersection = 0;
+  for (const token of leftTokens) {
+    if (rightTokens.has(token)) intersection += 1;
+  }
+
+  const union = new Set([...leftTokens, ...rightTokens]).size;
+  return union > 0 ? intersection / union : 0;
+}
+
+function buildSemanticText(step: SessionStep): string {
+  return [step.toolName, step.toolInput, step.toolOutput, step.reasoning, step.content, step.error]
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 1200);
+}
+
+function analyzeCallstackSegment(steps: SessionStep[], k = 0.5): CallstackCycleAnalysis {
+  const toolSequence = steps
+    .filter((step): step is SessionStep & { type: 'tool_call' } => step.type === 'tool_call')
+    .map(step => step.toolName?.trim() || 'unknown');
+
+  if (toolSequence.length < 3) {
+    return { detected: false, pattern: null, count: 0 };
+  }
+
+  const candidates = new Map<string, { count: number; length: number }>();
+  const maxLength = Math.min(4, toolSequence.length);
+  for (let length = 1; length <= maxLength; length += 1) {
+    for (let start = 0; start <= toolSequence.length - length; start += 1) {
+      const pattern = toolSequence.slice(start, start + length).join(' → ');
+      const existing = candidates.get(pattern);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        candidates.set(pattern, { count: 1, length });
+      }
+    }
+  }
+
+  const counts = Array.from(candidates.values()).map(item => item.count);
+  if (counts.length === 0) {
+    return { detected: false, pattern: null, count: 0 };
+  }
+
+  const mean = counts.reduce((sum, count) => sum + count, 0) / counts.length;
+  const variance = counts.reduce((sum, count) => sum + (count - mean) ** 2, 0) / counts.length;
+  const threshold = mean + k * Math.sqrt(variance);
+  const topCandidate = Array.from(candidates.entries())
+    .map(([pattern, value]) => ({ pattern, ...value }))
+    .filter(candidate => (candidate.length === 1 ? candidate.count >= 3 : candidate.count >= 2) && candidate.count > threshold)
+    .sort((a, b) => b.count * b.length - a.count * a.length || b.count - a.count || b.length - a.length)[0];
+
+  if (!topCandidate) {
+    return { detected: false, pattern: null, count: 0 };
+  }
+
+  return {
+    detected: true,
+    pattern: topCandidate.pattern,
+    count: topCandidate.count,
+  };
+}
+
+function analyzeSemanticSegment(steps: SessionStep[], threshold = 0.7): SemanticCycleAnalysis {
+  let bestSimilarity = 0;
+  let bestPattern: string | null = null;
+
+  for (const stepType of SEMANTIC_STEP_TYPES) {
+    const filtered = steps.filter(step => step.type === stepType);
+    for (let i = 1; i < filtered.length; i += 1) {
+      const previous = filtered[i - 1];
+      const current = filtered[i];
+      if (stepType === 'tool_call' && previous.toolName?.trim() !== current.toolName?.trim()) continue;
+      if (
+        stepType === 'tool_result' &&
+        previous.toolName?.trim() &&
+        current.toolName?.trim() &&
+        previous.toolName.trim() !== current.toolName.trim()
+      ) {
+        continue;
+      }
+
+      const similarity = jaccardSimilarity(buildSemanticText(previous), buildSemanticText(current));
+      if (similarity > bestSimilarity) {
+        bestSimilarity = similarity;
+        bestPattern =
+          stepType === 'tool_call'
+            ? previous.toolName?.trim() || current.toolName?.trim() || stepType
+            : stepType;
+      }
+    }
+  }
+
+  return {
+    detected: bestSimilarity > threshold,
+    pattern: bestPattern,
+    similarity: bestSimilarity,
+  };
+}
+
+function getMaxRepeatedToolCount(steps: SessionStep[]): number {
+  const counts = new Map<string, number>();
+  let maxCount = 0;
+
+  for (const step of steps) {
+    if (step.type !== 'tool_call') continue;
+    const tool = step.toolName?.trim() || 'unknown';
+    const nextCount = (counts.get(tool) ?? 0) + 1;
+    counts.set(tool, nextCount);
+    if (nextCount > maxCount) maxCount = nextCount;
+  }
+
+  return maxCount;
+}
+
+function getConfidenceRank(confidence: InternalBadCycleAnalysis['confidence']): number {
+  switch (confidence) {
+    case 'high':
+      return 3;
+    case 'medium':
+      return 2;
+    case 'low':
+    default:
+      return 1;
+  }
+}
+
+function analyzeBadCycleSegment(steps: SessionStep[]): InternalBadCycleAnalysis {
+  const callstack = analyzeCallstackSegment(steps);
+  const semantic = analyzeSemanticSegment(steps);
+  const repeatedToolCount = getMaxRepeatedToolCount(steps);
+
+  if (callstack.detected && semantic.detected) {
+    return {
+      detected: true,
+      confidence: 'high',
+      pattern: callstack.pattern ?? semantic.pattern,
+      similarity: semantic.similarity,
+      repetitionCount: callstack.count,
+    };
+  }
+
+  if (callstack.detected) {
+    return {
+      detected: true,
+      confidence: semantic.similarity >= 0.55 || repeatedToolCount >= 3 ? 'medium' : 'low',
+      pattern: callstack.pattern,
+      similarity: semantic.similarity,
+      repetitionCount: callstack.count,
+    };
+  }
+
+  if (semantic.detected && repeatedToolCount >= 3) {
+    return {
+      detected: true,
+      confidence: 'low',
+      pattern: semantic.pattern,
+      similarity: semantic.similarity,
+      repetitionCount: repeatedToolCount,
+    };
+  }
+
+  return {
+    detected: false,
+    confidence: 'low',
+    pattern: null,
+    similarity: semantic.similarity,
+    repetitionCount: 0,
+  };
+}
+
+export function detectCyclesCallstack(steps: SessionStep[], k = 0.5): boolean {
+  return splitCycleSegments(steps).some(segment => analyzeCallstackSegment(segment.steps, k).detected);
+}
+
+export function detectCyclesSemantic(steps: SessionStep[], threshold = 0.7): boolean {
+  return splitCycleSegments(steps).some(segment => analyzeSemanticSegment(segment.steps, threshold).detected);
+}
+
+export function detectBadCycle(
+  steps: SessionStep[],
+): { detected: boolean; confidence: 'high' | 'medium' | 'low'; pattern: string | null } {
+  let best: InternalBadCycleAnalysis = {
+    detected: false,
+    confidence: 'low',
+    pattern: null,
+    similarity: 0,
+    repetitionCount: 0,
+  };
+
+  for (const segment of splitCycleSegments(steps)) {
+    const analysis = analyzeBadCycleSegment(segment.steps);
+    if (!analysis.detected) continue;
+
+    const nextRank = getConfidenceRank(analysis.confidence);
+    const bestRank = getConfidenceRank(best.confidence);
+    if (
+      !best.detected ||
+      nextRank > bestRank ||
+      (nextRank === bestRank &&
+        (analysis.repetitionCount > best.repetitionCount ||
+          (analysis.repetitionCount === best.repetitionCount && analysis.similarity > best.similarity)))
+    ) {
+      best = analysis;
+    }
+  }
+
+  return {
+    detected: best.detected,
+    confidence: best.detected ? best.confidence : 'low',
+    pattern: best.pattern,
+  };
+}
+
 function sortDiagnostics(diagnostics: TokenWasteDiagnostic[]): TokenWasteDiagnostic[] {
   return diagnostics.sort((a, b) => b.estimatedWasteCost - a.estimatedWasteCost || b.estimatedWasteTokens - a.estimatedWasteTokens);
 }
@@ -196,58 +488,42 @@ function detectRetryLoops(replays: SessionReplay[]): TokenWasteDiagnostic[] {
   const diagnostics: TokenWasteDiagnostic[] = [];
 
   for (const replay of replays) {
-    const steps = replay.steps;
+    for (const segment of splitCycleSegments(replay.steps)) {
+      const cycle = analyzeBadCycleSegment(segment.steps);
+      if (!cycle.detected) continue;
 
-    for (let i = 0; i < steps.length; i += 1) {
-      const current = steps[i];
-      if (current.type !== 'tool_call' || !current.toolName) continue;
+      const estimatedWasteTokens = segment.steps.reduce((sum, step) => sum + step.inputTokens + step.outputTokens, 0);
+      const directWasteCost = segment.steps.reduce((sum, step) => sum + step.cost, 0);
+      const estimatedWasteCost = directWasteCost > 0 ? directWasteCost : estimateCostFromTokens(replay, estimatedWasteTokens);
+      const failureCount = segment.steps.filter(isToolResultError).length;
+      const confidenceZh =
+        cycle.confidence === 'high' ? '高度疑似' : cycle.confidence === 'medium' ? '较大概率' : '有一定概率';
+      const confidenceEn =
+        cycle.confidence === 'high' ? 'A high-confidence' : cycle.confidence === 'medium' ? 'A likely' : 'A possible';
+      const similarityTextZh =
+        cycle.similarity > 0
+          ? `，相邻同类型步骤的语义相似度约 ${cycle.similarity.toFixed(2)}`
+          : '';
+      const similarityTextEn =
+        cycle.similarity > 0 ? `, with adjacent same-type steps scoring ~${cycle.similarity.toFixed(2)} in Jaccard similarity` : '';
+      const failureTextZh = failureCount > 0 ? `，且窗口里已经出现了 ${failureCount} 次失败结果` : '';
+      const failureTextEn = failureCount > 0 ? ` and the window already contains ${failureCount} failed result(s)` : '';
+      const patternTextZh = cycle.pattern ? `调用模式 “${cycle.pattern}” ` : '调用模式 ';
+      const patternTextEn = cycle.pattern ? `pattern "${cycle.pattern}" ` : 'call pattern ';
 
-      const repeatedCalls: SessionStep[] = [current];
-      let lastMatchedIndex = i;
-      let failureCount = 0;
-
-      for (let j = i + 1; j < steps.length; j += 1) {
-        const step = steps[j];
-        if (step.type === 'user' || step.type === 'response') break;
-
-        if (isToolResultError(step)) {
-          failureCount += 1;
-          continue;
-        }
-
-        if (step.type !== 'tool_call') continue;
-        if (step.toolName !== current.toolName) break;
-        repeatedCalls.push(step);
-        lastMatchedIndex = j;
-      }
-
-      if (repeatedCalls.length >= 3) {
-        const retryWindow = steps.slice(i, lastMatchedIndex + 1).filter(step => step.type !== 'user' && step.type !== 'response');
-        const estimatedWasteTokens = retryWindow.reduce((sum, step) => sum + step.inputTokens + step.outputTokens, 0);
-        const estimatedWasteCost = retryWindow.reduce((sum, step) => sum + step.cost, 0);
-        const descZh =
-          failureCount > 0
-            ? `同一工具 “${current.toolName}” 在 ${failureCount} 次失败结果后仍连续重试了 ${repeatedCalls.length} 次，像是在失败后原地打转。`
-            : `同一工具 “${current.toolName}” 在没有新用户输入的情况下重复调用了 ${repeatedCalls.length} 次，像是在原地重试。`;
-        const descEn =
-          failureCount > 0
-            ? `Tool "${current.toolName}" was retried ${repeatedCalls.length} times after ${failureCount} failed result(s), which looks like a loop after failure.`
-            : `Tool "${current.toolName}" was called ${repeatedCalls.length} times without new user input, which looks like a retry loop.`;
-        diagnostics.push(
-          makeDiagnostic({
-            type: 'retry-loop',
-            titleZh: '工具重试循环',
-            titleEn: 'Tool retry loop',
-            descZh,
-            descEn,
-            estimatedWasteTokens,
-            estimatedWasteCost,
-            sessionId: replay.meta.id,
-            sessionLabel: getSessionLabel(replay),
-          }),
-        );
-        i = lastMatchedIndex;
-      }
+      diagnostics.push(
+        makeDiagnostic({
+          type: 'retry-loop',
+          titleZh: '工具重试循环',
+          titleEn: 'Tool retry loop',
+          descZh: `${confidenceZh}检测到${patternTextZh}异常重复（重复强度 ${cycle.repetitionCount}）${failureTextZh}${similarityTextZh}，说明代理可能在没有新信息的情况下反复走回同一条工具路径。`,
+          descEn: `${confidenceEn} repeated ${patternTextEn}was detected (repeat strength ${cycle.repetitionCount})${failureTextEn}${similarityTextEn}, which suggests the agent kept revisiting the same tool path without materially new information.`,
+          estimatedWasteTokens,
+          estimatedWasteCost,
+          sessionId: replay.meta.id,
+          sessionLabel: getSessionLabel(replay),
+        }),
+      );
     }
   }
 

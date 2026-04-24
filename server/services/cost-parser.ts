@@ -16,6 +16,7 @@ import {
   type PricingSource,
   type UsageSource,
   type UsageSourceBreakdown,
+  type CostMeta,
   type CostReconciliationMeta,
   type CostReconciliationSummary,
   type CostReconciliationRow,
@@ -36,6 +37,7 @@ import { buildCostMeta, resolveModelDetail, repriceStep } from './pricing-utils.
 import type { PricingSnapshot } from './pricing-fetcher.js';
 import type { SessionReplay } from '../types/replay.js';
 import { tokenWasteAnalyzer, type TokenWasteDiagnostic } from './token-waste-analyzer.js';
+import { attributeCosts, type CostAttribution } from './cost-attribution.js';
 import { log } from './logger.js';
 
 interface ModelBreakdownEntry {
@@ -153,6 +155,14 @@ export interface ReferenceCompareResult {
   currentReference: PricingReference;
   currentTotalCost: number;
   rows: ReferenceCompareRow[];
+}
+
+export interface CostAttributionReport {
+  attribution: CostAttribution;
+  costMeta: CostMeta;
+  latestUsageAt?: string;
+  dataCutoffAt: string;
+  usingDemo: boolean;
 }
 
 function getPricingReferenceLabel(reference: PricingReference): string {
@@ -637,6 +647,88 @@ export class CostParser {
 
   getUsageFreshness(): UsageFreshness {
     return this.buildUsageFreshness(this.getCachedUsageBatch());
+  }
+
+  private getFilteredReplays(batch: UsageCacheEntry, days: number): SessionReplay[] {
+    const cutoff = this.getReferenceNow(batch.data, batch.isDemo) - days * 24 * 60 * 60 * 1000;
+    return batch.replays.filter(
+      replay => !Number.isNaN(replay.meta.endTime.getTime()) && replay.meta.endTime.getTime() > cutoff,
+    );
+  }
+
+  getCostAttribution(days: number = 30): CostAttributionReport {
+    const batch = this.getCachedUsageBatch();
+    const filteredReplays = this.getFilteredReplays(batch, days);
+    const attribution: CostAttribution = {
+      byTask: {},
+      byTool: {},
+      byModel: {},
+      summary: {
+        totalCost: 0,
+        costPerStep: 0,
+        mostExpensiveTool: null,
+        mostExpensiveModel: null,
+        wastedCost: 0,
+      },
+    };
+    let totalStepCount = 0;
+
+    for (const replay of filteredReplays) {
+      const replayAttribution = attributeCosts(replay.steps);
+      totalStepCount += replay.steps.length;
+      attribution.summary.totalCost += replayAttribution.summary.totalCost;
+      attribution.summary.wastedCost += replayAttribution.summary.wastedCost;
+
+      for (const [taskKey, stats] of Object.entries(replayAttribution.byTask)) {
+        attribution.byTask[`${replay.meta.id}::${taskKey}`] = { ...stats };
+      }
+
+      for (const [tool, stats] of Object.entries(replayAttribution.byTool)) {
+        const existing = attribution.byTool[tool] ?? { directCost: 0, fullyLoadedCost: 0, callCount: 0, failCount: 0 };
+        existing.directCost += stats.directCost;
+        existing.fullyLoadedCost += stats.fullyLoadedCost;
+        existing.callCount += stats.callCount;
+        existing.failCount += stats.failCount;
+        attribution.byTool[tool] = existing;
+      }
+
+      for (const [model, stats] of Object.entries(replayAttribution.byModel)) {
+        const existing = attribution.byModel[model] ?? { cost: 0, inputTokens: 0, outputTokens: 0, callCount: 0 };
+        existing.cost += stats.cost;
+        existing.inputTokens += stats.inputTokens;
+        existing.outputTokens += stats.outputTokens;
+        existing.callCount += stats.callCount;
+        attribution.byModel[model] = existing;
+      }
+    }
+
+    for (const stats of Object.values(attribution.byTool)) {
+      stats.directCost = roundSuggestionMoney(stats.directCost);
+      stats.fullyLoadedCost = roundSuggestionMoney(stats.fullyLoadedCost);
+    }
+
+    for (const stats of Object.values(attribution.byModel)) {
+      stats.cost = roundSuggestionMoney(stats.cost);
+    }
+
+    const totalCost = roundSuggestionMoney(attribution.summary.totalCost);
+    const wastedCost = roundSuggestionMoney(attribution.summary.wastedCost);
+    attribution.summary.totalCost = totalCost;
+    attribution.summary.wastedCost = wastedCost;
+    attribution.summary.costPerStep = roundSuggestionMoney(totalStepCount > 0 ? attribution.summary.totalCost / totalStepCount : 0);
+    attribution.summary.mostExpensiveTool =
+      Array.from(Object.entries(attribution.byTool)).sort((a, b) => b[1].fullyLoadedCost - a[1].fullyLoadedCost)[0]?.[0] ?? null;
+    attribution.summary.mostExpensiveModel =
+      Array.from(Object.entries(attribution.byModel)).sort((a, b) => b[1].cost - a[1].cost)[0]?.[0] ?? null;
+
+    const freshness = this.buildUsageFreshness(batch);
+    return {
+      attribution,
+      costMeta: buildCostMeta(batch.pricing, batch.usageSource),
+      latestUsageAt: freshness.latestUsageAt,
+      dataCutoffAt: freshness.dataCutoffAt,
+      usingDemo: batch.isDemo,
+    };
   }
 
   async getReferenceComparison(days: number = 30): Promise<ReferenceCompareResult> {

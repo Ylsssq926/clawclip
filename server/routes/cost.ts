@@ -35,6 +35,17 @@ router.get('/summary', (req, res) => {
   }
 });
 
+/** Span-DAG 成本归因 */
+router.get('/attribution', (req, res) => {
+  const days = parseDays(req);
+  try {
+    const report = costParser.getCostAttribution(days);
+    res.json(report);
+  } catch (e) {
+    res.status(500).json({ error: '获取成本归因失败 / Failed to get cost attribution', detail: String(e) });
+  }
+});
+
 /** 参考价格对比 */
 router.get('/reference-compare', async (req, res) => {
   const days = parseDays(req);

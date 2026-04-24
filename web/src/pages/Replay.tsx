@@ -8,7 +8,7 @@ import { getReplayDetailSections } from './replayDetailSections'
 import { getSupportingElementPriority } from './supportingElementPriority'
 import type { Tab } from '../App'
 import type { SessionMeta } from '../types/session'
-import { apiGet, apiGetSafe } from '../lib/api'
+import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
 
 const TAG_ALL = '__all__'
 
@@ -88,6 +88,11 @@ interface TagInfo {
   tag: string
   sessionCount: number
   color: string
+}
+
+interface ReplayToast {
+  tone: 'success' | 'error'
+  message: string
 }
 
 function formatStepOffset(stepTime: string, startTime: string): string {
@@ -359,8 +364,15 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
   const [speed, setSpeed] = useState<ReplaySpeed>('normal')
   const [showAllSteps, setShowAllSteps] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(false)
+  const [savingEval, setSavingEval] = useState(false)
+  const [evalToast, setEvalToast] = useState<ReplayToast | null>(null)
   const lastVisibleStepRef = useRef<HTMLDivElement | null>(null)
   const currentSessionIdRef = useRef<string | null>(null)
+
+  const resetEvalFeedback = useCallback(() => {
+    setSavingEval(false)
+    setEvalToast(null)
+  }, [])
 
   const tagColorByTag = useMemo(() => {
     const m = new Map<string, string>()
@@ -421,7 +433,14 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
     }
   }, [view, t])
 
+  useEffect(() => {
+    if (!evalToast) return
+    const timer = window.setTimeout(() => setEvalToast(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [evalToast])
+
   const openSession = useCallback((id: string) => {
+    resetEvalFeedback()
     currentSessionIdRef.current = id
     setOpenSessionId(id)
     setView('detail')
@@ -436,7 +455,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
     setSpeed('normal')
     setShowAllSteps(false)
     setControlsVisible(false)
-  }, [])
+  }, [resetEvalFeedback])
 
   useEffect(() => {
     if (view !== 'detail' || !openSessionId) return
@@ -605,12 +624,32 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
       setControlsVisible(true)
     }
 
+    const hasFailedSteps = replay?.steps.some(step => step.isError === true) ?? false
+
+    const handleSaveAsEval = async () => {
+      if (!replay || !hasFailedSteps || savingEval) return
+      setSavingEval(true)
+      setEvalToast(null)
+      try {
+        await apiPost<{ id: string }>('/api/eval/cases', { sessionId: replay.meta.id })
+        setEvalToast({ tone: 'success', message: t('replay.saveAsEval.success') })
+      } catch (err) {
+        setEvalToast({
+          tone: 'error',
+          message: parseApiErrorMessage(err, t('replay.saveAsEval.error')),
+        })
+      } finally {
+        setSavingEval(false)
+      }
+    }
+
     return (
       <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => {
+              resetEvalFeedback()
               currentSessionIdRef.current = null
               setOpenSessionId(null)
               setView('list')
@@ -628,38 +667,71 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
             <ArrowLeft className="h-4 w-4" /> {t('replay.back')}
           </button>
           {replay && (
-            <details className="relative">
-              <summary className="details-summary-reset inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 py-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700">
-                <Share2 className="h-3.5 w-3.5" />
-                {t('replay.actions.more')}
-              </summary>
-              <div className="absolute right-0 top-full z-10 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-900/8">
-                <a
-                  href={`/api/knowledge/export/${encodeURIComponent(replay.meta.id)}?format=json`}
-                  download
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#3b82c4]"
+            <div className="flex items-center gap-2">
+              {hasFailedSteps && (
+                <button
+                  type="button"
+                  onClick={handleSaveAsEval}
+                  disabled={savingEval}
+                  title={t('replay.saveAsEval.hint')}
+                  className={cn(
+                    'inline-flex items-center rounded-lg border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
+                    savingEval
+                      ? 'cursor-wait border-emerald-200/80 bg-emerald-50/80 text-emerald-500'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100/70',
+                  )}
                 >
-                  <Download className="h-3.5 w-3.5" /> {t('replay.actions.exportJson')}
-                </a>
-                <a
-                  href={`/api/knowledge/export/${encodeURIComponent(replay.meta.id)}?format=markdown`}
-                  download
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#3b82c4]"
-                >
-                  <FileText className="h-3.5 w-3.5" /> {t('replay.actions.exportMd')}
-                </a>
-                <a
-                  href={`/share/replay/${encodeURIComponent(replay.meta.id)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#3b82c4]"
-                >
-                  <Share2 className="h-3.5 w-3.5" /> {t('replay.share')}
-                </a>
-              </div>
-            </details>
+                  {t('replay.saveAsEval')}
+                </button>
+              )}
+              <details className="relative">
+                <summary className="details-summary-reset inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 py-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700">
+                  <Share2 className="h-3.5 w-3.5" />
+                  {t('replay.actions.more')}
+                </summary>
+                <div className="absolute right-0 top-full z-10 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-lg shadow-slate-900/8">
+                  <a
+                    href={`/api/knowledge/export/${encodeURIComponent(replay.meta.id)}?format=json`}
+                    download
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#3b82c4]"
+                  >
+                    <Download className="h-3.5 w-3.5" /> {t('replay.actions.exportJson')}
+                  </a>
+                  <a
+                    href={`/api/knowledge/export/${encodeURIComponent(replay.meta.id)}?format=markdown`}
+                    download
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#3b82c4]"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> {t('replay.actions.exportMd')}
+                  </a>
+                  <a
+                    href={`/share/replay/${encodeURIComponent(replay.meta.id)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-600 transition-colors hover:bg-slate-50 hover:text-[#3b82c4]"
+                  >
+                    <Share2 className="h-3.5 w-3.5" /> {t('replay.share')}
+                  </a>
+                </div>
+              </details>
+            </div>
           )}
         </div>
+
+        {evalToast && (
+          <div
+            role={evalToast.tone === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+            className={cn(
+              'pointer-events-none fixed bottom-6 right-6 z-40 max-w-sm rounded-xl border px-4 py-3 text-sm shadow-lg shadow-slate-900/10',
+              evalToast.tone === 'success'
+                ? 'border-emerald-500/25 bg-emerald-50 text-emerald-700'
+                : 'border-red-500/25 bg-red-50 text-red-700',
+            )}
+          >
+            {evalToast.message}
+          </div>
+        )}
 
         {loading && <DetailSkeleton />}
         {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}

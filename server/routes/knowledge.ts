@@ -1,151 +1,16 @@
 import { Router } from 'express';
-import * as fs from 'fs';
-import * as path from 'path';
-import { getClawclipStateDir } from '../services/agent-data-root.js';
 import { analyzeReplay } from '../services/replay-analyzer.js';
-import { sessionParser, normalizeSessionId } from '../services/session-parser.js';
-import type { SessionMeta, SessionReplay, SessionStep } from '../types/replay.js';
+import {
+  findReplayById,
+  getMergedReplays,
+  loadImportedSessions,
+  parseSessionReplay,
+  saveImportedSessions,
+} from '../services/replay-repository.js';
+import { normalizeSessionId } from '../services/session-parser.js';
+import type { SessionReplay, SessionStep } from '../types/replay.js';
 
 const router = Router();
-
-function importedSessionsPath(): string {
-  return path.join(getClawclipStateDir(), 'imported-sessions.json');
-}
-
-function toDate(v: unknown): Date {
-  if (v instanceof Date && !Number.isNaN(v.getTime())) return v;
-  if (typeof v === 'string' || typeof v === 'number') {
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? new Date() : d;
-  }
-  return new Date();
-}
-
-function reviveMeta(raw: Record<string, unknown>): SessionMeta | null {
-  if (typeof raw.id !== 'string' || typeof raw.agentName !== 'string') return null;
-  return {
-    id: raw.id,
-    agentName: raw.agentName,
-    dataSource: typeof raw.dataSource === 'string' ? raw.dataSource : undefined,
-    startTime: toDate(raw.startTime),
-    endTime: toDate(raw.endTime),
-    durationMs: Number(raw.durationMs) || 0,
-    totalCost: Number(raw.totalCost) || 0,
-    totalTokens: Number(raw.totalTokens) || 0,
-    modelUsed: Array.isArray(raw.modelUsed) ? raw.modelUsed.map(String) : [],
-    stepCount: Number(raw.stepCount) || 0,
-    summary: typeof raw.summary === 'string' ? raw.summary : '',
-    sessionLabel: typeof raw.sessionLabel === 'string' ? raw.sessionLabel : undefined,
-    sessionKey: typeof raw.sessionKey === 'string' ? raw.sessionKey : undefined,
-    storeUpdatedAt:
-      typeof raw.storeUpdatedAt === 'number' && Number.isFinite(raw.storeUpdatedAt)
-        ? raw.storeUpdatedAt
-        : undefined,
-    storeContextTokens:
-      typeof raw.storeContextTokens === 'number' && Number.isFinite(raw.storeContextTokens)
-        ? raw.storeContextTokens
-        : undefined,
-    storeTotalTokens:
-      typeof raw.storeTotalTokens === 'number' && Number.isFinite(raw.storeTotalTokens)
-        ? raw.storeTotalTokens
-        : undefined,
-    storeModel: typeof raw.storeModel === 'string' ? raw.storeModel : undefined,
-    storeChannel: typeof raw.storeChannel === 'string' ? raw.storeChannel : undefined,
-    storeProvider: typeof raw.storeProvider === 'string' ? raw.storeProvider : undefined,
-  };
-}
-
-function reviveStep(raw: Record<string, unknown>, index: number): SessionStep | null {
-  if (typeof raw.type !== 'string') return null;
-  const allowed = new Set([
-    'thinking',
-    'tool_call',
-    'tool_result',
-    'response',
-    'user',
-    'system',
-  ]);
-  if (!allowed.has(raw.type)) return null;
-  const idxNum = Number(raw.index);
-  return {
-    index: Number.isFinite(idxNum) ? idxNum : index,
-    timestamp: toDate(raw.timestamp),
-    type: raw.type as SessionStep['type'],
-    content: typeof raw.content === 'string' ? raw.content : String(raw.content ?? ''),
-    model: typeof raw.model === 'string' ? raw.model : undefined,
-    toolName: typeof raw.toolName === 'string' ? raw.toolName : undefined,
-    toolInput: typeof raw.toolInput === 'string' ? raw.toolInput : undefined,
-    toolOutput: typeof raw.toolOutput === 'string' ? raw.toolOutput : undefined,
-    inputTokens: Number(raw.inputTokens) || 0,
-    outputTokens: Number(raw.outputTokens) || 0,
-    cost: Number(raw.cost) || 0,
-    durationMs: Number(raw.durationMs) || 0,
-  };
-}
-
-function parseSessionReplay(data: unknown): SessionReplay | null {
-  if (!data || typeof data !== 'object') return null;
-  const o = data as Record<string, unknown>;
-  if (!o.meta || typeof o.meta !== 'object' || !Array.isArray(o.steps)) return null;
-  const meta = reviveMeta(o.meta as Record<string, unknown>);
-  if (!meta) return null;
-  const steps: SessionStep[] = [];
-  for (let i = 0; i < o.steps.length; i++) {
-    const row = o.steps[i];
-    if (!row || typeof row !== 'object') continue;
-    const s = reviveStep(row as Record<string, unknown>, i);
-    if (s) steps.push({ ...s, index: steps.length });
-  }
-  return { meta: { ...meta, stepCount: steps.length }, steps };
-}
-
-function loadImportedSessions(): SessionReplay[] {
-  try {
-    if (!fs.existsSync(importedSessionsPath())) return [];
-    const text = fs.readFileSync(importedSessionsPath(), 'utf-8');
-    const parsed = JSON.parse(text) as unknown;
-    const arr = Array.isArray(parsed) ? parsed : [parsed];
-    const out: SessionReplay[] = [];
-    for (const item of arr) {
-      const r = parseSessionReplay(item);
-      if (r) out.push(r);
-    }
-    return out;
-  } catch {
-    return [];
-  }
-}
-
-function saveImportedSessions(replays: SessionReplay[]): void {
-  const dir = path.dirname(importedSessionsPath());
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(importedSessionsPath(), JSON.stringify(replays, null, 2), 'utf-8');
-}
-
-function getMergedReplays(): SessionReplay[] {
-  // 先批量拿到当前可见 replay，避免对每个 meta 再触发一次整批 repriced replays 重建。
-  const fromParser = sessionParser.getSessionReplays();
-  const imported = loadImportedSessions();
-  const byNorm = new Map<string, SessionReplay>();
-  for (const r of fromParser) {
-    byNorm.set(normalizeSessionId(r.meta.id), r);
-  }
-  for (const r of imported) {
-    const k = normalizeSessionId(r.meta.id);
-    if (!byNorm.has(k)) byNorm.set(k, r);
-  }
-  return Array.from(byNorm.values());
-}
-
-function findReplayById(sessionId: string): SessionReplay | null {
-  const fromParser = sessionParser.getSessionReplay(sessionId);
-  if (fromParser) return fromParser;
-  const norm = normalizeSessionId(sessionId);
-  for (const r of loadImportedSessions()) {
-    if (normalizeSessionId(r.meta.id) === norm) return r;
-  }
-  return null;
-}
 
 function formatDateTime(d: Date): string {
   const y = d.getFullYear();

@@ -18,11 +18,11 @@ const UNKNOWN_MODEL_FALLBACK: ModelPriceDetail = { input: 2.0, output: 2.0 };
  *   2. 去掉日期后缀（-YYYY-MM-DD）和版本号（:xxx）再匹配
  *   3. 前缀匹配（model 以表中的 key 开头）
  */
-export function resolveModelDetail(
+function findResolvedModelDetail(
   pricing: DetailedModelPricing,
   model?: string,
-): ModelPriceDetail {
-  if (!model) return UNKNOWN_MODEL_FALLBACK;
+): ModelPriceDetail | undefined {
+  if (!model) return undefined;
 
   const variants = normalizeModelId(model);
   for (const variant of variants) {
@@ -36,7 +36,21 @@ export function resolveModelDetail(
     }
   }
 
-  return UNKNOWN_MODEL_FALLBACK;
+  return undefined;
+}
+
+export function hasModelPricing(
+  pricing: DetailedModelPricing,
+  model?: string,
+): boolean {
+  return findResolvedModelDetail(pricing, model) != null;
+}
+
+export function resolveModelDetail(
+  pricing: DetailedModelPricing,
+  model?: string,
+): ModelPriceDetail {
+  return findResolvedModelDetail(pricing, model) ?? UNKNOWN_MODEL_FALLBACK;
 }
 
 /**

@@ -48,6 +48,29 @@ const DIAGNOSTIC_LIMIT = 6;
 const LONG_PROMPT_THRESHOLD = 800;
 const VERBOSE_OUTPUT_THRESHOLD = 1000;
 const CONTEXT_BLOAT_THRESHOLD = 1500;
+const MODEL_DATE_SUFFIX_RE = /-(?:\d{8}|\d{4}-\d{2}-\d{2})$/;
+const EXPENSIVE_MODEL_NAMES = new Set([
+  'gpt-5-4',
+  'gpt-4o',
+  'gpt-4-1',
+  'gpt-4-turbo',
+  'gpt-4',
+  'o3-pro',
+  'o3',
+  'o1',
+  'claude-opus-4-6',
+  'claude-opus-4-5',
+  'claude-opus-4-1',
+  'claude-opus-4',
+  'claude-sonnet-4-6',
+  'claude-sonnet-4-5',
+  'claude-sonnet-4',
+  'claude-3-7-sonnet',
+  'claude-3-5-sonnet',
+  'claude-3-opus',
+  'gemini-3-1-pro',
+  'gemini-2-5-pro',
+]);
 
 function roundCost(value: number): number {
   return Math.round(value * 1_000_000) / 1_000_000;
@@ -80,20 +103,25 @@ function estimateSeverity(estimatedWasteTokens: number, estimatedWasteCost: numb
 }
 
 function normalizeModelName(value: string): string {
-  return value.toLowerCase().replace(/[._\s]+/g, '-');
+  return value.toLowerCase().replace(/[._\s]+/g, '-').replace(/:+/g, ':');
+}
+
+function getModelNameVariants(value: string): string[] {
+  const normalized = normalizeModelName(value);
+  if (!normalized) return [];
+
+  const withoutFree = normalized.replace(/:free$/, '');
+  const withoutQualifier = withoutFree.replace(/:.*$/, '');
+  const tail = withoutQualifier.split('/').filter(Boolean).pop() ?? withoutQualifier;
+  const variants = [normalized, withoutFree, withoutQualifier, tail]
+    .flatMap(item => [item, item.replace(MODEL_DATE_SUFFIX_RE, '')])
+    .filter(Boolean);
+
+  return Array.from(new Set(variants));
 }
 
 function findExpensiveModel(models: string[]): string | undefined {
-  return models.find(model => {
-    const normalized = normalizeModelName(model);
-    return (
-      normalized.includes('gpt-5-4') ||
-      normalized.includes('claude-opus') ||
-      normalized.includes('claude-sonnet-4-6') ||
-      normalized.includes('o3-pro') ||
-      /(^|-)o1($|-)/.test(normalized)
-    );
-  });
+  return models.find(model => getModelNameVariants(model).some(variant => EXPENSIVE_MODEL_NAMES.has(variant)));
 }
 
 function isToolResultError(step: SessionStep): boolean {

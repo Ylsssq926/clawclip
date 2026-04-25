@@ -41,6 +41,39 @@ function finalizeReplay(partial: { meta: Omit<SessionMeta, 'totalCost' | 'totalT
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEMO_NOW = Date.now();
+const DEMO_BASE_TS = {
+  smartWriter: DEMO_NOW - 2.25 * DAY_MS,
+  codeHelper: DEMO_NOW - 4.5 * DAY_MS,
+  analyst: DEMO_NOW - 7.5 * DAY_MS,
+  dataHelper: DEMO_NOW - 10.5 * DAY_MS,
+  translator: DEMO_NOW - 14 * DAY_MS,
+  debugger: DEMO_NOW - 18 * DAY_MS,
+  newsBot: DEMO_NOW - 24 * DAY_MS,
+  emailHelper: DEMO_NOW - 29.75 * DAY_MS,
+} as const;
+
+function demoTime(baseMs: number, offsetMs = 0): Date {
+  return new Date(baseMs + offsetMs);
+}
+
+function demoIso(baseMs: number, offsetMs = 0): string {
+  return demoTime(baseMs, offsetMs).toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+function formatDateZh(date: Date): string {
+  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日`;
+}
+
+const INVENTORY_UPDATED_AT = {
+  a100: demoIso(DEMO_BASE_TS.dataHelper, -5 * DAY_MS),
+  b220: demoIso(DEMO_BASE_TS.dataHelper, -6 * DAY_MS + 5 * 60 * 60 * 1000),
+  c009: demoIso(DEMO_BASE_TS.dataHelper, -7 * DAY_MS + 90 * 60 * 1000),
+} as const;
+
+const EMAIL_HELPER_SENT_DATE = formatDateZh(demoTime(DEMO_BASE_TS.emailHelper, 28_000));
+
 /** 没装 OpenClaw 时的完整回放样本：8 条场景化 Demo */
 export const DEMO_SESSIONS: SessionReplay[] = [
   /* 1 — 小红书种草（smart-writer / deepseek-chat）总时长约 98s */
@@ -54,7 +87,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-18T02:15:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.smartWriter, 0),
         type: 'user',
         content:
           '帮我写一篇小红书种草文案，主题是「最近入坑的 AI 自动化工具」，语气轻松、带点 emoji，不要太硬广。',
@@ -65,7 +98,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-18T02:15:05.200Z'),
+        timestamp: demoTime(DEMO_BASE_TS.smartWriter, 5_200),
         type: 'thinking',
         model: 'deepseek-chat',
         content:
@@ -77,7 +110,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-18T02:15:12.400Z'),
+        timestamp: demoTime(DEMO_BASE_TS.smartWriter, 12_400),
         type: 'tool_call',
         model: 'deepseek-chat',
         content: '',
@@ -94,7 +127,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-18T02:15:22.800Z'),
+        timestamp: demoTime(DEMO_BASE_TS.smartWriter, 22_800),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -113,7 +146,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-18T02:15:35.100Z'),
+        timestamp: demoTime(DEMO_BASE_TS.smartWriter, 35_100),
         type: 'thinking',
         model: 'deepseek-chat',
         content:
@@ -125,7 +158,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-18T02:15:48.600Z'),
+        timestamp: demoTime(DEMO_BASE_TS.smartWriter, 48_600),
         type: 'tool_call',
         model: 'deepseek-chat',
         content: '',
@@ -141,7 +174,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       },
       {
         index: 6,
-        timestamp: new Date('2026-03-18T02:16:38.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.smartWriter, 98_000),
         type: 'response',
         model: 'deepseek-chat',
         content: `标题：2026 入坑不亏🌿 这三类 AI 自动化把我从「重复劳动」里捞出来了
@@ -193,7 +226,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
       return [
         {
           index: 0,
-          timestamp: new Date('2026-03-17T06:40:00.000Z'),
+          timestamp: demoTime(DEMO_BASE_TS.codeHelper, 0),
           type: 'user' as const,
           content: `${userMsg}\n\n\`\`\`python\n${codeSnippet}\n\`\`\``,
           inputTokens: 0,
@@ -203,7 +236,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 1,
-          timestamp: new Date('2026-03-17T06:40:04.500Z'),
+          timestamp: demoTime(DEMO_BASE_TS.codeHelper, 4_500),
           type: 'thinking' as const,
           model: 'gpt-4o-mini',
           content:
@@ -215,7 +248,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 2,
-          timestamp: new Date('2026-03-17T06:40:11.200Z'),
+          timestamp: demoTime(DEMO_BASE_TS.codeHelper, 11_200),
           type: 'tool_call' as const,
           model: 'gpt-4o-mini',
           content: '',
@@ -228,7 +261,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 3,
-          timestamp: new Date('2026-03-17T06:40:15.800Z'),
+          timestamp: demoTime(DEMO_BASE_TS.codeHelper, 15_800),
           type: 'tool_result' as const,
           content: '',
           toolOutput: `"""duplicate finder — user paste mirror"""\n${codeSnippet}`,
@@ -239,7 +272,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 4,
-          timestamp: new Date('2026-03-17T06:40:28.000Z'),
+          timestamp: demoTime(DEMO_BASE_TS.codeHelper, 28_000),
           type: 'thinking' as const,
           model: 'gpt-4o-mini',
           content:
@@ -251,7 +284,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
         },
         {
           index: 5,
-          timestamp: new Date('2026-03-17T06:41:08.000Z'),
+          timestamp: demoTime(DEMO_BASE_TS.codeHelper, 68_000),
           type: 'response' as const,
           model: 'gpt-4o-mini',
           content: `这段代码在大列表上慢，主要来自 **三类性能瓶颈**：
@@ -318,7 +351,7 @@ def find_duplicates_set(items):
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-16T01:30:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 0),
         type: 'user',
         content:
           '帮我分析 Notion、Obsidian、Logseq 这三个笔记工具的竞品对比，要表格、结论和选型建议，面向个人知识管理 + 小团队协作用途。',
@@ -329,7 +362,7 @@ def find_duplicates_set(items):
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-16T01:30:08.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 8_000),
         type: 'thinking',
         model: 'gpt-4o',
         content:
@@ -341,7 +374,7 @@ def find_duplicates_set(items):
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-16T01:30:22.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 22_000),
         type: 'tool_call',
         model: 'gpt-4o',
         content: '',
@@ -357,7 +390,7 @@ def find_duplicates_set(items):
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-16T01:30:45.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 45_000),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -375,7 +408,7 @@ def find_duplicates_set(items):
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-16T01:30:58.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 58_000),
         type: 'tool_call',
         model: 'gpt-4o',
         content: '',
@@ -388,7 +421,7 @@ def find_duplicates_set(items):
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-16T01:31:18.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 78_000),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -406,7 +439,7 @@ def find_duplicates_set(items):
       },
       {
         index: 6,
-        timestamp: new Date('2026-03-16T01:31:42.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 102_000),
         type: 'thinking',
         model: 'gpt-4o',
         content:
@@ -418,7 +451,7 @@ def find_duplicates_set(items):
       },
       {
         index: 7,
-        timestamp: new Date('2026-03-16T01:33:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.analyst, 180_000),
         type: 'response',
         model: 'gpt-4o',
         content: `## Notion / Obsidian / Logseq 竞品对比（个人 PKM + 小团队）
@@ -464,15 +497,15 @@ def find_duplicates_set(items):
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-15T08:05:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.dataHelper, 0),
         type: 'user',
         content: `帮我把下面 JSON 整理成可以用 Excel 打开的表格，列名用英文 snake_case，日期保持 ISO 字符串即可。
 
 \`\`\`json
 [
-  {"sku": "A-100", "name": "机械键盘", "qty": 12, "unit_price": 399.0, "updated_at": "2026-03-20T10:00:00Z"},
-  {"sku": "B-220", "name": "显示器支架", "qty": 4, "unit_price": 159.5, "updated_at": "2026-03-19T14:22:00Z"},
-  {"sku": "C-009", "name": "USB-C 集线器", "qty": 30, "unit_price": 89.0, "updated_at": "2026-03-18T09:05:00Z"}
+  {"sku": "A-100", "name": "机械键盘", "qty": 12, "unit_price": 399.0, "updated_at": "${INVENTORY_UPDATED_AT.a100}"},
+  {"sku": "B-220", "name": "显示器支架", "qty": 4, "unit_price": 159.5, "updated_at": "${INVENTORY_UPDATED_AT.b220}"},
+  {"sku": "C-009", "name": "USB-C 集线器", "qty": 30, "unit_price": 89.0, "updated_at": "${INVENTORY_UPDATED_AT.c009}"}
 ]
 \`\`\``,
         inputTokens: 0,
@@ -482,7 +515,7 @@ def find_duplicates_set(items):
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-15T08:05:06.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.dataHelper, 6_000),
         type: 'thinking',
         model: 'deepseek-chat',
         content:
@@ -494,7 +527,7 @@ def find_duplicates_set(items):
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-15T08:05:14.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.dataHelper, 14_000),
         type: 'tool_call',
         model: 'deepseek-chat',
         content: '',
@@ -502,7 +535,7 @@ def find_duplicates_set(items):
         toolInput: JSON.stringify({
           path: 'exports/inventory_from_json.csv',
           content:
-            'sku,name,qty,unit_price,updated_at\nA-100,机械键盘,12,399.0,2026-03-20T10:00:00Z\nB-220,显示器支架,4,159.5,2026-03-19T14:22:00Z\nC-009,USB-C 集线器,30,89.0,2026-03-18T09:05:00Z\n',
+            `sku,name,qty,unit_price,updated_at\nA-100,机械键盘,12,399.0,${INVENTORY_UPDATED_AT.a100}\nB-220,显示器支架,4,159.5,${INVENTORY_UPDATED_AT.b220}\nC-009,USB-C 集线器,30,89.0,${INVENTORY_UPDATED_AT.c009}\n`,
           encoding: 'utf-8',
         }),
         inputTokens: 480,
@@ -512,7 +545,7 @@ def find_duplicates_set(items):
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-15T08:05:28.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.dataHelper, 28_000),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -528,7 +561,7 @@ def find_duplicates_set(items):
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-15T08:05:45.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.dataHelper, 45_000),
         type: 'response',
         model: 'deepseek-chat',
         content: `已将 JSON 数组整理为 **CSV**（路径 \`exports/inventory_from_json.csv\`），表头为 \`sku,name,qty,unit_price,updated_at\`，与源字段一一对应，没有丢弃列。
@@ -559,7 +592,7 @@ def find_duplicates_set(items):
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-14T03:20:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 0),
         type: 'user',
         content: `Please translate the following technical documentation into natural, professional Chinese. Keep terms like Pod, kube-scheduler, and affinity as commonly used in the Chinese cloud-native community (you may keep English in parentheses where helpful).
 
@@ -572,7 +605,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-14T03:20:07.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 7_000),
         type: 'thinking',
         model: 'deepseek-chat',
         content:
@@ -584,7 +617,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-14T03:20:32.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 32_000),
         type: 'response',
         model: 'deepseek-chat',
         content: `Kubernetes 调度器（kube-scheduler）会根据 **资源请求（requests）**、**资源上限（limits）** 以及 **调度约束** 将 **Pod** 分配到 **Node（节点）** 上。
@@ -601,7 +634,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-14T03:20:33.500Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 33_500),
         type: 'system',
         content: '会话完成：翻译已输出，未检测到进一步追问。',
         inputTokens: 0,
@@ -611,7 +644,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-14T03:20:45.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 45_000),
         type: 'tool_call',
         model: 'deepseek-chat',
         content: '',
@@ -624,7 +657,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-14T03:20:58.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 58_000),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -641,7 +674,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 6,
-        timestamp: new Date('2026-03-14T03:21:10.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 70_000),
         type: 'user',
         content: '第二段的"neural architecture"翻译成"神经网络架构"更准确，帮我改一下',
         inputTokens: 0,
@@ -651,7 +684,7 @@ The Kubernetes scheduler assigns Pods to Nodes based on resource requests, limit
       },
       {
         index: 7,
-        timestamp: new Date('2026-03-14T03:21:28.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.translator, 88_000),
         type: 'response',
         model: 'deepseek-chat',
         content: `已将第二段中的"神经架构"统一替换为**"神经网络架构"**，以下是修订终稿：
@@ -683,7 +716,7 @@ Kubernetes 调度器（kube-scheduler）会根据 **资源请求（requests）**
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-13T11:42:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 0),
         type: 'user',
         content: `我的 React 项目报错：Cannot read properties of undefined (reading 'map')。下面是组件代码，帮我看看咋修。
 
@@ -715,7 +748,7 @@ export function List() {
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-13T11:42:05.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 5_000),
         type: 'thinking',
         model: 'gpt-4o-mini',
         content:
@@ -727,7 +760,7 @@ export function List() {
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-13T11:42:12.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 12_000),
         type: 'tool_call',
         model: 'gpt-4o-mini',
         content: '',
@@ -740,7 +773,7 @@ export function List() {
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-13T11:42:18.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 18_000),
         type: 'tool_result',
         content: '',
         toolOutput: 'ENOENT: no such file or directory, open "src/components/List.tsx"',
@@ -753,7 +786,7 @@ export function List() {
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-13T11:42:24.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 24_000),
         type: 'thinking',
         model: 'gpt-4o-mini',
         content:
@@ -765,7 +798,7 @@ export function List() {
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-13T11:42:31.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 31_000),
         type: 'tool_call',
         model: 'gpt-4o-mini',
         content: '',
@@ -778,7 +811,7 @@ export function List() {
       },
       {
         index: 6,
-        timestamp: new Date('2026-03-13T11:42:38.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 38_000),
         type: 'tool_result',
         content: '',
         toolOutput: 'ENOENT: no such file or directory, open "app/src/components/List.tsx"',
@@ -791,7 +824,7 @@ export function List() {
       },
       {
         index: 7,
-        timestamp: new Date('2026-03-13T11:42:45.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 45_000),
         type: 'thinking',
         model: 'gpt-4o-mini',
         content:
@@ -803,7 +836,7 @@ export function List() {
       },
       {
         index: 8,
-        timestamp: new Date('2026-03-13T11:42:54.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 54_000),
         type: 'tool_call',
         model: 'gpt-4o-mini',
         content: '',
@@ -816,7 +849,7 @@ export function List() {
       },
       {
         index: 9,
-        timestamp: new Date('2026-03-13T11:43:02.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 62_000),
         type: 'tool_result',
         content: '',
         toolOutput: `import { useEffect, useState } from "react";
@@ -845,7 +878,7 @@ export function List() {
       },
       {
         index: 10,
-        timestamp: new Date('2026-03-13T11:43:16.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 76_000),
         type: 'response',
         model: 'gpt-4o-mini',
         content: `## 原因
@@ -896,7 +929,7 @@ const [items, setItems] = useState<string[]>([]);
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-12T00:10:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.newsBot, 0),
         type: 'user',
         content: '帮我整理今天的 AI 行业热点新闻，每条要有标题、摘要和来源，风格像简报，不要太长。',
         inputTokens: 0,
@@ -906,7 +939,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-12T00:10:06.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.newsBot, 6_000),
         type: 'thinking',
         model: 'gemini-2.0-flash',
         content:
@@ -918,7 +951,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-12T00:10:18.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.newsBot, 18_000),
         type: 'tool_call',
         model: 'gemini-2.0-flash',
         content: '',
@@ -931,7 +964,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-12T00:10:38.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.newsBot, 38_000),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -948,7 +981,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 4,
-        timestamp: new Date('2026-03-12T00:10:52.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.newsBot, 52_000),
         type: 'tool_call',
         model: 'gemini-2.0-flash',
         content: '',
@@ -961,7 +994,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 5,
-        timestamp: new Date('2026-03-12T00:11:18.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.newsBot, 78_000),
         type: 'tool_result',
         content: '',
         toolOutput: JSON.stringify({
@@ -977,7 +1010,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 6,
-        timestamp: new Date('2026-03-12T00:12:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.newsBot, 120_000),
         type: 'response',
         model: 'gemini-2.0-flash',
         content: `## 今日 AI 行业热点速报（简报）
@@ -1023,7 +1056,7 @@ const [items, setItems] = useState<string[]>([]);
     steps: [
       {
         index: 0,
-        timestamp: new Date('2026-03-16T07:50:00.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 0),
         type: 'user',
         content:
           '我要申请字节跳动的前端工程师岗位，帮我写一封求职邮件。我有 4 年前端经验，熟悉 React、TypeScript，做过中后台与活动页，附过简历 PDF。语气正式但不僵硬。',
@@ -1034,7 +1067,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 1,
-        timestamp: new Date('2026-03-16T07:50:06.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 6_000),
         type: 'thinking',
         model: 'claude-sonnet-4.6',
         content:
@@ -1046,7 +1079,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 2,
-        timestamp: new Date('2026-03-16T07:50:28.000Z'),
+        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 28_000),
         type: 'response',
         model: 'claude-sonnet-4.6',
         content: `**邮件主题**：应聘前端工程师—张三—4年React/TypeScript经验
@@ -1070,7 +1103,7 @@ const [items, setItems] = useState<string[]>([]);
 张三  
 手机：138-xxxx-xxxx  
 邮箱：zhangsan@example.com  
-日期：2026 年 3 月 16 日`,
+日期：${EMAIL_HELPER_SENT_DATE}`,
         inputTokens: 420,
         outputTokens: 380,
         cost: 0,
@@ -1078,7 +1111,7 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 3,
-        timestamp: new Date('2026-03-16T07:50:29.200Z'),
+        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 29_200),
         type: 'system',
         content: '会话完成：求职邮件草稿已生成，用户可自行替换姓名与联系方式后发送。',
         inputTokens: 0,

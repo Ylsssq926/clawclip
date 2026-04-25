@@ -85,8 +85,8 @@ router.post('/v1/traces', (req, res, next) => {
               session.meta.endTime = endTime;
             }
             
-            session.meta.totalTokens += step.inputTokens + step.outputTokens;
-            session.meta.totalCost += step.cost;
+            session.meta.totalTokens += (step.inputTokens ?? 0) + (step.outputTokens ?? 0);
+            session.meta.totalCost += step.cost ?? 0;
             
             if (step.model && !session.meta.modelUsed.includes(step.model)) {
               session.meta.modelUsed.push(step.model);

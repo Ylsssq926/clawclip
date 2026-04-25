@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { resolveModelDetail, computeDetailedCost, computeCost } from '../services/pricing-utils.js';
+import { resolveModelDetail, computeDetailedCost, computeCost, hasModelPricing } from '../services/pricing-utils.js';
 import type { DetailedModelPricing } from '../types/index.js';
-import { DEFAULT_DETAILED_PRICING } from '../types/index.js';
+import { DEFAULT_DETAILED_PRICING, DEFAULT_MODEL_PRICING } from '../types/index.js';
 
 describe('resolveModelDetail', () => {
   it('returns exact match', () => {
@@ -67,6 +67,18 @@ describe('computeDetailedCost', () => {
   });
 });
 
+describe('hasModelPricing', () => {
+  it('returns true for known models and aliases', () => {
+    expect(hasModelPricing(DEFAULT_DETAILED_PRICING, 'gpt-4o')).toBe(true);
+    expect(hasModelPricing(DEFAULT_DETAILED_PRICING, 'gpt-4o-2026-03-25')).toBe(true);
+  });
+
+  it('returns false for unknown models', () => {
+    expect(hasModelPricing(DEFAULT_DETAILED_PRICING, 'unknown-x')).toBe(false);
+    expect(hasModelPricing(DEFAULT_DETAILED_PRICING, undefined)).toBe(false);
+  });
+});
+
 describe('computeCost (convenience)', () => {
   it('combines resolveModelDetail + computeDetailedCost', () => {
     const cost = computeCost(DEFAULT_DETAILED_PRICING, 'gpt-4o', 1000, 500);
@@ -78,5 +90,14 @@ describe('computeCost (convenience)', () => {
     const cost = computeCost(DEFAULT_DETAILED_PRICING, 'unknown-x', 1000, 1000);
     // (1000 * 2.0 + 1000 * 2.0) / 1_000_000 = 0.004
     expect(cost).toBeCloseTo(0.004, 10);
+  });
+});
+
+describe('DeepSeek pricing defaults', () => {
+  it('keeps chat and reasoner prices aligned with the latest official rates', () => {
+    expect(DEFAULT_DETAILED_PRICING['deepseek-chat']).toEqual({ input: 0.14, output: 0.28 });
+    expect(DEFAULT_DETAILED_PRICING['deepseek-reasoner']).toEqual({ input: 0.14, output: 0.28 });
+    expect(DEFAULT_MODEL_PRICING['deepseek-chat']).toBe(0.28);
+    expect(DEFAULT_MODEL_PRICING['deepseek-reasoner']).toBe(0.28);
   });
 });

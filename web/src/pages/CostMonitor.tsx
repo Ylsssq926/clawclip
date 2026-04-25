@@ -746,6 +746,8 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
           })
         )
         setAlternatives(alternativesData)
+      } else {
+        setAlternatives({})
       }
     } catch {
       setError(copy.errorLoad)

@@ -389,6 +389,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
     if (view !== 'list') return
     
     let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
     
@@ -402,13 +403,13 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
     }
     
     Promise.all([
-      apiGet<SessionMeta[]>('/api/replay/sessions?limit=20'),
-      apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status')
+      apiGet<SessionMeta[]>('/api/replay/sessions?limit=20', { signal: controller.signal }),
+      apiGetSafe<{ hasRealSessionData?: boolean }>('/api/status', { signal: controller.signal })
         .then(s => !(s?.hasRealSessionData ?? false)),
-      apiGetSafe<Record<string, unknown>>('/api/analytics/session-tags')
+      apiGetSafe<Record<string, unknown>>('/api/analytics/session-tags', { signal: controller.signal })
         .then(data => parseSessionTags(data))
         .catch(() => ({} as Record<string, string[]>)),
-      apiGetSafe<TagInfo[]>('/api/analytics/tags')
+      apiGetSafe<TagInfo[]>('/api/analytics/tags', { signal: controller.signal })
         .then(data => (Array.isArray(data) ? data : []))
         .catch(() => [] as TagInfo[]),
     ])
@@ -430,6 +431,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
     
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [view, t])
 

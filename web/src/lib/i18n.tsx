@@ -5215,6 +5215,8 @@ const pageRefreshCopy: Record<Locale, Record<string, string>> = {
     'solutions.generator.configPath': '配置文件路径',
     'solutions.generator.envVars': '环境变量',
     'solutions.generator.warning': '注意事项',
+    'solutions.generator.error': '生成配置失败，请重试',
+    'solutions.ollama.install': '安装 Ollama 可免费本地运行模型',
   },
   en: {
     'promptInsight.hero.title': 'One-line read',
@@ -5327,6 +5329,8 @@ const pageRefreshCopy: Record<Locale, Record<string, string>> = {
     'solutions.generator.configPath': 'Config file path',
     'solutions.generator.envVars': 'Environment variables',
     'solutions.generator.warning': 'Warning',
+    'solutions.generator.error': 'Failed to generate config, please try again',
+    'solutions.ollama.install': 'Install Ollama to run models locally for free',
   },
   ja: {
     'promptInsight.hero.title': 'ひとことで判断',

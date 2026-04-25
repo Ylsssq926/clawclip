@@ -35,6 +35,8 @@ describe('OTEL Normalizer', () => {
     expect(step.model).toBe('gpt-4o');
     expect(step.inputTokens).toBe(100);
     expect(step.outputTokens).toBe(50);
+    expect(step.cost).toBeCloseTo(0.00075, 10);
+    expect(step.costEstimated).toBe(true);
     expect(step.durationMs).toBe(500);
   });
 
@@ -94,5 +96,26 @@ describe('OTEL Normalizer', () => {
     const step = normalizeOtelSpan(span, mockResource, 3);
 
     expect(step.model).toBe('claude-3.5-sonnet');
+  });
+
+  it('should keep cost at 0 when OTEL model pricing is unknown', () => {
+    const span: OtelSpan = {
+      traceId: 'trace-123',
+      spanId: 'span-unknown-model',
+      name: 'invoke_agent',
+      startTimeUnixNano: '1000000000000000',
+      endTimeUnixNano: '1000000100000000',
+      attributes: [
+        { key: 'gen_ai.operation.name', value: { stringValue: 'invoke_agent' } },
+        { key: 'gen_ai.request.model', value: { stringValue: 'mystery-model-v1' } },
+        { key: 'gen_ai.usage.input_tokens', value: { intValue: '200' } },
+        { key: 'gen_ai.usage.output_tokens', value: { intValue: '80' } },
+      ],
+    };
+
+    const step = normalizeOtelSpan(span, mockResource, 4);
+
+    expect(step.cost).toBe(0);
+    expect(step.costEstimated).toBe(false);
   });
 });

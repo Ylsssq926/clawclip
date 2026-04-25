@@ -1,5 +1,6 @@
 import type { OtelSpan, OtelResource, OtelKeyValue } from '../types/otel.js';
 import type { SessionStep } from '../types/replay.js';
+import { computeCost, DEFAULT_DETAILED_PRICING, hasModelPricing } from './pricing-utils.js';
 
 /** 从 OTEL 属性数组中提取指定 key 的值 */
 function getAttr(attrs: OtelKeyValue[], key: string): string | number | boolean | undefined {
@@ -75,6 +76,10 @@ export function normalizeOtelSpan(
   // 计算时间
   const timestamp = nanoToDate(span.startTimeUnixNano);
   const durationMs = nanoDiffMs(span.startTimeUnixNano, span.endTimeUnixNano);
+  const costEstimated = hasModelPricing(DEFAULT_DETAILED_PRICING, model);
+  const cost = costEstimated
+    ? computeCost(DEFAULT_DETAILED_PRICING, model, inputTokens, outputTokens)
+    : 0;
   
   // 构建 SessionStep
   const step: Partial<SessionStep> = {
@@ -89,7 +94,8 @@ export function normalizeOtelSpan(
     error,
     inputTokens,
     outputTokens,
-    cost: 0, // 需要后续根据 model 计算
+    cost,
+    costEstimated,
     durationMs,
   };
   

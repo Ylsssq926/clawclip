@@ -121,6 +121,23 @@ function makeSnippet(text: string, queryLower: string, maxLen = 160): string {
   return s;
 }
 
+const EXPORT_ALL_DEFAULT_LIMIT = 200;
+const EXPORT_ALL_MAX_LIMIT = 500;
+
+function parsePositiveInt(value: unknown): number | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  return parsed;
+}
+
+function parseNonNegativeInt(value: unknown): number | undefined {
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  return parsed;
+}
+
 /** GET /api/knowledge/stats — 统计知识库会话总数（含导入数据） */
 router.get('/stats', (_req, res, next) => {
   try {
@@ -178,18 +195,28 @@ router.get('/export/:id', (req, res, next) => {
   }
 });
 
-/** GET /api/knowledge/export-all?format=json|markdown */
+/** GET /api/knowledge/export-all?format=json|markdown&limit=200&offset=0 */
 router.get('/export-all', (req, res, next) => {
   try {
     const format = String(req.query.format ?? 'json').toLowerCase();
     const all = getMergedReplays();
+    const total = all.length;
+    const limit = Math.min(parsePositiveInt(req.query.limit) ?? EXPORT_ALL_DEFAULT_LIMIT, EXPORT_ALL_MAX_LIMIT);
+    const offset = parseNonNegativeInt(req.query.offset) ?? 0;
+    const data = all.slice(offset, offset + limit);
+
     if (format === 'markdown' || format === 'md') {
       res.type('text/markdown; charset=utf-8');
-      const text = all.map(r => replayToMarkdown(r)).join('\n\n---\n\n');
-      res.send(text);
+      const text = data.map(r => replayToMarkdown(r)).join('\n\n---\n\n');
+      const truncated = offset + data.length < total;
+      const suffix = truncated
+        ? `\n\n---\n\n> 已按 limit=${limit} 截断，本次导出 ${data.length} / ${total} 条；如需下一页，请传 offset=${offset + data.length}。\n`
+        : '\n';
+      res.send((text || '> 当前分页没有可导出的会话。') + suffix);
       return;
     }
-    res.json(all);
+
+    res.json({ total, offset, limit, data });
   } catch (e) {
     next(e);
   }

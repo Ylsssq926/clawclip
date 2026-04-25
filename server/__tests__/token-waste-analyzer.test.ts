@@ -4,6 +4,8 @@ import { TokenWasteAnalyzer, detectBadCycle } from '../services/token-waste-anal
 import { sessionParser } from '../services/session-parser.js';
 import type { SessionReplay, SessionStep } from '../types/replay.js';
 
+const DAY_MS = 86_400_000;
+
 function makeMeta(id: string, totalTokens: number, totalCost: number, stepCount: number, modelUsed: string[]): SessionReplay['meta'] {
   const startTime = new Date('2026-03-18T08:00:00.000Z');
   const endTime = new Date(startTime.getTime() + stepCount * 1000);
@@ -111,6 +113,42 @@ describe('TokenWasteAnalyzer', () => {
     } finally {
       DEMO_SESSIONS.splice(0, DEMO_SESSIONS.length, ...original);
     }
+  });
+
+  it('flags exact expensive models but excludes cheaper mini variants', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-20T08:00:00.000Z'));
+
+    const expensiveReplay: SessionReplay = {
+      meta: makeMeta('expensive-model', 4_800, 0.06, 2, ['gpt-4o']),
+      steps: [
+        makeStep({ index: 0, type: 'user', content: '给我一份详细策略。' }),
+        makeStep({ index: 1, type: 'response', content: '这是详细策略。', model: 'gpt-4o', inputTokens: 1_800, outputTokens: 900, cost: 0.06 }),
+      ],
+    };
+    const cheapVariantReplay: SessionReplay = {
+      meta: makeMeta('cheap-variant', 4_800, 0.004, 2, ['gpt-4o-mini']),
+      steps: [
+        makeStep({ index: 0, type: 'user', content: '给我一份简版策略。' }),
+        makeStep({ index: 1, type: 'response', content: '这是简版策略。', model: 'gpt-4o-mini', inputTokens: 1_800, outputTokens: 900, cost: 0.004 }),
+      ],
+    };
+
+    vi.spyOn(sessionParser, 'getRealReplays').mockReturnValue([expensiveReplay, cheapVariantReplay]);
+
+    const report = new TokenWasteAnalyzer().getReport(30);
+    const expensiveSignals = report.diagnostics.filter(item => item.type === 'expensive-model');
+
+    expect(expensiveSignals.some(item => item.sessionId === 'expensive-model')).toBe(true);
+    expect(expensiveSignals.some(item => item.sessionId === 'cheap-variant')).toBe(false);
+  });
+
+  it('keeps built-in demo sessions in the recent past window', () => {
+    const now = Date.now();
+    const startTimes = DEMO_SESSIONS.map(replay => replay.meta.startTime.getTime());
+
+    expect(Math.max(...startTimes)).toBeLessThanOrEqual(now - 2 * DAY_MS);
+    expect(Math.min(...startTimes)).toBeGreaterThan(now - 30 * DAY_MS);
   });
 
   it('emits the promised demo signals from the built-in demo set', () => {

@@ -325,6 +325,7 @@ describe('P1 regressions', () => {
                   attributes: [
                     { key: 'gen_ai.operation.name', value: { stringValue: 'execute_tool' } },
                     { key: 'gen_ai.tool.name', value: { stringValue: 'web_search' } },
+                    { key: 'gen_ai.request.model', value: { stringValue: 'gpt-4o' } },
                     { key: 'gen_ai.usage.input_tokens', value: { intValue: '12' } },
                     { key: 'gen_ai.usage.output_tokens', value: { intValue: '4' } },
                   ],
@@ -358,11 +359,15 @@ describe('P1 regressions', () => {
       expect(trace.status).toBe(200);
       expect(trace.body.meta.stepCount).toBe(1);
       expect(trace.body.meta.totalTokens).toBe(16);
+      expect(trace.body.meta.totalCost).toBeCloseTo(0.00007, 10);
       expect(trace.body.steps).toHaveLength(1);
       expect(trace.body.steps[0]).toMatchObject({
         spanId: 'span-1',
         toolName: 'web_search',
+        model: 'gpt-4o',
+        costEstimated: true,
       });
+      expect(trace.body.steps[0]?.cost).toBeCloseTo(0.00007, 10);
     } finally {
       await server.request('/sessions', { method: 'DELETE' });
       await server.close();

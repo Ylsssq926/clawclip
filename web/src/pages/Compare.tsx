@@ -140,7 +140,7 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
     setAvailableSessionsLoading(true)
     setAvailableSessionsError(null)
 
-    apiGet<SessionMeta[]>('/api/replay/sessions?limit=50&fallback=demo&minCount=50')
+    apiGet<SessionMeta[]>('/api/replay/sessions?limit=50&minCount=50')
       .then(data => {
         if (cancelled) return
         const comparableSessions = (Array.isArray(data) ? data : []).filter(

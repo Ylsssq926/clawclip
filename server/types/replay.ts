@@ -61,6 +61,8 @@ export interface SessionStep {
   inputTokens: number;
   outputTokens: number;
   cost: number;
+  /** 当前 cost 是否基于已知模型定价估算得出 */
+  costEstimated?: boolean;
   durationMs: number;
 }
 

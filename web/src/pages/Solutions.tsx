@@ -93,6 +93,7 @@ export default function Solutions() {
   const [configCopied, setConfigCopied] = useState(false)
   const [detectedModel, setDetectedModel] = useState<string | null>(null)
   const [manualModel, setManualModel] = useState<string>('claude-3-5-sonnet')
+  const [generatorError, setGeneratorError] = useState<string | null>(null)
 
   useEffect(() => {
     // 获取所有解决方案
@@ -141,6 +142,7 @@ export default function Solutions() {
 
   const handleGenerateConfig = async () => {
     setIsGenerating(true)
+    setGeneratorError(null)
     try {
       const response = await fetch('/api/solutions/generate-config', {
         method: 'POST',
@@ -158,6 +160,7 @@ export default function Solutions() {
       setGeneratedConfig(config)
     } catch (error) {
       console.error('Error generating config:', error)
+      setGeneratorError(t('solutions.generator.error'))
     } finally {
       setIsGenerating(false)
     }
@@ -363,6 +366,12 @@ export default function Solutions() {
             >
               {isGenerating ? '生成中...' : t('solutions.generator.generate')}
             </button>
+
+            {generatorError && (
+              <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {generatorError}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -565,6 +574,7 @@ export default function Solutions() {
             const Icon = SOLUTION_TYPE_ICONS[solution.type]
             const isOllamaCard = solution.id === 'ollama-local'
             const showOllamaDetected = isOllamaCard && ollamaStatus.available
+            const showOllamaNotDetected = isOllamaCard && !ollamaStatus.available
             const solutionRiskNote = getSolutionRiskNote(solution, locale)
             const showRiskBox =
               !!solutionRiskNote && (solution.riskLevel === 'medium' || solution.riskLevel === 'high')
@@ -641,6 +651,25 @@ export default function Solutions() {
                         {ollamaStatus.models.length > 3 && ` +${ollamaStatus.models.length - 3}`}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {showOllamaNotDetected && (
+                  <div className="mb-4 rounded-lg bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-medium text-slate-700">
+                      {t('solutions.ollama.notDetected')}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {t('solutions.ollama.install')}
+                    </p>
+                    <a
+                      href="https://ollama.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block text-xs text-blue-600 hover:underline"
+                    >
+                      ollama.com →
+                    </a>
                   </div>
                 )}
 

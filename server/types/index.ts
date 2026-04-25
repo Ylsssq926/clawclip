@@ -188,8 +188,8 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'gemini-2.0-flash':    { input: 0.10, output: 0.40 },
 
   // ── DeepSeek ──
-  'deepseek-chat':       { input: 0.28, output: 0.42 },
-  'deepseek-reasoner':   { input: 0.28, output: 0.42 },
+  'deepseek-chat':       { input: 0.14, output: 0.28 },
+  'deepseek-reasoner':   { input: 0.14, output: 0.28 },
 
   // ── Qwen / 阿里 ──
   'qwen-max':       { input: 1.60, output: 6.40 },
@@ -308,8 +308,8 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
   'gemini-2.0-flash':    0.4,   // $0.10 in / $0.40 out (deprecated June 2026)
 
   // ── DeepSeek (api-docs.deepseek.com/quick_start/pricing  2026-03) ──
-  'deepseek-chat':       0.42,  // $0.28 in / $0.42 out (V3.2)
-  'deepseek-reasoner':   0.42,  // V3.2 统一定价
+  'deepseek-chat':       0.28,  // $0.14 in / $0.28 out（兼容 deepseek-v4-flash 非思考模式）
+  'deepseek-reasoner':   0.28,  // $0.14 in / $0.28 out（兼容 deepseek-v4-flash 思考模式）
 
   // ── Qwen / 阿里 DashScope (alibabacloud.com Model Studio  2026-03) ──
   'qwen-max':       6.4,    // $1.60 in / $6.40 out (Qwen3-Max)

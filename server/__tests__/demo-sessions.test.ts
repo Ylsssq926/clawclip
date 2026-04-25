@@ -35,9 +35,12 @@ describe('DEMO_SESSIONS', () => {
     const replay = getDemoSession('email-helper');
     const models = new Set(replay.steps.map(step => step.model).filter(Boolean));
     const response = replay.steps.find(step => step.type === 'response');
+    const expectedDate = response
+      ? `日期：${response.timestamp.getFullYear()} 年 ${response.timestamp.getMonth() + 1} 月 ${response.timestamp.getDate()} 日`
+      : '';
 
     expect(Array.from(models)).toContain('claude-sonnet-4.6');
-    expect(response?.content).toContain('日期：2026 年 3 月 16 日');
-    expect(response?.content).not.toContain('日期：2026 年 3 月 24 日');
+    expect(response?.content).toContain(expectedDate);
+    expect(response?.timestamp.getTime()).toBeLessThan(Date.now());
   });
 });

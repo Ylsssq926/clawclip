@@ -88,12 +88,20 @@ alwaysApply: true
 - 禁止使用 `ssh ubuntu@121.4.98.150`（会弹密码框，阻塞自动化流程）
 - SSH 配置位于 `~/.ssh/config`，使用 `~/.ssh/id_ed25519_ruxi` 密钥
 - 服务器用户：`ubuntu`，密码：`Weijiang1.`（仅在密钥不可用时备用）
-- 海外 / 测试服务器：`43.133.60.168`（`ssh zeroclaw-server`，同样密钥认证）
+- 海外 / 测试服务器：`43.133.60.168`
 
 ## Claw 服务器连接与业务路由（共享权威事实）
 ### 统一 SSH 入口
 - 主服务器：`ssh ruxi-server`（密钥认证，免密）
-- 海外服务器：`ssh zeroclaw-server`（密钥认证，免密）
+- 海外服务器首选：`ssh zeroclaw-server`
+- 海外服务器别名：`ssh openclaw-server`
+- `zeroclaw-server` / `openclaw-server` 在 `~/.ssh/config` 中都指向：
+  - `HostName 43.133.60.168`
+  - `User ubuntu`
+  - `IdentityFile ~/.ssh/id_ed25519_ruxi`
+- 如果本机 SSH 别名失效，海外服务器的明文回退方式是：`ssh ubuntu@43.133.60.168`
+- 已实测：`ubuntu / Weijiang1.` 可登录并可 `sudo`；`openclaw / Weijiang1.` 可登录但无 sudo；`root` 不能用同密码登录
+- **腾讯云控制台“执行命令”只作为 SSH 不可用时的兜底方案，不是首选连接方式**
 - 如需维护旧 `zeroclaw.service`，在 `zeroclaw-server` 上可切换到 `ubuntu` 视角处理
 
 ### 第二台服务器（`zeroclaw-server`）上的 Claw 实例
@@ -183,7 +191,88 @@ alwaysApply: true
 
 ## 图片素材生成方案
 
-### Gemini 生图工作流（主力方案，本地 Playwright）
+### GPT Image 2 生图工作流（首选方案，ListenHub）
+
+#### 平台与账号
+- 地址：`https://listenhub.ai/zh/app/ai-image`
+- 模型选择：**GPT-Image-2**（下拉菜单第三项，有 ✨ 标识）
+- 比例：GPT-Image-2 支持 `1:1 / 9:16 / 16:9`，无 4:3；封面图用 `16:9` 生成后 PIL 裁剪为 1200×900
+- 账号管理：Ruby 账号（`rubmullins260@gmail.com`）已登录，每账号有限时免费额度（活动期间约 100 张）
+- 额度用完时：换其他已登录账号继续，不要重新注册（临时邮箱收不到验证码）
+
+#### 操作流程（Playwright CDP）
+```javascript
+const browser = await chromium.connectOverCDP('http://127.0.0.1:9222');
+const ctx = browser.contexts()[0];
+let page = ctx.pages().find(p => p.url().includes('listenhub'));
+if (!page) { page = await ctx.newPage(); await page.goto('https://listenhub.ai/zh/app/ai-image'); }
+// 1. 选模型 GPT-Image-2
+// 2. 选比例 16:9
+// 3. 输入 prompt，点击生成
+// 4. 等待图片出现（最多 3 分钟）
+// 5. 用 fetch + FileReader 下载 blob URL（无水印）
+// 6. PIL 裁剪为 1200×900
+```
+
+#### PIL 裁剪标准（封面图）
+```python
+from PIL import Image
+def process(src, dst):
+    img = Image.open(src).convert('RGB')
+    w, h = img.size
+    tr = 1200/900
+    cr = w/h
+    if cr > tr:
+        nw = int(h * tr)
+        img = img.crop(((w-nw)//2, 0, (w-nw)//2+nw, h))
+    else:
+        nh = int(w / tr)
+        img = img.crop((0, (h-nh)//2, w, (h-nh)//2+nh))
+    img = img.resize((1200, 900), Image.LANCZOS)
+    img.save(dst, 'JPEG', quality=88, optimize=True, progressive=True)
+```
+
+#### GPT Image 2 Prompt 写法规范（重要）
+
+GPT Image 2 的核心优势是**成品感**，它吃"任务书"，不吃"玄学词库"。
+
+**最佳 Prompt 结构（7 段式）：**
+```
+1. 封面类型：项目封面 / 官网 Hero / 应用商店首图 / 宣传海报
+2. 比例与用途：16:9，用于官网项目展示
+3. 主视觉：一个明确主体，位置、占比
+4. 版式骨架：上标题区、中主视觉、下副标题/标签
+5. 风格：只选一个主风格 + 一个材质/时代参照 + 一个配色方案
+6. 限制：无乱码、无杂字、留白充足、适合封面
+7. 如需画内文字：直接写出标题/副标题内容
+```
+
+**写法规律：**
+- 先定义"图是什么"（杂志封面、产品 Hero、游戏 KV），再描述内容
+- 少堆"masterpiece / 8K / 超清"，多写视觉事实（S 型构图、左上标题区、宣纸背景）
+- 最后补 avoid 列表（避免电商感、避免乱码、避免过度装饰）
+- Pixel art 要强调：crisp pixel art、limited palette、readable silhouette、grid-aligned
+
+**按项目类型推荐风格关键词：**
+
+| 项目类型 | 推荐风格词 |
+|---------|-----------|
+| 技术/SaaS/后台产品 | dark SaaS dashboard, glassmorphism, purple/cyan accent, floating cards, premium product hero |
+| 游戏/二次元/世界观 | game key visual, cinematic poster, anime key art, strong silhouette, volumetric light |
+| 国风/品牌/内容 | 极简东方美学, 宣纸质感, S 型构图, 青绿鎏金, 高级商业插画 |
+| 公益/工具/教程 | editorial layout, clean typography, card-based composition, warm soft light |
+| 像素/复古游戏 | crisp pixel art, limited palette, 8-bit style, neon grid, retro arcade |
+
+**避坑：**
+- 不要只堆风格词，要写清版式骨架
+- 不要省略"成品类型"
+- 不要让模型自由发挥画内文字（要写就直接给出）
+- 不要同时混超过 2 个主风格
+- 深色 Dashboard 封面只保留 1 个核心图表 + 3~5 个指标卡片
+
+---
+
+### Gemini 生图工作流（备用方案，本地 Playwright）
 
 #### 环境
 - Chrome 已登录 Gemini、Python PIL 已可用
@@ -214,8 +303,6 @@ import { writeFileSync } from 'fs';
 // 1. 连接已有浏览器
 const browser = await chromium.connectOverCDP('http://127.0.0.1:9222');
 const page = browser.contexts()[0].pages().find(p => p.url().includes('gemini'));
-// 如果没有 Gemini 页面，用第一个页面导航过去
-// if (!page) { page = browser.contexts()[0].pages()[0]; await page.goto('https://gemini.google.com/app'); }
 
 // 2. 确认 Flash 模式（不是 Pro，Pro 不支持生图）
 

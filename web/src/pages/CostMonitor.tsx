@@ -148,9 +148,12 @@ interface Solution {
   titleZh: string
   description: string
   descriptionZh: string
-  type: 'tool' | 'config' | 'free-tier' | 'local-model'
+  type: 'tool' | 'config' | 'free-tier' | 'local-model' | 'proxy'
   effort: 'low' | 'medium' | 'high'
   savingsEstimate: string
+  riskLevel?: 'low' | 'medium' | 'high'
+  riskNote?: string
+  riskNoteZh?: string
   tool?: {
     name: string
     github?: string

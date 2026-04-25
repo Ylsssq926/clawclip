@@ -1,5 +1,12 @@
 import { Router } from 'express';
 import { getRecommendations } from '../services/solution-recommender.js';
+import {
+  generateOpenClawConfig,
+  generateZeroClawConfig,
+  type RuntimeType,
+  type PresetType,
+  type GeneratedConfig,
+} from '../services/config-generator.js';
 
 const router = Router();
 
@@ -52,6 +59,40 @@ router.get('/all', (_req, res) => {
   
   const solutions = getRecommendations(allTags);
   return res.json(solutions);
+});
+
+interface GenerateConfigRequest {
+  runtime: RuntimeType;
+  preset: PresetType;
+  currentModel?: string;
+}
+
+router.post('/generate-config', (req, res) => {
+  try {
+    const { runtime, preset, currentModel } = req.body as GenerateConfigRequest;
+
+    if (!runtime || !preset) {
+      return res.status(400).json({ error: 'Missing runtime or preset' });
+    }
+
+    if (runtime !== 'openclaw' && runtime !== 'zeroclaw') {
+      return res.status(400).json({ error: 'Invalid runtime' });
+    }
+
+    if (preset !== 'zero-bill' && preset !== 'cheap-cloud' && preset !== 'hybrid') {
+      return res.status(400).json({ error: 'Invalid preset' });
+    }
+
+    const config: GeneratedConfig =
+      runtime === 'openclaw'
+        ? generateOpenClawConfig(currentModel ?? '', preset)
+        : generateZeroClawConfig(currentModel ?? '', preset);
+
+    return res.json(config);
+  } catch (error) {
+    console.error('Error generating config:', error);
+    return res.status(500).json({ error: 'Failed to generate config' });
+  }
 });
 
 export default router;

@@ -24,8 +24,11 @@ export interface Solution {
     freeLimit: string;
     model: string;
     url: string;
+    signupUrl?: string;
+    requiresCreditCard?: boolean;
   };
   configSnippet?: string;
+  recommendationPriority?: Partial<Record<TokenWasteType, number>>;
   tags: string[];
 }
 
@@ -54,36 +57,6 @@ function normalizeDiagnosticTypes(diagnosticTypes: string[]): TokenWasteType[] {
   return normalized;
 }
 
-function escapeYamlString(value: string): string {
-  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-}
-
-function resolvePremiumModel(modelName?: string): string {
-  const normalized = modelName?.trim();
-  return normalized || 'openai/gpt-5';
-}
-
-function buildLiteLLMRoutingSnippet(modelName?: string): string {
-  return `model_list:
-  - model_name: cheap-fast
-    litellm_params:
-      model: groq/llama-3.1-8b-instant
-
-  - model_name: premium-primary
-    litellm_params:
-      model: ${escapeYamlString(resolvePremiumModel(modelName))}
-
-  - model_name: smart-router
-    litellm_params:
-      model: auto_router/complexity_router
-      complexity_router_config:
-        tiers:
-          SIMPLE: cheap-fast
-          MEDIUM: cheap-fast
-          COMPLEX: premium-primary
-      complexity_router_default_model: cheap-fast`;
-}
-
 const LITELLM_CACHE_SNIPPET = `litellm_settings:
   cache: true
   cache_params:
@@ -105,78 +78,272 @@ stop:
   - "\n\nEND"
 system: "Return only the requested fields."`;
 
-function buildSolutionDatabase(modelName?: string): Solution[] {
-  const premiumModel = resolvePremiumModel(modelName);
+const DEFAULT_LITELLM_PRIMARY_MODEL = 'openai/gpt-4o';
 
+function sanitizePrimaryModelName(modelName?: string): string {
+  const normalized = modelName?.trim()?.replace(/\s+/g, ' ');
+  return normalized ? normalized : DEFAULT_LITELLM_PRIMARY_MODEL;
+}
+
+function buildLiteLLMRoutingSnippet(modelName?: string): string {
+  const primaryModel = sanitizePrimaryModelName(modelName);
+
+  return `# config.yaml
+# Keep your current premium model for hard tasks: ${primaryModel}
+model_list:
+  - model_name: cheap-default
+    litellm_params:
+      model: gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: premium-primary
+    litellm_params:
+      model: "${primaryModel}"
+      api_key: os.environ/OPENAI_API_KEY
+
+router_settings:
+  routing_strategy: "cost-based-routing"
+  fallbacks:
+    - premium-primary
+
+# Run: litellm --config config.yaml --port 4000`;
+}
+
+function getPriorityForDiagnostic(solution: Solution, diagnosticType: TokenWasteType, fallbackIndex: number): number {
+  return solution.recommendationPriority?.[diagnosticType] ?? 100 + fallbackIndex;
+}
+
+function buildSolutionDatabase(modelName?: string): Solution[] {
   return [
+    // ===== 免费 tier 方案 =====
+    {
+      id: 'groq-free',
+      title: 'Switch to Groq (Free)',
+      titleZh: '切换到 Groq（免费）',
+      description: 'Llama 3.1 8B on Groq: 500K tokens/day free, no credit card needed. Fastest inference available.',
+      descriptionZh: 'Groq 上的 Llama 3.1 8B：每天 50 万 token 免费，无需信用卡，推理速度极快。',
+      type: 'free-tier',
+      effort: 'low',
+      savingsEstimate: '100%',
+      freeTier: {
+        provider: 'Groq',
+        model: 'llama-3.1-8b-instant',
+        freeLimit: '500K tokens/day, 14,400 req/day',
+        requiresCreditCard: false,
+        url: 'https://console.groq.com',
+        signupUrl: 'https://console.groq.com/keys',
+      },
+      configSnippet: `# OpenAI-compatible endpoint
+OPENAI_BASE_URL=https://api.groq.com/openai/v1
+OPENAI_API_KEY=your_groq_key
+# Model: llama-3.1-8b-instant (fast, free)
+# Or: llama-3.3-70b-versatile (smarter, still free)`,
+      recommendationPriority: {
+        'expensive-model': 1,
+      },
+      tags: ['expensive-model', 'model-mismatch'],
+    },
+    {
+      id: 'gemini-free',
+      title: 'Switch to Gemini Flash-Lite (Free)',
+      titleZh: '切换到 Gemini Flash-Lite（免费）',
+      description: 'Google Gemini 2.5 Flash-Lite: 1,000 req/day free, 250K tokens/day. No credit card.',
+      descriptionZh: 'Google Gemini 2.5 Flash-Lite：每天 1000 次请求免费，25 万 token，无需信用卡。',
+      type: 'free-tier',
+      effort: 'low',
+      savingsEstimate: '100%',
+      freeTier: {
+        provider: 'Google',
+        model: 'gemini-2.5-flash-lite',
+        freeLimit: '1,000 req/day, 250K tokens/day',
+        requiresCreditCard: false,
+        url: 'https://aistudio.google.com',
+        signupUrl: 'https://aistudio.google.com/apikey',
+      },
+      configSnippet: `# OpenAI-compatible via LiteLLM
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+OPENAI_API_KEY=your_gemini_key
+# Model: gemini-2.5-flash-lite-preview-06-17`,
+      recommendationPriority: {
+        'expensive-model': 3,
+      },
+      tags: ['expensive-model'],
+    },
+    {
+      id: 'openrouter-free',
+      title: 'Use OpenRouter Free Models',
+      titleZh: '使用 OpenRouter 免费模型',
+      description: '25+ free models via one API. DeepSeek V3, Llama, Qwen and more. No credit card for basic use.',
+      descriptionZh: '一个 API 访问 25+ 免费模型，包括 DeepSeek V3、Llama、Qwen 等，基础使用无需信用卡。',
+      type: 'free-tier',
+      effort: 'low',
+      savingsEstimate: '100%',
+      freeTier: {
+        provider: 'OpenRouter',
+        model: 'deepseek/deepseek-chat:free',
+        freeLimit: '200 req/day (free), 1000 req/day (after $10 deposit)',
+        requiresCreditCard: false,
+        url: 'https://openrouter.ai',
+        signupUrl: 'https://openrouter.ai/keys',
+      },
+      configSnippet: `# OpenAI-compatible
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_API_KEY=your_openrouter_key
+# Free models end with :free
+# e.g. deepseek/deepseek-chat:free
+#      meta-llama/llama-3.1-8b-instruct:free`,
+      recommendationPriority: {
+        'expensive-model': 4,
+      },
+      tags: ['expensive-model'],
+    },
+    {
+      id: 'deepseek-cheap',
+      title: 'Switch to DeepSeek V3 (20x cheaper)',
+      titleZh: '切换到 DeepSeek V3（便宜 20 倍）',
+      description: 'DeepSeek V3.2: $0.14/M input tokens. 20-50x cheaper than GPT-4o, comparable quality.',
+      descriptionZh: 'DeepSeek V3.2：输入 $0.14/百万 token，比 GPT-4o 便宜 20-50 倍，质量相当。',
+      type: 'free-tier',
+      effort: 'low',
+      savingsEstimate: '95%',
+      freeTier: {
+        provider: 'DeepSeek',
+        model: 'deepseek-chat',
+        freeLimit: '5M tokens for new users',
+        requiresCreditCard: false,
+        url: 'https://platform.deepseek.com',
+        signupUrl: 'https://platform.deepseek.com/api_keys',
+      },
+      configSnippet: `# OpenAI-compatible
+OPENAI_BASE_URL=https://api.deepseek.com
+OPENAI_API_KEY=your_deepseek_key
+# Model: deepseek-chat (V3.2, $0.14/M input)
+# Or: deepseek-reasoner (R1, for complex reasoning)`,
+      recommendationPriority: {
+        'expensive-model': 5,
+      },
+      tags: ['expensive-model'],
+    },
+
+    // ===== 成本优化工具 =====
+    {
+      id: 'anthropic-cache',
+      title: 'Enable Anthropic Prompt Caching',
+      titleZh: '开启 Anthropic Prompt Caching',
+      description: 'Cache your system prompt. Cached tokens cost 90% less ($0.30/M vs $3.00/M). Saves most on long system prompts.',
+      descriptionZh: '缓存系统提示词，缓存 token 成本降低 90%（$0.30/M vs $3.00/M），系统提示词越长越省。',
+      type: 'config',
+      effort: 'low',
+      savingsEstimate: '90% on cached tokens',
+      configSnippet: `# Add cache_control to your system prompt
+{
+  "role": "system",
+  "content": [
+    {
+      "type": "text",
+      "text": "Your long system prompt here...",
+      "cache_control": {"type": "ephemeral"}
+    }
+  ]
+}
+# Cached reads: $0.30/M (vs $3.00/M normal)
+# Break-even: just 1.4 reads per cache write`,
+      recommendationPriority: {
+        'long-prompt': 2,
+        'context-bloat': 3,
+        'expensive-model': 6,
+      },
+      tags: ['long-prompt', 'context-bloat', 'expensive-model'],
+    },
+    {
+      id: 'llmlingua',
+      title: 'Compress Prompts with LLMLingua-2',
+      titleZh: '用 LLMLingua-2 压缩 Prompt',
+      description: 'Microsoft research tool. 20x compression with <5% quality loss. Works on RAG context, long docs, conversation history.',
+      descriptionZh: '微软研究院工具，最高 20 倍压缩，质量损失 <5%，适合 RAG 上下文、长文档、对话历史。',
+      type: 'tool',
+      effort: 'medium',
+      savingsEstimate: '75-95% on long prompts',
+      tool: {
+        name: 'LLMLingua-2',
+        github: 'https://github.com/microsoft/LLMLingua',
+        docs: 'https://llmlingua.com/',
+        installCmd: 'pip install llmlingua',
+      },
+      configSnippet: `from llmlingua import PromptCompressor
+
+compressor = PromptCompressor(
+    model_name="microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+    use_llmlingua2=True,
+)
+
+compressed = compressor.compress_prompt(
+    your_long_prompt,
+    rate=0.33,  # Keep 33% of tokens
+    force_tokens=['\\n', '?'],
+)
+print(f"Saved {compressed['saving']} tokens")`,
+      recommendationPriority: {
+        'long-prompt': 0,
+        'context-bloat': 0,
+        'verbose-output': 2,
+      },
+      tags: ['long-prompt', 'context-bloat', 'verbose-output'],
+    },
     {
       id: 'litellm-routing',
-      title: 'LiteLLM smart router',
-      titleZh: 'LiteLLM 智能路由',
-      description: `Route simple requests away from ${premiumModel} and keep the premium model only for complex work.`,
-      descriptionZh: `把简单请求从 ${premiumModel} 分流出去，只把复杂任务留给贵模型。`,
+      title: 'Set Up LiteLLM Model Routing',
+      titleZh: '配置 LiteLLM 模型路由',
+      description: 'Route simple tasks to cheap models, complex tasks to powerful ones. 40-85% cost reduction with 95% quality maintained.',
+      descriptionZh: '简单任务路由到便宜模型，复杂任务路由到强模型，成本降低 40-85%，质量保持 95%。',
       type: 'tool',
       effort: 'medium',
       savingsEstimate: '40-85%',
       tool: {
         name: 'LiteLLM',
         github: 'https://github.com/BerriAI/litellm',
-        docs: 'https://docs.litellm.ai/docs/proxy/auto_routing',
+        docs: 'https://docs.litellm.ai/docs/routing',
         installCmd: 'pip install "litellm[proxy]"',
       },
       configSnippet: buildLiteLLMRoutingSnippet(modelName),
-      tags: ['expensive-model'],
-    },
-    {
-      id: 'groq-free-tier',
-      title: 'Groq free tier',
-      titleZh: 'Groq 免费额度',
-      description: 'Use Llama 3.1 8B for classification, extraction, and simple Q&A before spending on premium APIs.',
-      descriptionZh: '把分类、提取、简单问答先放到 Llama 3.1 8B 免费额度上跑，再决定是否要用贵模型。',
-      type: 'free-tier',
-      effort: 'low',
-      savingsEstimate: '100% within free limit',
-      freeTier: {
-        provider: 'Groq',
-        freeLimit: '14.4K req/day · 500K tokens/day',
-        model: 'llama-3.1-8b-instant',
-        url: 'https://console.groq.com',
+      recommendationPriority: {
+        'expensive-model': 0,
       },
-      tags: ['expensive-model'],
+      tags: ['expensive-model', 'model-mismatch'],
     },
     {
-      id: 'ollama-local-models',
-      title: 'Ollama local models',
-      titleZh: 'Ollama 本地模型',
-      description: 'Run lightweight private or high-frequency tasks locally so the marginal token cost drops to zero.',
-      descriptionZh: '把高频轻任务或隐私敏感任务放到本地跑，边际 token 成本可以降到零。',
+      id: 'ollama-local',
+      title: 'Run Models Locally with Ollama',
+      titleZh: '用 Ollama 在本地跑模型',
+      description: 'Zero marginal cost after setup. Break-even vs GPT-4o-mini at ~500 req/day. Best for privacy-sensitive or high-volume tasks.',
+      descriptionZh: '安装后边际成本为零，每天 500+ 请求时比 GPT-4o-mini 更划算，适合隐私敏感或高频任务。',
       type: 'local-model',
       effort: 'medium',
-      savingsEstimate: '100% marginal cost',
+      savingsEstimate: '100% (after hardware)',
       tool: {
         name: 'Ollama',
-        docs: 'https://docs.ollama.com/linux',
+        github: 'https://github.com/ollama/ollama',
+        docs: 'https://ollama.com',
         installCmd: 'curl -fsSL https://ollama.com/install.sh | sh',
       },
-      tags: ['expensive-model'],
-    },
-    {
-      id: 'gptcache-semantic-cache',
-      title: 'GPTCache semantic cache',
-      titleZh: 'GPTCache 语义缓存',
-      description: 'Short-circuit repeated or near-duplicate prompts so retries stop paying for the same answer twice.',
-      descriptionZh: '把重复或近似重复的问题直接命中缓存，别为同一个答案重复付费。',
-      type: 'tool',
-      effort: 'medium',
-      savingsEstimate: '100% on duplicate requests',
-      tool: {
-        name: 'GPTCache',
-        github: 'https://github.com/zilliztech/GPTCache',
-        docs: 'https://gptcache.readthedocs.io/en/latest/',
-        installCmd: 'pip install gptcache',
+      configSnippet: `# Install and run a model
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.1:8b  # Good for most tasks
+ollama pull qwen2.5:7b   # Better for Chinese
+
+# OpenAI-compatible API at localhost:11434
+OPENAI_API_KEY=ollama  # any string works
+OPENAI_BASE_URL=http://localhost:11434/v1
+# Model: llama3.1:8b
+
+# Break-even vs GPT-4o-mini: ~500 req/day`,
+      recommendationPriority: {
+        'expensive-model': 2,
+        'retry-loop': 4,
       },
-      tags: ['retry-loop'],
+      tags: ['expensive-model', 'retry-loop'],
     },
+
+    // ===== 保留原有方案 =====
     {
       id: 'litellm-redis-cache',
       title: 'LiteLLM Redis cache',
@@ -193,24 +360,30 @@ function buildSolutionDatabase(modelName?: string): Solution[] {
         installCmd: 'pip install "litellm[proxy]"',
       },
       configSnippet: LITELLM_CACHE_SNIPPET,
+      recommendationPriority: {
+        'retry-loop': 0,
+      },
       tags: ['retry-loop'],
     },
     {
-      id: 'llmlingua-compression',
-      title: 'LLMLingua compression',
-      titleZh: 'LLMLingua 压缩',
-      description: 'Compress long prompts before they reach the model to shrink context cost without rewriting the workflow.',
-      descriptionZh: '在请求进入模型前先压缩长 prompt，不改主流程也能直接减上下文成本。',
+      id: 'gptcache-semantic-cache',
+      title: 'GPTCache semantic cache',
+      titleZh: 'GPTCache 语义缓存',
+      description: 'Short-circuit repeated or near-duplicate prompts so retries stop paying for the same answer twice.',
+      descriptionZh: '把重复或近似重复的问题直接命中缓存，别为同一个答案重复付费。',
       type: 'tool',
       effort: 'medium',
-      savingsEstimate: 'Up to 20x compression',
+      savingsEstimate: '100% on duplicate requests',
       tool: {
-        name: 'LLMLingua',
-        github: 'https://github.com/microsoft/LLMLingua',
-        docs: 'https://www.microsoft.com/en-us/research/project/llmlingua/llmlingua/',
-        installCmd: 'pip install llmlingua',
+        name: 'GPTCache',
+        github: 'https://github.com/zilliztech/GPTCache',
+        docs: 'https://gptcache.readthedocs.io/en/latest/',
+        installCmd: 'pip install gptcache',
       },
-      tags: ['context-bloat', 'long-prompt'],
+      recommendationPriority: {
+        'retry-loop': 1,
+      },
+      tags: ['retry-loop'],
     },
     {
       id: 'manual-context-pruning',
@@ -226,6 +399,9 @@ function buildSolutionDatabase(modelName?: string): Solution[] {
         docs: 'https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/long-context-tips',
       },
       configSnippet: MANUAL_CONTEXT_SNIPPET,
+      recommendationPriority: {
+        'context-bloat': 1,
+      },
       tags: ['context-bloat'],
     },
     {
@@ -242,6 +418,9 @@ function buildSolutionDatabase(modelName?: string): Solution[] {
         docs: 'https://platform.openai.com/docs/guides/structured-outputs',
       },
       configSnippet: VERBOSE_OUTPUT_SNIPPET,
+      recommendationPriority: {
+        'verbose-output': 0,
+      },
       tags: ['verbose-output'],
     },
   ];
@@ -253,23 +432,36 @@ export function getRecommendations(diagnosticTypes: string[], modelName?: string
 
   return buildSolutionDatabase(modelName)
     .map((solution, index) => {
-      const matchedIndexes = solution.tags
-        .map(tag => normalizedTypes.indexOf(tag as TokenWasteType))
-        .filter(position => position >= 0);
+      const matchedTypes = normalizedTypes.filter(type => solution.tags.includes(type));
+      if (matchedTypes.length === 0) return null;
 
-      if (matchedIndexes.length === 0) return null;
+      const firstMatchedType = matchedTypes[0];
 
       return {
         solution,
-        firstMatchIndex: Math.min(...matchedIndexes),
-        matchedCount: matchedIndexes.length,
+        firstMatchIndex: normalizedTypes.indexOf(firstMatchedType),
+        firstMatchedType,
+        matchedCount: matchedTypes.length,
+        priority: getPriorityForDiagnostic(solution, firstMatchedType, index),
         index,
       };
     })
-    .filter((item): item is { solution: Solution; firstMatchIndex: number; matchedCount: number; index: number } => item !== null)
+    .filter(
+      (
+        item,
+      ): item is {
+        solution: Solution;
+        firstMatchIndex: number;
+        firstMatchedType: TokenWasteType;
+        matchedCount: number;
+        priority: number;
+        index: number;
+      } => item !== null,
+    )
     .sort(
       (left, right) =>
         left.firstMatchIndex - right.firstMatchIndex ||
+        left.priority - right.priority ||
         right.matchedCount - left.matchedCount ||
         left.index - right.index,
     )

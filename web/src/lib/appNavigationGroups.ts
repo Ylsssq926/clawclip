@@ -1,6 +1,6 @@
 export const OVERVIEW_NAV_TAB_IDS = ['dashboard'] as const
 export const CORE_FLOW_NAV_TAB_IDS = ['replay', 'benchmark', 'cost'] as const
-export const TOOL_NAV_TAB_IDS = ['prompt', 'compare', 'knowledge', 'templates', 'skills', 'leaderboard'] as const
+export const TOOL_NAV_TAB_IDS = ['prompt', 'compare', 'knowledge', 'templates', 'skills', 'solutions', 'leaderboard'] as const
 
 export const ALL_NAV_TAB_IDS = [
   ...OVERVIEW_NAV_TAB_IDS,

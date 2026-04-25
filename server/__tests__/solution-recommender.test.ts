@@ -7,8 +7,8 @@ describe('getRecommendations', () => {
 
     expect(recommendations.slice(0, 3).map(item => item.id)).toEqual([
       'litellm-routing',
-      'groq-free-tier',
-      'ollama-local-models',
+      'groq-free',
+      'ollama-local',
     ]);
     expect(recommendations[0]?.configSnippet).toContain('openai/gpt-5');
   });
@@ -17,7 +17,7 @@ describe('getRecommendations', () => {
     const recommendations = getRecommendations(['context-bloat', 'long-prompt']);
     const ids = recommendations.map(item => item.id);
 
-    expect(ids.filter(id => id === 'llmlingua-compression')).toHaveLength(1);
-    expect(ids.slice(0, 2)).toEqual(['llmlingua-compression', 'manual-context-pruning']);
+    expect(ids.filter(id => id === 'llmlingua')).toHaveLength(1);
+    expect(ids.slice(0, 2)).toEqual(['llmlingua', 'manual-context-pruning']);
   });
 });

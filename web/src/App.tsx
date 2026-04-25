@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Landing from './pages/Landing'
 import ErrorBoundary from './components/ErrorBoundary'
-import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb, GitCompareArrows, ChevronDown, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Play, Trophy, DollarSign, Puzzle, Store, ArrowLeft, Database, Medal, Menu, X, Lightbulb, GitCompareArrows, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
 import { cn } from './lib/cn'
 import { buildAppNavigationGroups, ALL_NAV_TAB_IDS } from './lib/appNavigationGroups'
 import { useI18n, LanguageSwitcher } from './lib/i18n'
@@ -21,6 +21,7 @@ const SkillManager = lazy(() => import('./pages/SkillManager'))
 const TemplateMarket = lazy(() => import('./pages/TemplateMarket'))
 const Knowledge = lazy(() => import('./pages/Knowledge'))
 const Leaderboard = lazy(() => import('./pages/Leaderboard'))
+const Solutions = lazy(() => import('./pages/Solutions'))
 
 export type Tab = (typeof ALL_NAV_TAB_IDS)[number]
 
@@ -34,6 +35,7 @@ const tabs = [
   { id: 'knowledge' as const, nameKey: 'nav.knowledge', icon: Database },
   { id: 'templates' as const, nameKey: 'nav.templates', icon: Store },
   { id: 'skills' as const, nameKey: 'nav.skills', icon: Puzzle },
+  { id: 'solutions' as const, nameKey: 'nav.solutions', icon: Sparkles },
   { id: 'leaderboard' as const, nameKey: 'nav.leaderboard', icon: Medal },
 ] as const
 
@@ -442,6 +444,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
                   {activeTab === 'compare' && <Compare onNavigate={navigateTab} onOpenReplaySession={openReplaySession} />}
                   {activeTab === 'skills' && <SkillManager />}
                   {activeTab === 'templates' && <TemplateMarket />}
+                  {activeTab === 'solutions' && <Solutions />}
                   {activeTab === 'knowledge' && (
                     <Knowledge
                       initialQuery={knowledgeInitialQuery}

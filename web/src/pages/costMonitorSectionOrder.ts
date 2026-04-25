@@ -1,6 +1,7 @@
 export type CostMonitorSectionId =
   | 'savings'
   | 'savings-empty'
+  | 'solutions'
   | 'token-waste'
   | 'trend'
   | 'model-breakdown'
@@ -15,6 +16,7 @@ export type CostMonitorSectionTier = 'primary' | 'secondary'
 export const COST_MONITOR_SECTION_ORDER: readonly CostMonitorSectionId[] = [
   'savings',
   'savings-empty',
+  'solutions',
   'token-waste',
   'trend',
   'model-breakdown',
@@ -28,6 +30,7 @@ export const COST_MONITOR_SECTION_ORDER: readonly CostMonitorSectionId[] = [
 const PRIMARY_COST_MONITOR_SECTIONS = new Set<CostMonitorSectionId>([
   'savings',
   'savings-empty',
+  'solutions',
   'token-waste',
   'trend',
 ])

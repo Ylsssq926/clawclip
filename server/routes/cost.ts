@@ -2,6 +2,8 @@ import { Router } from 'express';
 import type { Request } from 'express';
 import { costParser } from '../services/cost-parser.js';
 import * as pricingFetcher from '../services/pricing-fetcher.js';
+import { tokenWasteAnalyzer } from '../services/token-waste-analyzer.js';
+import { getRecommendations } from '../services/solution-recommender.js';
 
 const router = Router();
 
@@ -19,10 +21,19 @@ router.get('/summary', (req, res) => {
     const freshness = costParser.getUsageFreshness();
     const requestCount = costParser.getRequestCount(days);
     const budget = costParser.checkBudgetAlert();
+    const wasteReport = tokenWasteAnalyzer.getReport(days);
+    const topModelName = Object.entries(costParser.getModelBreakdown(days))
+      .sort((left, right) => right[1].cost - left[1].cost)[0]?.[0];
+    const recommendations = getRecommendations(
+      wasteReport.diagnostics.map(diagnostic => diagnostic.type),
+      topModelName,
+    ).slice(0, 3);
+
     res.json({
       ...stats,
       requestCount,
       budget,
+      recommendations,
       latestUsageAt: freshness.latestUsageAt,
       dataCutoffAt: freshness.dataCutoffAt,
       costMeta: {
@@ -169,6 +180,24 @@ router.get('/savings', (req, res) => {
     res.json(report);
   } catch (e) {
     res.status(500).json({ error: '获取省钱建议失败 / Failed to get savings', detail: String(e) });
+  }
+});
+
+/** 获取更便宜的替代方案 */
+router.get('/alternatives', (req, res) => {
+  try {
+    const model = String(req.query.model || '');
+    const taskType = req.query.taskType ? String(req.query.taskType) : undefined;
+
+    if (!model) {
+      res.status(400).json({ error: '缺少 model 参数 / Missing model parameter' });
+      return;
+    }
+
+    const result = costParser.getCheaperAlternatives(model, taskType);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: '获取替代方案失败 / Failed to get alternatives', detail: String(e) });
   }
 });
 

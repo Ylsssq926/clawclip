@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode, useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar } from 'recharts'
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight, ChevronRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight, ChevronRight, Copy, Check, ExternalLink } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import EmptyState from '../components/ui/EmptyState'
@@ -142,6 +142,31 @@ function getUsageSourceBadgeClass(source: UsageSource | undefined): string {
   }
 }
 
+interface Solution {
+  id: string
+  title: string
+  titleZh: string
+  description: string
+  descriptionZh: string
+  type: 'tool' | 'config' | 'free-tier' | 'local-model'
+  effort: 'low' | 'medium' | 'high'
+  savingsEstimate: string
+  tool?: {
+    name: string
+    github?: string
+    docs?: string
+    installCmd?: string
+  }
+  freeTier?: {
+    provider: string
+    freeLimit: string
+    model: string
+    url: string
+  }
+  configSnippet?: string
+  tags: string[]
+}
+
 interface CostSummary {
   totalCost: number
   totalTokens: number
@@ -151,6 +176,7 @@ interface CostSummary {
   comparedToLastMonth: number
   budget: { isAlert: boolean; percentage: number; message: string }
   topTasks: { taskId: string; taskName: string; cost: number; tokens: number }[]
+  recommendations?: Solution[]
   pricingReference?: PricingReference
   pricingSource?: PricingSource
   pricingUpdatedAt?: string
@@ -378,6 +404,43 @@ interface BudgetConfig {
 
 type ModelBreakdown = Record<string, { tokens: number; cost: number }>
 
+interface FreeTierInfo {
+  provider: string
+  model: string
+  modelId: string
+  freeLimit: {
+    requestsPerDay?: number
+    tokensPerDay?: number
+    tokensPerMonth?: number
+  }
+  rateLimit: {
+    rpm: number
+    tpm?: number
+  }
+  requiresCreditCard: boolean
+  url: string
+  notes?: string
+}
+
+interface AlternativeModel {
+  model: string
+  provider: string
+  inputPrice: number
+  outputPrice: number
+  savingsPercent: number
+  freeTier?: FreeTierInfo
+  suitableFor: string[]
+  notSuitableFor: string[]
+  notes: string
+}
+
+interface AlternativesResult {
+  currentModel: string
+  currentPrice: { input: number; output: number }
+  alternatives: AlternativeModel[]
+  freeTiers: FreeTierInfo[]
+}
+
 interface ModelBreakdownRow {
   model: string
   cost: number
@@ -494,6 +557,34 @@ function getTokenWasteDiagnosticDescription(diagnostic: TokenWasteDiagnostic, lo
   return copy.tokenWaste.descriptions[diagnostic.type] ?? diagnostic.descEn
 }
 
+function getLocalizedSolutionTitle(solution: Solution, locale: Locale): string {
+  return locale === 'zh' ? solution.titleZh : solution.title
+}
+
+function getLocalizedSolutionDescription(solution: Solution, locale: Locale): string {
+  return locale === 'zh' ? solution.descriptionZh : solution.description
+}
+
+function getSolutionLearnMoreUrl(solution: Solution): string | undefined {
+  return solution.tool?.docs ?? solution.tool?.github ?? solution.freeTier?.url
+}
+
+function getSolutionCopyText(solution: Solution): string | undefined {
+  return solution.tool?.installCmd ?? solution.configSnippet
+}
+
+function getSolutionMetaText(solution: Solution): string | null {
+  if (solution.freeTier) {
+    return `${solution.freeTier.provider} · ${solution.freeTier.model} · ${solution.freeTier.freeLimit}`
+  }
+
+  if (solution.tool?.name) {
+    return solution.tool.name
+  }
+
+  return null
+}
+
 function CostSkeleton() {
   return (
     <div className="space-y-6">
@@ -536,6 +627,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
   const [modelBreakdown, setModelBreakdown] = useState<ModelBreakdown>({})
   const [modelValueRows, setModelValueRows] = useState<ModelValueRow[]>([])
+  const [alternatives, setAlternatives] = useState<Record<string, AlternativesResult>>({})
   const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null)
   const [budgetModalOpen, setBudgetModalOpen] = useState(false)
   const [budgetForm, setBudgetForm] = useState({ monthly: '', alertThreshold: '80' })
@@ -550,6 +642,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   const [reconciliationSortBy, setReconciliationSortBy] = useState<CostReconciliationSortKey>(DEFAULT_COST_RECONCILIATION_SORT)
   const [showEstimatedOnly, setShowEstimatedOnly] = useState(false)
   const [showReplayableOnly, setShowReplayableOnly] = useState(false)
+  const [copiedSolutionId, setCopiedSolutionId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -607,6 +700,38 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
           : [],
       )
       setBudgetConfig(normalizedBudget)
+
+      // 获取贵模型的替代方案
+      const expensiveModels = Object.entries(normalizedModels)
+        .filter(([model, data]) => {
+          const cost = Number(data.cost ?? 0)
+          const modelLower = model.toLowerCase()
+          return cost > 0 && (
+            modelLower.includes('gpt-4o') ||
+            modelLower.includes('gpt-5') ||
+            modelLower.includes('claude-opus') ||
+            modelLower.includes('claude-sonnet')
+          )
+        })
+        .map(([model]) => model)
+        .slice(0, 3) // 只获取前3个贵模型的替代方案
+
+      if (expensiveModels.length > 0) {
+        const alternativesData: Record<string, AlternativesResult> = {}
+        await Promise.all(
+          expensiveModels.map(async (model) => {
+            try {
+              const result = await apiGetSafe<AlternativesResult>(`/api/cost/alternatives?model=${encodeURIComponent(model)}`)
+              if (result) {
+                alternativesData[model] = result
+              }
+            } catch {
+              // 忽略错误
+            }
+          })
+        )
+        setAlternatives(alternativesData)
+      }
     } catch {
       setError(copy.errorLoad)
     } finally {
@@ -697,6 +822,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   const wasteMetaText = tokenWaste
     ? `${fillTemplate(copy.tokenWaste.signals, { count: tokenWaste.summary.signals })}${tokenWaste.summary.usingDemo ? copy.tokenWaste.demoSuffix : ''}`
     : copy.tokenWaste.fallback
+  const recommendedSolutions = summary?.recommendations?.slice(0, 3) ?? []
   const hasSwitchModelSuggestion = Boolean(
     savings?.suggestions.some(suggestion => (
       suggestion.reasonType === 'switch-model'
@@ -777,6 +903,19 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
     } finally {
       setReferenceSaving(false)
     }
+  }
+
+  const handleCopySolutionText = (solutionId: string, text?: string) => {
+    if (!text || !navigator.clipboard?.writeText) return
+
+    void navigator.clipboard.writeText(text)
+      .then(() => {
+        setCopiedSolutionId(solutionId)
+        window.setTimeout(() => {
+          setCopiedSolutionId(current => (current === solutionId ? null : current))
+        }, 1800)
+      })
+      .catch(() => {})
   }
 
   const TrendIcon = summary?.trend === 'up' ? TrendingUp : summary?.trend === 'down' ? TrendingDown : Minus
@@ -968,6 +1107,102 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
     })
   }
 
+  if (recommendedSolutions.length > 0) {
+    costMonitorSections.push({
+      id: 'solutions',
+      content: (
+        <div className={primarySectionCardClass}>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h3 className="text-lg font-semibold">{t('solutions.title')}</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {t('solutions.disclaimer')}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
+            {recommendedSolutions.map(solution => {
+              const copyText = getSolutionCopyText(solution)
+              const learnMoreUrl = getSolutionLearnMoreUrl(solution)
+              const metaText = getSolutionMetaText(solution)
+              const copyLabel = solution.tool?.installCmd ? t('solutions.install') : t('solutions.snippet')
+              const isCopied = copiedSolutionId === solution.id
+
+              return (
+                <div key={solution.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {metaText && (
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{metaText}</p>
+                      )}
+                      <h4 className="mt-1 text-base font-semibold text-slate-900">{getLocalizedSolutionTitle(solution, locale)}</h4>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                        {t(`solutions.effort.${solution.effort}`)}
+                      </span>
+                      {solution.type === 'free-tier' && (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                          {t('solutions.free')}
+                        </span>
+                      )}
+                      {solution.type === 'local-model' && (
+                        <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-medium text-violet-700">
+                          {t('solutions.local')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                    {getLocalizedSolutionDescription(solution, locale)}
+                  </p>
+
+                  <div className="mt-4 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2.5">
+                    <p className="text-[11px] font-medium text-emerald-700">{t('solutions.savings')}</p>
+                    <p className="mt-1 text-sm font-semibold text-emerald-700">{solution.savingsEstimate}</p>
+                  </div>
+
+                  {copyText && (
+                    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-950 px-3 py-3 text-slate-100">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{copyLabel}</p>
+                        <button
+                          type="button"
+                          onClick={() => handleCopySolutionText(solution.id, copyText)}
+                          className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82c4]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                        >
+                          {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          <span>{isCopied ? t('solutions.copied') : t('solutions.copy')}</span>
+                        </button>
+                      </div>
+                      <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-5 text-slate-100">{copyText}</pre>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex items-center justify-end gap-3">
+                    {learnMoreUrl ? (
+                      <a
+                        href={learnMoreUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#3b82c4] transition-colors hover:text-[#2f6fa8]"
+                      >
+                        {t('solutions.learnMore')}
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : <span />}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ),
+    })
+  }
+
   costMonitorSections.push({
     id: 'token-waste',
     content: (
@@ -1138,6 +1373,60 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
               <Bar dataKey="percentage" name={copy.modelBreakdown.series} fill="#3b82c4" radius={[0, 8, 8, 0]} />
             </BarChart>
           </ResponsiveContainer>
+
+          {/* 更便宜的替代方案 */}
+          {Object.keys(alternatives).length > 0 && (
+            <div className="mt-6 space-y-4">
+              {Object.entries(alternatives).map(([model, altData]) => {
+                if (!altData.alternatives || altData.alternatives.length === 0) return null
+                
+                return (
+                  <details key={model} className="group rounded-lg border border-slate-200 bg-slate-50/50">
+                    <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100/50 transition-colors flex items-center justify-between">
+                      <span>💡 {locale === 'zh' ? `${model} 的更便宜替代方案` : `Cheaper alternatives for ${model}`}</span>
+                      <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="border-t border-slate-200 px-4 py-3 space-y-3">
+                      {altData.alternatives.slice(0, 3).map((alt, idx) => (
+                        <div key={idx} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-900">{alt.model}</span>
+                              <span className="text-xs text-slate-500">({alt.provider})</span>
+                              {alt.freeTier && (
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                                  {locale === 'zh' ? '免费' : 'Free'}
+                                </span>
+                              )}
+                              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                                {locale === 'zh' ? `节省 ${alt.savingsPercent}%` : `Save ${alt.savingsPercent}%`}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-600">
+                              {locale === 'zh' ? '输入' : 'Input'}: ${alt.inputPrice}/M · {locale === 'zh' ? '输出' : 'Output'}: ${alt.outputPrice}/M
+                            </div>
+                            <div className="mt-2 text-xs text-slate-500">{alt.notes}</div>
+                            {alt.freeTier && (
+                              <div className="mt-2 text-xs text-slate-500">
+                                {locale === 'zh' ? '免费额度' : 'Free tier'}: 
+                                {alt.freeTier.freeLimit.requestsPerDay && ` ${alt.freeTier.freeLimit.requestsPerDay} ${locale === 'zh' ? '次/天' : 'req/day'}`}
+                                {alt.freeTier.freeLimit.tokensPerDay && ` ${(alt.freeTier.freeLimit.tokensPerDay / 1000).toFixed(0)}K ${locale === 'zh' ? 'tokens/天' : 'tokens/day'}`}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        {locale === 'zh' 
+                          ? '⚠️ 免责声明：替代方案基于价格和通用能力推荐，实际效果可能因任务而异。建议先在非关键任务上测试，确认质量后再扩大使用范围。'
+                          : '⚠️ Disclaimer: Alternatives are recommended based on pricing and general capabilities. Actual performance may vary by task. Test on non-critical tasks first before wider adoption.'}
+                      </p>
+                    </div>
+                  </details>
+                )
+              })}
+            </div>
+          )}
         </div>
       ),
     })

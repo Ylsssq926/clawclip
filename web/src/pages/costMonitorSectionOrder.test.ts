@@ -19,10 +19,12 @@ describe('orderCostMonitorSections', () => {
       'reference-compare',
       'token-waste',
       'savings',
+      'solutions',
     ]))
 
     expect(primary.map(section => section.id)).toEqual([
       'savings',
+      'solutions',
       'token-waste',
       'trend',
     ])
@@ -35,7 +37,7 @@ describe('orderCostMonitorSections', () => {
   })
 
   it('只把先下手最值的区块视为第一屏主线', () => {
-    const primaryIds: CostMonitorSectionId[] = ['savings', 'savings-empty', 'token-waste', 'trend']
+    const primaryIds: CostMonitorSectionId[] = ['savings', 'savings-empty', 'solutions', 'token-waste', 'trend']
     const secondaryIds: CostMonitorSectionId[] = ['model-breakdown', 'model-value', 'insights', 'reference-compare', 'reconciliation', 'top-tasks']
 
     expect(primaryIds.every(id => getCostMonitorSectionTier(id) === 'primary')).toBe(true)
@@ -69,6 +71,7 @@ describe('orderCostMonitorSections', () => {
       'trend',
       'model-value',
       'token-waste',
+      'solutions',
       'reconciliation',
       'insights',
       'model-breakdown',
@@ -77,6 +80,7 @@ describe('orderCostMonitorSections', () => {
 
     expect(primary.map(section => section.id)).toEqual([
       'savings',
+      'solutions',
       'token-waste',
       'trend',
     ])

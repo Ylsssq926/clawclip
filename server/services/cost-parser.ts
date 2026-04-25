@@ -39,6 +39,7 @@ import type { SessionReplay } from '../types/replay.js';
 import { tokenWasteAnalyzer, type TokenWasteDiagnostic } from './token-waste-analyzer.js';
 import { attributeCosts, type CostAttribution } from './cost-attribution.js';
 import { log } from './logger.js';
+import { FREE_TIERS, LOW_COST_MODELS, type FreeTierInfo } from '../data/free-tiers.js';
 
 interface ModelBreakdownEntry {
   inputTokens: number;
@@ -127,6 +128,95 @@ function suggestAlternativeDetailed(
   return null;
 }
 
+/**
+ * 判断任务类型是否适合轻量模型
+ */
+function isLightweightTask(taskType?: string): boolean {
+  if (!taskType) return false;
+  const lightweightTypes = ['classification', 'extraction', 'format', 'simple'];
+  return lightweightTypes.some(type => taskType.toLowerCase().includes(type));
+}
+
+/**
+ * 推荐更便宜的替代方案
+ */
+export function suggestCheaperAlternatives(
+  currentModel: string,
+  taskType?: string,
+): AlternativeModel[] {
+  const pricing = getPricingSnapshot(getConfiguredPricingReference());
+  const currentDetail = resolveModelDetail(pricing.detailed, currentModel);
+  const alternatives: AlternativeModel[] = [];
+
+  const currentModelLower = currentModel.toLowerCase();
+  const isExpensiveModel =
+    currentModelLower.includes('gpt-4o') ||
+    currentModelLower.includes('gpt-5') ||
+    currentModelLower.includes('claude-opus') ||
+    currentModelLower.includes('claude-sonnet');
+
+  // 如果是贵模型，推荐 DeepSeek 和 Groq
+  if (isExpensiveModel) {
+    // DeepSeek V3.2
+    const deepseekDetail = resolveModelDetail(pricing.detailed, 'deepseek-chat');
+    const deepseekInfo = LOW_COST_MODELS.find(m => m.modelId === 'deepseek-chat');
+    if (deepseekInfo) {
+      const savingsPercent = ((currentDetail.output - deepseekDetail.output) / currentDetail.output) * 100;
+      alternatives.push({
+        model: deepseekInfo.model,
+        provider: deepseekInfo.provider,
+        inputPrice: deepseekDetail.input,
+        outputPrice: deepseekDetail.output,
+        savingsPercent: Math.round(savingsPercent),
+        suitableFor: deepseekInfo.suitableFor,
+        notSuitableFor: deepseekInfo.notSuitableFor,
+        notes: deepseekInfo.notes,
+      });
+    }
+
+    // Groq Llama 70B
+    const groq70bDetail = resolveModelDetail(pricing.detailed, 'llama-3.1-70b-versatile');
+    const groq70bInfo = LOW_COST_MODELS.find(m => m.modelId === 'llama-3.1-70b-versatile');
+    if (groq70bInfo) {
+      const savingsPercent = ((currentDetail.output - groq70bDetail.output) / currentDetail.output) * 100;
+      alternatives.push({
+        model: groq70bInfo.model,
+        provider: groq70bInfo.provider,
+        inputPrice: groq70bDetail.input,
+        outputPrice: groq70bDetail.output,
+        savingsPercent: Math.round(savingsPercent),
+        suitableFor: groq70bInfo.suitableFor,
+        notSuitableFor: groq70bInfo.notSuitableFor,
+        notes: groq70bInfo.notes,
+      });
+    }
+  }
+
+  // 如果是轻量任务，额外推荐免费模型
+  if (isLightweightTask(taskType)) {
+    const groq8bDetail = resolveModelDetail(pricing.detailed, 'llama-3.1-8b-instant');
+    const groq8bInfo = LOW_COST_MODELS.find(m => m.modelId === 'llama-3.1-8b-instant');
+    const groq8bFreeTier = FREE_TIERS.find(f => f.modelId === 'llama-3.1-8b-instant');
+    if (groq8bInfo) {
+      const savingsPercent = ((currentDetail.output - groq8bDetail.output) / currentDetail.output) * 100;
+      alternatives.push({
+        model: groq8bInfo.model,
+        provider: groq8bInfo.provider,
+        inputPrice: groq8bDetail.input,
+        outputPrice: groq8bDetail.output,
+        savingsPercent: Math.round(savingsPercent),
+        freeTier: groq8bFreeTier,
+        suitableFor: groq8bInfo.suitableFor,
+        notSuitableFor: groq8bInfo.notSuitableFor,
+        notes: groq8bInfo.notes,
+      });
+    }
+  }
+
+  // 按节省百分比排序
+  return alternatives.sort((a, b) => b.savingsPercent - a.savingsPercent);
+}
+
 interface UsageCacheEntry {
   at: number;
   data: TokenUsage[];
@@ -180,6 +270,25 @@ function getPricingReferenceLabel(reference: PricingReference): string {
 
 type SavingReasonType = 'switch-model' | 'trim-prompt' | 'trim-output' | 'reduce-retries';
 type SavingPriority = 'high' | 'medium' | 'low';
+
+export interface AlternativeModel {
+  model: string;
+  provider: string;
+  inputPrice: number;
+  outputPrice: number;
+  savingsPercent: number;
+  freeTier?: FreeTierInfo;
+  suitableFor: string[];
+  notSuitableFor: string[];
+  notes: string;
+}
+
+export interface AlternativesResult {
+  currentModel: string;
+  currentPrice: { input: number; output: number };
+  alternatives: AlternativeModel[];
+  freeTiers: FreeTierInfo[];
+}
 
 type EnhancedSavingSuggestion = SavingSuggestion & {
   reasonType?: SavingReasonType;
@@ -1431,6 +1540,25 @@ export class CostParser {
     return {
       totalPotentialSaving,
       suggestions,
+    };
+  }
+
+  /**
+   * 获取模型的更便宜替代方案
+   */
+  getCheaperAlternatives(model: string, taskType?: string): AlternativesResult {
+    const pricing = this.getCachedPricingSnapshot();
+    const currentDetail = resolveModelDetail(pricing.detailed, model);
+    const alternatives = suggestCheaperAlternatives(model, taskType);
+
+    return {
+      currentModel: model,
+      currentPrice: {
+        input: currentDetail.input,
+        output: currentDetail.output,
+      },
+      alternatives,
+      freeTiers: FREE_TIERS,
     };
   }
 }

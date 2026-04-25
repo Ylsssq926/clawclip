@@ -84,6 +84,7 @@ export function normalizeOtelSpan(
     content: span.name,
     model,
     toolName,
+    spanId: span.spanId,
     isError,
     error,
     inputTokens,

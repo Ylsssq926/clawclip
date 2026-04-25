@@ -652,7 +652,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
     setError(null)
 
     try {
-      const [d, s, compare, recon, isDemo, ins, sav, waste, models, modelValue, budget] = await Promise.all([
+      const results = await Promise.allSettled([
         apiGet<DailyData[]>(`/api/cost/daily?days=${days}`),
         apiGet<CostSummary>(`/api/cost/summary?days=${days}`),
         apiGetSafe<ReferenceCompareData>(`/api/cost/reference-compare?days=${days}`),
@@ -666,6 +666,18 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
         apiGetSafe<ModelValueReport>(`/api/analytics/model-value?days=${days}`),
         apiGetSafe<BudgetConfig>('/api/cost/budget'),
       ])
+
+      const d = results[0].status === 'fulfilled' ? results[0].value : []
+      const s = results[1].status === 'fulfilled' ? results[1].value : null
+      const compare = results[2].status === 'fulfilled' ? results[2].value : null
+      const recon = results[3].status === 'fulfilled' ? results[3].value : null
+      const isDemo = results[4].status === 'fulfilled' ? results[4].value : false
+      const ins = results[5].status === 'fulfilled' ? results[5].value : []
+      const sav = results[6].status === 'fulfilled' ? results[6].value : null
+      const waste = results[7].status === 'fulfilled' ? results[7].value : null
+      const models = results[8].status === 'fulfilled' ? results[8].value : null
+      const modelValue = results[9].status === 'fulfilled' ? results[9].value : null
+      const budget = results[10].status === 'fulfilled' ? results[10].value : null
 
       const normalizedModels: ModelBreakdown = {}
       if (models && typeof models === 'object' && !Array.isArray(models)) {

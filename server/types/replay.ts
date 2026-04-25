@@ -50,6 +50,8 @@ export interface SessionStep {
   toolOutput?: string;
   /** tool call 的唯一标识，用于关联 tool_call 和 tool_result */
   toolCallId?: string;
+  /** OTEL span 的唯一标识，用于幂等去重 */
+  spanId?: string;
   /** 错误信息（如果这一步失败了） */
   error?: string;
   /** 步骤是否出错 */

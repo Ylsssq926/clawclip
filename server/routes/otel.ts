@@ -68,9 +68,16 @@ router.post('/v1/traces', (req, res, next) => {
             otelSessions.set(traceId, session);
           }
           
+          const existingSpanIds = new Set(session.steps.map(step => step.spanId).filter((spanId): spanId is string => Boolean(spanId)));
+          
           // 转换并添加 spans
           for (const span of traceSpans) {
+            if (existingSpanIds.has(span.spanId)) {
+              continue;
+            }
+
             const step = normalizeOtelSpan(span, resource, session.steps.length) as SessionStep;
+            existingSpanIds.add(span.spanId);
             
             // 更新会话元数据
             const endTime = new Date(Math.floor(parseInt(span.endTimeUnixNano, 10) / 1_000_000));
@@ -87,12 +94,11 @@ router.post('/v1/traces', (req, res, next) => {
             
             session.steps.push(step);
             session.meta.stepCount = session.steps.length;
+            totalSpans += 1;
           }
           
           // 更新总时长
           session.meta.durationMs = session.meta.endTime.getTime() - session.meta.startTime.getTime();
-          
-          totalSpans += traceSpans.length;
         }
       }
     }

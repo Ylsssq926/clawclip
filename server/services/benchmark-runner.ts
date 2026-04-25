@@ -530,6 +530,10 @@ function findPairedToolResultIndex(
   return findNearestToolResultIndex(steps, callIndex, consumedToolResults, toolCallId);
 }
 
+function isErroredToolResult(step: SessionStep | undefined): boolean {
+  return step?.type === 'tool_result' && (step.isError === true || Boolean(step.error));
+}
+
 function scoreReliability(replays: SessionReplay[]): DimensionScore {
   let totalToolCalls = 0;
   let failedToolCalls = 0;
@@ -554,6 +558,9 @@ function scoreReliability(replays: SessionReplay[]): DimensionScore {
           failedToolCalls += 1;
         } else {
           consumedToolResults.add(pairedToolResultIndex);
+          if (isErroredToolResult(steps[pairedToolResultIndex])) {
+            failedToolCalls += 1;
+          }
         }
       }
 

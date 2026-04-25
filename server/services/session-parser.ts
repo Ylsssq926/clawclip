@@ -446,8 +446,16 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
   const role = resolveMessageRole(body, outerType);
   const stepContent = buildStepContent(text, reasoningExtra);
   const errorText = extractErrorText(body, obj);
+  const functionCall = body.function_call as Record<string, unknown> | undefined;
+  const toolCalls = pickToolCalls(body, obj);
+  const isToolResultLike = role === 'tool' || outerType === 'tool_result' || outerType === 'function_call_output';
+  const isToolCallLike =
+    (functionCall && typeof functionCall.name === 'string') ||
+    outerType === 'tool_call' ||
+    outerType === 'function_call' ||
+    Boolean(toolCalls && toolCalls.length > 0);
 
-  if (outerType === 'error' || errorText) {
+  if ((outerType === 'error' || errorText) && !isToolResultLike && !isToolCallLike) {
     const errorContent = buildStepContent(text || errorText, reasoningExtra);
     return {
       index,
@@ -475,27 +483,33 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
     };
   }
 
-  if (role === 'assistant' || outerType === 'assistant_message') {
-    const fc = body.function_call as Record<string, unknown> | undefined;
-    if (fc && typeof fc.name === 'string') {
-      const args = fc.arguments;
+  if (
+    role === 'assistant' ||
+    outerType === 'assistant_message' ||
+    outerType === 'tool_call' ||
+    outerType === 'function_call' ||
+    (functionCall && typeof functionCall.name === 'string') ||
+    Boolean(toolCalls && toolCalls.length > 0)
+  ) {
+    if (functionCall && typeof functionCall.name === 'string') {
+      const args = functionCall.arguments;
       const toolInput = typeof args === 'string' ? args : JSON.stringify(args ?? {});
       return {
         index,
         timestamp,
         type: 'tool_call',
-        ...stepContent,
+        ...buildStepContent(text || errorText, reasoningExtra),
         model,
-        toolName: fc.name,
+        toolName: functionCall.name,
         toolInput,
-        toolCallId: extractToolCallId(fc),
+        toolCallId: extractToolCallId(functionCall),
+        ...(errorText ? { error: errorText, isError: true } : {}),
         ...base(),
         cost: 0,
         durationMs: 0,
       };
     }
 
-    const toolCalls = pickToolCalls(body, obj);
     if (toolCalls && toolCalls.length > 0) {
       const steps: SessionStep[] = [];
       const hasLeadResponse = text.length > 0;
@@ -517,7 +531,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
         const n = toolCallName(tcr);
         const tin = toolCallInput(tcr);
         const toolStepContent =
-          i === 0 && !hasLeadResponse ? buildStepContent('', reasoningExtra) : { content: '' };
+          i === 0 && !hasLeadResponse ? buildStepContent(errorText || '', reasoningExtra) : { content: '' };
         steps.push({
           index: index + toolCallOffset + i,
           timestamp,
@@ -527,6 +541,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
           toolName: n,
           toolInput: tin,
           toolCallId: extractToolCallId(tcr),
+          ...(errorText ? { error: errorText, isError: true } : {}),
           ...base(!hasLeadResponse && i === 0),
           cost: 0,
           durationMs: 0,
@@ -564,7 +579,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
   }
 
   if (role === 'tool' || outerType === 'tool_result' || outerType === 'function_call_output') {
-    const out = text || stringifyContent(body.output ?? body.result ?? obj.output ?? obj.result);
+    const out = text || stringifyContent(body.output ?? body.result ?? obj.output ?? obj.result) || errorText;
     return {
       index,
       timestamp,
@@ -583,6 +598,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
               : typeof obj.tool_name === 'string'
                 ? obj.tool_name
                 : undefined,
+      ...(errorText ? { error: errorText, isError: true } : {}),
       ...base(),
       cost: 0,
       durationMs: 0,

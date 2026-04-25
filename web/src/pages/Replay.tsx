@@ -624,7 +624,14 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
       setControlsVisible(true)
     }
 
-    const hasFailedSteps = replay?.steps.some(step => step.isError === true) ?? false
+    const hasFailedSteps = replay?.steps.some(step => {
+      const toolFailurePattern = /error|failed|failure|失败|异常/i
+      const hasError = Boolean(step.isError || step.error)
+      const isToolFailure =
+        (step.type === 'tool_result' || step.type === 'tool_call')
+        && (toolFailurePattern.test(`${step.content} ${step.toolOutput ?? ''} ${step.error ?? ''}`) || hasError)
+      return hasError || isToolFailure
+    }) ?? false
 
     const handleSaveAsEval = async () => {
       if (!replay || !hasFailedSteps || savingEval) return

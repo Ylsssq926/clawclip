@@ -91,6 +91,8 @@ export default function Solutions() {
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedConfig | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [configCopied, setConfigCopied] = useState(false)
+  const [detectedModel, setDetectedModel] = useState<string | null>(null)
+  const [manualModel, setManualModel] = useState<string>('claude-3-5-sonnet')
 
   useEffect(() => {
     // 获取所有解决方案
@@ -109,6 +111,18 @@ export default function Solutions() {
       })
       .catch(() => {
         setOllamaStatus({ available: false })
+      })
+
+    // 获取最近使用的模型
+    apiGetSafe<{ model?: string }>('/api/cost/summary?days=7')
+      .then((summary) => {
+        if (summary?.model) {
+          setDetectedModel(summary.model)
+          setManualModel(summary.model)
+        }
+      })
+      .catch(() => {
+        setDetectedModel(null)
       })
   }, [])
 
@@ -134,7 +148,7 @@ export default function Solutions() {
         body: JSON.stringify({
           runtime: selectedRuntime,
           preset: selectedPreset,
-          currentModel: 'claude-3-5-sonnet', // TODO: Get from actual session data
+          currentModel: detectedModel || manualModel,
         }),
       })
 
@@ -235,7 +249,24 @@ export default function Solutions() {
               <div className="mb-2 text-xs font-medium text-slate-500">
                 {t('solutions.generator.currentModel')}
               </div>
-              <div className="font-mono text-sm text-slate-900">claude-3-5-sonnet</div>
+              {detectedModel ? (
+                <div className="font-mono text-sm text-slate-900">{detectedModel}</div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-xs text-amber-600">未检测到模型，请手动选择</div>
+                  <select
+                    value={manualModel}
+                    onChange={(e) => setManualModel(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="claude-3-5-sonnet">claude-3-5-sonnet</option>
+                    <option value="gpt-4o">gpt-4o</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini</option>
+                    <option value="claude-3-opus">claude-3-opus</option>
+                    <option value="claude-3-haiku">claude-3-haiku</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Preset Selection */}

@@ -490,7 +490,7 @@ function detectRetryLoops(replays: SessionReplay[]): TokenWasteDiagnostic[] {
   for (const replay of replays) {
     for (const segment of splitCycleSegments(replay.steps)) {
       const cycle = analyzeBadCycleSegment(segment.steps);
-      if (!cycle.detected) continue;
+      if (!cycle.detected || cycle.confidence === 'low') continue;
 
       const estimatedWasteTokens = segment.steps.reduce((sum, step) => sum + step.inputTokens + step.outputTokens, 0);
       const directWasteCost = segment.steps.reduce((sum, step) => sum + step.cost, 0);

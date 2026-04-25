@@ -6,7 +6,7 @@
 
 **Your agent's burning tokens on retry loops, bloated prompts, and expensive models doing lightweight work. ClawClip shows you where — so you can cut the waste and keep what actually makes it stronger.**
 
-Runs locally · Reads your existing logs · No upload
+Runs locally · Reads your existing logs · No upload · No code changes
 
 <p>
   <a href="https://clawclip.luelan.online">Live Demo</a> ·
@@ -50,17 +50,14 @@ ClawClip ends the guessing. It reads your session logs, replays what actually ha
 
 ## What it does
 
-### Find where tokens are being wasted
-Retry loops. Bloated prompts. Verbose outputs. Expensive models doing lightweight work. ClawClip finds the patterns quietly inflating your bill — and tells you which ones to fix first.
+### Find where your agent's burning money
+Retry loops you didn't notice. Prompts that grew too long. Expensive models doing simple work. ClawClip reads your logs, flags the patterns, and tells you which fix saves the most.
 
-### Compare models and configs side by side
-Run the same task with different models or prompts. Compare them directly: which scored higher, which cost less, which actually improved. No more guessing after a swap.
+### Compare runs without guessing
+Swap a model, tweak a prompt, run it again. ClawClip shows you the before/after: score, tokens, cost. If it got better but more expensive, you'll see that too.
 
-### Prove whether an optimization worked
-Every benchmark run is saved. After a change, you get before/after proof: score, tokens, cost. Plain verdict: better, worse, or no real difference. If the score went up but the bill went up more, you'll see that too.
-
-### Replay any run step by step
-See what your agent actually did: every tool call, retry, reasoning block, and response, in order. Find where it went sideways without digging through raw JSONL.
+### Get solutions, not just problems
+Found a waste pattern? ClawClip suggests free-tier alternatives and generates the config for you. No digging through docs.
 
 ## About the diagnostics
 

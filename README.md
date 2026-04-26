@@ -6,6 +6,10 @@
 
 **Your agent's burning tokens on retry loops, bloated prompts, and expensive models doing lightweight work. ClawClip shows you where — so you can cut the waste and keep what actually makes it stronger.**
 
+> **OpenClaw's built-in Usage Dashboard shows you what you spent. ClawClip shows you why you spent it, whether your changes helped, and how to spend less.**
+>
+> ClawClip fills the gaps OpenClaw doesn't cover: step-by-step session replay, before/after version comparison, cross-framework analysis (Hermes, LangGraph, AutoGen), and actionable optimization recommendations.
+
 Runs locally · Reads your existing logs · No upload · No code changes
 
 <p>

@@ -1,5 +1,25 @@
 # ClawClip v2 迭代计划
 
+## 竞争格局更新（2026-04）
+
+OpenClaw v2026.4.24 已内建 Usage Dashboard，能做：
+- 按日期/模型/provider/agent/channel 分类的成本汇总
+- CSV/JSON 导出
+
+**虾片不应该和 OpenClaw 的 usage dashboard 正面竞争。**
+
+虾片的真正差异化（OpenClaw 明确没有的）：
+1. **Session 回放** — OpenClaw 只有 history/preview，没有 step-by-step replay（官方标记为 not planned）
+2. **版本对比** — OpenClaw 没有 before/after、A/B、benchmark scoring
+3. **跨框架分析** — OpenClaw 只分析自己的 session，虾片支持 Hermes/LangGraph/AutoGen
+4. **解决方案推荐** — OpenClaw 告诉你花了多少，虾片告诉你怎么少花
+5. **数据可信度** — OpenClaw 有已知漏算问题（非默认 agent、reset archive、OAuth 成本），虾片直接读 JSONL 更准
+
+**核心定位调整：**
+> "OpenClaw 告诉你花了多少，虾片告诉你为什么花这么多、怎么少花、改了有没有用。"
+
+---
+
 ## 版本目标
 从"OpenClaw/ZeroClaw 专用工具"升级为"通用 Agent 日志分析平台"，优先适配 Hermes 和 LangGraph，补齐可靠性评测维度。
 
@@ -12,8 +32,10 @@
 | **Hermes 适配** | 1. 新增 `HermesParser` 读 SQLite + JSONL<br>2. XML `<tool_call>` 解析器<br>3. 映射到统一 schema（session_id/role/content/tool_calls）<br>4. 复用现有 Insights/Scorecard 组件<br><br>**Hermes → ClawClip 字段映射**<br><table><tr><th>Hermes 字段</th><th>ClawClip 统一字段</th><th>备注</th></tr><tr><td>sessions.id</td><td>sessionId</td><td>直接映射</td></tr><tr><td>sessions.source</td><td>platform</td><td>cli/telegram/discord</td></tr><tr><td>sessions.model</td><td>model</td><td>直接映射</td></tr><tr><td>sessions.started_at</td><td>timestamp</td><td>Unix epoch → ISO 8601</td></tr><tr><td>messages.role</td><td>role</td><td>user/assistant/tool</td></tr><tr><td>messages.content</td><td>content</td><td>直接映射</td></tr><tr><td>messages.tool_calls</td><td>toolCalls</td><td>JSON 字符串需反序列化</td></tr><tr><td>sessions.input_tokens</td><td>inputTokens</td><td>直接映射</td></tr><tr><td>sessions.output_tokens</td><td>outputTokens</td><td>直接映射</td></tr></table><br>**XML tool_call 解析示例**<br>`extractToolCalls(xml) => parseXML(/<tool_call>(.*?)<\/tool_call>/g).map(JSON.parse)`<br><br>**已知版本兼容问题**<br>- Hermes v0.5.0+ 新增 `reasoning` 字段（需兼容旧版无此字段）<br>- SQLite schema v6 新增 `cache_read_tokens` 等计费字段（v5 及以下需默认值 0） | NousResearch 用户量大，Hermes 是主流开源 agent 框架，适配后用户基数翻倍 | 5-8 天 |
 | **可靠性维度评测** | 1. 新增 `ReliabilityScorer`<br>2. 指标：一致性（同任务多次运行的结果方差）、故障恢复率（工具失败后是否重试成功）<br>3. 在 Scorecard 页面新增第七维度卡片<br><br>**数据依据**（基于调研）：<br>- 主流 Agent 评测框架（GAIA、SWE-bench、ReliabilityBench）已将可靠性作为核心维度<br>- 当前六维缺失的具体问题：没有衡量"同一任务跑 5 次结果是否一致"的指标<br>- 研究发现：单次运行成功率 60% 的 agent，8 次运行一致性仅 25%（arXiv:2511.14136）<br>- 具体计算方式：**一致性分数 = 相同结果次数 / 总运行次数**<br>- 示例：同一任务跑 5 次，3 次成功 2 次失败 → 一致性 60%（3/5）<br>- 参考标准：Princeton HAL Reliability Dashboard 定义的 Consistency Metrics | 当前六维缺少"稳定性"视角，用户反馈需要知道 agent 是否"靠谱" | 3-5 天 |
 | **版本感知解析** | 1. 在 parser 层检测 `_version` 字段<br>2. 维护 schema 映射表（OpenClaw v2026.4.1 → 新字段 `context_tokens`）<br>3. 解析失败时显示版本不兼容警告 | 避免用户升级 OpenClaw/ZeroClaw 后 ClawClip 报错，减少 support 成本 | 2-3 天 |
+| **跨框架统一视图** | 1. 新增 `UnifiedDashboard` 组件<br>2. 支持在同一界面对比 OpenClaw、Hermes、LangGraph 的成本和质量<br>3. 统一时间轴展示不同框架的 session | OpenClaw 只能看自己的数据，虾片能横向对比多个框架，帮用户选最优方案 | 4-6 天 |
+| **数据可信度增强** | 1. 覆盖 OpenClaw 漏算场景（非默认 agent、reset archive）<br>2. 新增"数据完整性检查"功能，标记可能漏算的 session<br>3. 提供修正建议 | OpenClaw 的 usage dashboard 有已知漏算问题，虾片直接读 JSONL 更准确 | 3-4 天 |
 
-**P0 总工作量：10-16 天**
+**P0 总工作量：17-29 天**
 
 ---
 

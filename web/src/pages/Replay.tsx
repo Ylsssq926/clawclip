@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Play, Pause, RotateCcw, Bot, Clock, ChevronDown, ChevronUp, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp } from 'lucide-react'
+import { ArrowLeft, Play, Pause, RotateCcw, Bot, Clock, ChevronDown, ChevronUp, Share2, Download, FileText, Lightbulb, AlertTriangle, ThumbsUp, Search } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useI18n, formatI18n } from '../lib/i18n'
 import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/formatSession'
@@ -363,6 +363,8 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
   const [tagInfos, setTagInfos] = useState<TagInfo[]>([])
   const [selectedTag, setSelectedTag] = useState(TAG_ALL)
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<SessionSourceFilterKey>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortMode, setSortMode] = useState<'newest' | 'costDesc' | 'tokensDesc' | 'stepsDesc'>('newest')
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
   const [replay, setReplay] = useState<SessionReplay | null>(null)
   const [loading, setLoading] = useState(true)
@@ -398,12 +400,33 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
   )
 
   const filteredSessions = useMemo(() => {
-    return sessions.filter(session => {
+    const query = searchQuery.trim().toLowerCase()
+    let result = sessions.filter(session => {
       const matchesTag = selectedTag === TAG_ALL || sessionTags[session.id]?.includes(selectedTag)
       const matchesSource = matchesSessionSourceFilter(session.dataSource, selectedSourceFilter)
-      return matchesTag && matchesSource
+      const matchesSearch = !query || [
+        session.agentName,
+        session.summary,
+        session.sessionLabel,
+      ].some(field => (field ?? '').toLowerCase().includes(query))
+      return matchesTag && matchesSource && matchesSearch
     })
-  }, [selectedSourceFilter, selectedTag, sessions, sessionTags])
+    result = [...result].sort((a, b) => {
+      switch (sortMode) {
+        case 'newest':
+          return new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        case 'costDesc':
+          return b.totalCost - a.totalCost
+        case 'tokensDesc':
+          return b.totalTokens - a.totalTokens
+        case 'stepsDesc':
+          return b.stepCount - a.stepCount
+        default:
+          return 0
+      }
+    })
+    return result
+  }, [selectedSourceFilter, selectedTag, sessions, sessionTags, searchQuery, sortMode])
 
   useEffect(() => {
     if (view !== 'list') return
@@ -1006,6 +1029,32 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
 
       {!loading && !error && (
         <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={t('replay.search.placeholder')}
+                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20 placeholder:text-slate-400"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">{t('replay.sort.label')}</span>
+              <select
+                value={sortMode}
+                onChange={e => setSortMode(e.target.value as typeof sortMode)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20"
+              >
+                <option value="newest">{t('replay.sort.newest')}</option>
+                <option value="costDesc">{t('replay.sort.costDesc')}</option>
+                <option value="tokensDesc">{t('replay.sort.tokensDesc')}</option>
+                <option value="stepsDesc">{t('replay.sort.stepsDesc')}</option>
+              </select>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             {SESSION_SOURCE_FILTERS.map(filter => (
               <button

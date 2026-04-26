@@ -118,12 +118,14 @@ export interface ModelPricing {
 }
 
 /**
- * 分离 input/output 价格的详细定价表（USD / 百万 token）。
+ * 模型价格详情接口 — 包含 input、output 和可选的缓存价格。
  * 用于精确计算费用；legacy ModelPricing 仅存 output 价格，供向后兼容场景使用。
  */
 export interface ModelPriceDetail {
-  input: number;
-  output: number;
+  input: number;           // 输入 token 价格（$/M）
+  output: number;          // 输出 token 价格（$/M）
+  inputCached?: number;    // 缓存 input token 价格（$/M）
+  outputCached?: number;   // 缓存 output token 价格（$/M）
 }
 
 export type DetailedModelPricing = { [model: string]: ModelPriceDetail };
@@ -150,8 +152,8 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'gpt-4.1':         { input: 2.00, output: 8.0 },
   'gpt-4.1-mini':    { input: 0.40, output: 1.60 },
   'gpt-4.1-nano':    { input: 0.10, output: 0.40 },
-  'gpt-4o':         { input: 2.50, output: 10.0 },
-  'gpt-4o-mini':     { input: 0.15, output: 0.60 },
+  'gpt-4o':         { input: 2.50, output: 10.0, inputCached: 1.25 },
+  'gpt-4o-mini':     { input: 0.15, output: 0.60, inputCached: 0.075 },
   'gpt-4-turbo':    { input: 10.0, output: 30.0 },
   'gpt-4':          { input: 30.0, output: 60.0 },
   'gpt-3.5-turbo':   { input: 0.50, output: 1.50 },
@@ -164,7 +166,7 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'o1-pro':        { input: 150.0, output: 600.0 },
 
   // ── Anthropic ──
-  'claude-opus-4.6':     { input: 5.0, output: 25.0 },
+  'claude-opus-4.6':     { input: 5.0, output: 25.0, inputCached: 1.50, outputCached: 15.0 },
   'claude-opus-4.5':     { input: 5.0, output: 25.0 },
   'claude-opus-4.1':     { input: 15.0, output: 75.0 },
   'claude-opus-4':       { input: 15.0, output: 75.0 },
@@ -173,8 +175,10 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'claude-sonnet-4':     { input: 3.0, output: 15.0 },
   'claude-sonnet-3.7':   { input: 3.0, output: 15.0 },
   'claude-3.5-sonnet':   { input: 3.0, output: 15.0 },
+  'claude-3-5-sonnet-20241022': { input: 3.0, output: 15.0, inputCached: 0.30, outputCached: 3.75 },
   'claude-haiku-4.5':     { input: 1.0, output: 5.0 },
   'claude-3.5-haiku':     { input: 0.80, output: 4.0 },
+  'claude-3-5-haiku-20241022': { input: 0.80, output: 4.0, inputCached: 0.08, outputCached: 1.0 },
   'claude-3-opus':       { input: 15.0, output: 75.0 },
   'claude-3-haiku':       { input: 0.25, output: 1.25 },
 
@@ -188,7 +192,7 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'gemini-2.0-flash':    { input: 0.10, output: 0.40 },
 
   // ── DeepSeek ──
-  'deepseek-chat':       { input: 0.14, output: 0.28 },
+  'deepseek-chat':       { input: 0.14, output: 0.28, inputCached: 0.014 },
   'deepseek-reasoner':   { input: 0.14, output: 0.28 },
 
   // ── Qwen / 阿里 ──

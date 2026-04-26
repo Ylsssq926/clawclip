@@ -29,6 +29,8 @@ export interface Solution {
     url: string;
     signupUrl?: string;
     requiresCreditCard?: boolean;
+    notes?: string;
+    lastVerified?: string;
   };
   configSnippet?: string;
   recommendationPriority?: Partial<Record<TokenWasteType, number>>;
@@ -122,8 +124,8 @@ function buildSolutionDatabase(modelName?: string): Solution[] {
       id: 'groq-free',
       title: 'Switch to Groq (Free)',
       titleZh: '切换到 Groq（免费）',
-      description: 'Llama 3.1 8B on Groq: 500K tokens/day free, no credit card needed. Fastest inference available.',
-      descriptionZh: 'Groq 上的 Llama 3.1 8B：每天 50 万 token 免费，无需信用卡，推理速度极快。',
+      description: 'Llama 3.1 8B on Groq: 500K tokens/day free, no credit card needed. Fastest inference available. Rate limit: 30 RPM.',
+      descriptionZh: 'Groq 上的 Llama 3.1 8B：每天 50 万 token 免费，无需信用卡，推理速度极快。速率限制：30 RPM。',
       type: 'free-tier',
       effort: 'low',
       savingsEstimate: '100%',
@@ -134,6 +136,8 @@ function buildSolutionDatabase(modelName?: string): Solution[] {
         requiresCreditCard: false,
         url: 'https://console.groq.com',
         signupUrl: 'https://console.groq.com/keys',
+        notes: '速率限制 30 RPM',
+        lastVerified: '2026-04',
       },
       configSnippet: `# OpenAI-compatible endpoint
 OPENAI_BASE_URL=https://api.groq.com/openai/v1
@@ -161,6 +165,7 @@ OPENAI_API_KEY=your_groq_key
         requiresCreditCard: false,
         url: 'https://aistudio.google.com',
         signupUrl: 'https://aistudio.google.com/apikey',
+        lastVerified: '2026-04',
       },
       configSnippet: `# OpenAI-compatible via LiteLLM
 OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
@@ -187,6 +192,7 @@ OPENAI_API_KEY=your_gemini_key
         requiresCreditCard: false,
         url: 'https://openrouter.ai',
         signupUrl: 'https://openrouter.ai/keys',
+        lastVerified: '2026-04',
       },
       configSnippet: `# OpenAI-compatible
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
@@ -215,6 +221,7 @@ OPENAI_API_KEY=your_openrouter_key
         requiresCreditCard: false,
         url: 'https://platform.deepseek.com',
         signupUrl: 'https://platform.deepseek.com/api_keys',
+        lastVerified: '2026-04',
       },
       configSnippet: `# OpenAI-compatible
 OPENAI_BASE_URL=https://api.deepseek.com

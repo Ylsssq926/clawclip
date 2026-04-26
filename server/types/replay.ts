@@ -60,6 +60,8 @@ export interface SessionStep {
   reasoning?: string;
   inputTokens: number;
   outputTokens: number;
+  /** 缓存读取的 token 数量（如果支持） */
+  cacheReadTokens?: number;
   cost: number;
   /** 当前 cost 是否基于已知模型定价估算得出 */
   costEstimated?: boolean;

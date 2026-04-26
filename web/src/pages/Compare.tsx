@@ -16,6 +16,7 @@ import { cn } from '../lib/cn'
 import { apiGet, apiPost, parseApiErrorMessage } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { formatDuration } from '../lib/formatSession'
+import { formatI18n } from '../lib/i18n'
 import type { Tab } from '../App'
 import type { SessionMeta } from '../types/session'
 
@@ -543,6 +544,15 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                 <span className="text-[11px] text-slate-500 uppercase tracking-wide">
                   {t('compare.placeholder')} {i + 1}
                 </span>
+                {i === 1 && slots[0] && (
+                  <div className="mb-1 flex items-center gap-1.5 text-xs">
+                    {loadingSimilar ? (
+                      <span className="text-blue-500">✨ {t('compare.similar.loading')}</span>
+                    ) : similarSessions.length > 0 ? (
+                      <span className="text-blue-500">✨ {formatI18n(t('compare.similar.found'), { n: String(similarSessions.length) })}</span>
+                    ) : null}
+                  </div>
+                )}
                 <select
                   value={value}
                   onChange={e => setSlot(i, e.target.value)}
@@ -560,7 +570,7 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                             id: session.id, 
                             agentName: session.agentName, 
                             summary: session.summary 
-                          } as SessionMeta)} — {t('compare.similar.score', { n: Math.round(session.similarity * 100) })}
+                          } as SessionMeta)} — {formatI18n(t('compare.similar.score'), { n: String(Math.round(session.similarity * 100)) })}
                         </option>
                       ))}
                     </optgroup>
@@ -597,9 +607,6 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
               {loading ? t('compare.loading') : t('compare.submit')}
             </button>
           </div>
-          {loadingSimilar && slots[0] && (
-            <p className="text-xs text-slate-400">加载相似推荐中...</p>
-          )}
           {availableSessionsError && <p className="text-sm text-rose-400">{availableSessionsError}</p>}
           {error && <p className="text-sm text-rose-400">{error}</p>}
         </div>

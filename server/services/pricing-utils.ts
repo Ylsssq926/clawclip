@@ -55,13 +55,24 @@ export function resolveModelDetail(
 
 /**
  * 使用 input/output 分离价格精确计算费用（USD）。
+ * 如果提供了 cacheReadTokens，会使用 inputCached 价格计算缓存部分。
  */
 export function computeDetailedCost(
   detail: ModelPriceDetail,
   inputTokens: number,
   outputTokens: number,
+  cacheReadTokens?: number,
 ): number {
-  return (inputTokens * detail.input + outputTokens * detail.output) / 1_000_000;
+  let cost = (inputTokens * detail.input + outputTokens * detail.output) / 1_000_000;
+  
+  // 如果有缓存读取 token 且模型支持缓存价格
+  if (cacheReadTokens && cacheReadTokens > 0 && detail.inputCached != null) {
+    // 从 inputTokens 中减去缓存部分，用缓存价格计算
+    const nonCachedInput = Math.max(0, inputTokens - cacheReadTokens);
+    cost = (nonCachedInput * detail.input + cacheReadTokens * detail.inputCached + outputTokens * detail.output) / 1_000_000;
+  }
+  
+  return cost;
 }
 
 /**
@@ -72,9 +83,10 @@ export function computeCost(
   model: string | undefined,
   inputTokens: number,
   outputTokens: number,
+  cacheReadTokens?: number,
 ): number {
   const detail = resolveModelDetail(pricing, model);
-  return computeDetailedCost(detail, inputTokens, outputTokens);
+  return computeDetailedCost(detail, inputTokens, outputTokens, cacheReadTokens);
 }
 
 export function buildCostMeta(snapshot: PricingSnapshot, usageSource: UsageSource): CostMeta {
@@ -94,8 +106,9 @@ export function repriceStep(
   inputTokens: number,
   outputTokens: number,
   snapshot: PricingSnapshot,
+  cacheReadTokens?: number,
 ): number {
-  return computeCost(snapshot.detailed, model, inputTokens, outputTokens);
+  return computeCost(snapshot.detailed, model, inputTokens, outputTokens, cacheReadTokens);
 }
 
 export function repriceReplay(
@@ -105,7 +118,7 @@ export function repriceReplay(
 ): SessionReplay {
   const steps = replay.steps.map(step => ({
     ...step,
-    cost: repriceStep(step.model, step.inputTokens, step.outputTokens, snapshot),
+    cost: repriceStep(step.model, step.inputTokens, step.outputTokens, snapshot, step.cacheReadTokens),
   }));
   const totalCost = steps.reduce((sum, step) => sum + step.cost, 0);
 

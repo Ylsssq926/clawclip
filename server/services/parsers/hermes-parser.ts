@@ -16,6 +16,12 @@ interface HermesMessageRecord {
   content: string;
   model?: string;
   tokensUsed?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
   createdAt?: unknown;
   reasoning?: string;
   toolName?: string;
@@ -480,7 +486,7 @@ export class HermesParser extends BaseParser<HermesSessionRecord> {
     if (role === 'user') {
       const text = this.extractPlainText(message.content).trim();
       if (text) pushTextStep('user', text);
-      this.assignUsage(steps, role, tokensUsed);
+      this.assignUsage(steps, role, tokensUsed, message);
       return steps;
     }
 
@@ -492,7 +498,7 @@ export class HermesParser extends BaseParser<HermesSessionRecord> {
         } else if (reasoningPending) {
           pushTextStep('thinking', reasoningPending, model);
         }
-        this.assignUsage(steps, role, tokensUsed);
+        this.assignUsage(steps, role, tokensUsed, message);
         return steps;
       }
 
@@ -536,7 +542,7 @@ export class HermesParser extends BaseParser<HermesSessionRecord> {
       if (steps.length === 0 && reasoningPending) {
         pushTextStep('thinking', reasoningPending, model);
       }
-      this.assignUsage(steps, role, tokensUsed);
+      this.assignUsage(steps, role, tokensUsed, message);
       return steps;
     }
 
@@ -597,7 +603,7 @@ export class HermesParser extends BaseParser<HermesSessionRecord> {
           );
         }
       }
-      this.assignUsage(steps, role, tokensUsed);
+      this.assignUsage(steps, role, tokensUsed, message);
       return steps;
     }
 
@@ -607,7 +613,7 @@ export class HermesParser extends BaseParser<HermesSessionRecord> {
     } else if (reasoningPending) {
       pushTextStep('thinking', reasoningPending, model);
     }
-    this.assignUsage(steps, role, tokensUsed);
+    this.assignUsage(steps, role, tokensUsed, message);
     return steps;
   }
 
@@ -619,10 +625,43 @@ export class HermesParser extends BaseParser<HermesSessionRecord> {
     return 'assistant';
   }
 
-  private assignUsage(steps: SessionStep[], role: HermesRole, tokensUsed: number): void {
-    if (steps.length === 0 || tokensUsed <= 0) return;
-    if (role === 'user') steps[0]!.inputTokens = tokensUsed;
-    else steps[0]!.outputTokens = tokensUsed;
+  private assignUsage(steps: SessionStep[], role: HermesRole, tokensUsed: number, message?: HermesMessageRecord): void {
+    if (steps.length === 0) return;
+    
+    // 优先使用明确的 input/output token 字段
+    const explicitInput = message?.inputTokens ?? message?.input_tokens ?? message?.prompt_tokens;
+    const explicitOutput = message?.outputTokens ?? message?.output_tokens ?? message?.completion_tokens;
+    
+    if (explicitInput != null && explicitInput > 0) {
+      steps[0]!.inputTokens = explicitInput;
+    }
+    if (explicitOutput != null && explicitOutput > 0) {
+      steps[0]!.outputTokens = explicitOutput;
+    }
+    
+    // 如果已经有明确的 token 分配，直接返回
+    if ((explicitInput != null && explicitInput > 0) || (explicitOutput != null && explicitOutput > 0)) {
+      return;
+    }
+    
+    // 回退到 tokensUsed 的启发式分配
+    if (tokensUsed <= 0) return;
+    
+    if (role === 'user') {
+      steps[0]!.inputTokens = tokensUsed;
+    } else {
+      // assistant 或 tool 角色
+      const stepType = steps[0]?.type;
+      if (stepType === 'user' || stepType === 'tool_call') {
+        steps[0]!.inputTokens = tokensUsed;
+      } else if (stepType === 'response' || stepType === 'tool_result' || stepType === 'thinking') {
+        steps[0]!.outputTokens = tokensUsed;
+      } else {
+        // 无法判断，各占 50%
+        steps[0]!.inputTokens = Math.floor(tokensUsed / 2);
+        steps[0]!.outputTokens = tokensUsed - steps[0]!.inputTokens;
+      }
+    }
   }
 
   private extractPlainText(content: string): string {

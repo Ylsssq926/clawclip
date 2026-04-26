@@ -6,7 +6,7 @@ import { DEFAULT_DETAILED_PRICING, DEFAULT_MODEL_PRICING } from '../types/index.
 describe('resolveModelDetail', () => {
   it('returns exact match', () => {
     const detail = resolveModelDetail(DEFAULT_DETAILED_PRICING, 'gpt-4o');
-    expect(detail).toEqual({ input: 2.50, output: 10.0 });
+    expect(detail).toEqual({ input: 2.50, output: 10.0, inputCached: 1.25 });
   });
 
   it('returns fallback for unknown model', () => {
@@ -21,7 +21,7 @@ describe('resolveModelDetail', () => {
 
   it('strips date suffix and matches', () => {
     const detail = resolveModelDetail(DEFAULT_DETAILED_PRICING, 'gpt-4o-2026-03-25');
-    expect(detail).toEqual({ input: 2.50, output: 10.0 });
+    expect(detail).toEqual({ input: 2.50, output: 10.0, inputCached: 1.25 });
   });
 
   it('strips version after colon and matches', () => {
@@ -95,7 +95,7 @@ describe('computeCost (convenience)', () => {
 
 describe('DeepSeek pricing defaults', () => {
   it('keeps chat and reasoner prices aligned with the latest official rates', () => {
-    expect(DEFAULT_DETAILED_PRICING['deepseek-chat']).toEqual({ input: 0.14, output: 0.28 });
+    expect(DEFAULT_DETAILED_PRICING['deepseek-chat']).toEqual({ input: 0.14, output: 0.28, inputCached: 0.014 });
     expect(DEFAULT_DETAILED_PRICING['deepseek-reasoner']).toEqual({ input: 0.14, output: 0.28 });
     expect(DEFAULT_MODEL_PRICING['deepseek-chat']).toBe(0.28);
     expect(DEFAULT_MODEL_PRICING['deepseek-reasoner']).toBe(0.28);

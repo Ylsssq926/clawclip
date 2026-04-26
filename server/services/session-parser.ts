@@ -634,14 +634,94 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
   return null;
 }
 
+/**
+ * 标注重试链路：为每个步骤添加 pairedResultIndex、retryOfIndex、retryCount
+ */
+function annotateRetryChains(steps: SessionStep[]): SessionStep[] {
+  const annotated = steps.map(s => ({ ...s }));
+  
+  // 1. 为每个 tool_call 找对应的 tool_result，设置 pairedResultIndex
+  for (let i = 0; i < annotated.length; i++) {
+    const step = annotated[i];
+    if (step.type === 'tool_call' && step.toolCallId) {
+      // 向后查找匹配的 tool_result
+      for (let j = i + 1; j < annotated.length; j++) {
+        const candidate = annotated[j];
+        if (candidate.type === 'tool_result' && candidate.toolCallId === step.toolCallId) {
+          step.pairedResultIndex = j;
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. 检测重试链路：如果 tool_result 失败，找后续同名工具的 tool_call
+  const failedCalls: Array<{ index: number; toolName: string; timestamp: Date }> = [];
+  
+  for (let i = 0; i < annotated.length; i++) {
+    const step = annotated[i];
+    
+    // 收集失败的 tool_call（通过 pairedResultIndex 找到对应的 result）
+    if (step.type === 'tool_call' && step.toolName && step.pairedResultIndex !== undefined) {
+      const resultStep = annotated[step.pairedResultIndex];
+      if (resultStep && resultStep.isError) {
+        failedCalls.push({ index: i, toolName: step.toolName, timestamp: step.timestamp });
+      }
+    }
+  }
+
+  // 3. 为每个 tool_call 检查是否是重试
+  for (let i = 0; i < annotated.length; i++) {
+    const step = annotated[i];
+    if (step.type === 'tool_call' && step.toolName) {
+      // 查找之前最近的同名失败调用
+      let retryOfIndex: number | undefined;
+      for (let j = failedCalls.length - 1; j >= 0; j--) {
+        const failed = failedCalls[j];
+        if (failed.toolName === step.toolName && failed.index < i) {
+          // 确保时间上合理（在失败之后）
+          if (step.timestamp >= failed.timestamp) {
+            retryOfIndex = failed.index;
+            break;
+          }
+        }
+      }
+      
+      if (retryOfIndex !== undefined) {
+        step.retryOfIndex = retryOfIndex;
+      }
+    }
+  }
+
+  // 4. 统计每个失败 call 被重试的次数
+  const retryCounts = new Map<number, number>();
+  for (const step of annotated) {
+    if (step.retryOfIndex !== undefined) {
+      retryCounts.set(step.retryOfIndex, (retryCounts.get(step.retryOfIndex) ?? 0) + 1);
+    }
+  }
+  
+  for (let i = 0; i < annotated.length; i++) {
+    const count = retryCounts.get(i);
+    if (count !== undefined && count > 0) {
+      annotated[i].retryCount = count;
+    }
+  }
+
+  return annotated;
+}
+
 function finalizeStepDurationsAndCost(steps: SessionStep[]): SessionStep[] {
   const n = steps.length;
-  return steps.map((s, i) => {
+  const withCostAndDuration = steps.map((s, i) => {
     const cost = computeCost(DEFAULT_DETAILED_PRICING, s.model, s.inputTokens, s.outputTokens);
     const durationMs =
       i < n - 1 ? Math.max(0, steps[i + 1].timestamp.getTime() - s.timestamp.getTime()) : 0;
     return { ...s, index: i, cost, durationMs };
   });
+  
+  // 添加重试链路标注
+  return annotateRetryChains(withCostAndDuration);
 }
 
 function cleanSessionSummary(raw: string): string {

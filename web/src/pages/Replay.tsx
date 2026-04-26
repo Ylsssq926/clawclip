@@ -9,6 +9,14 @@ import { getSupportingElementPriority } from './supportingElementPriority'
 import type { Tab } from '../App'
 import type { SessionMeta } from '../types/session'
 import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
+import {
+  countSessionsForSourceFilter,
+  getSessionSourceDisplayName,
+  getSessionSourceFilterLabel,
+  matchesSessionSourceFilter,
+  SESSION_SOURCE_FILTERS,
+  type SessionSourceFilterKey,
+} from '../lib/sessionSources'
 
 const TAG_ALL = '__all__'
 
@@ -51,16 +59,6 @@ function replaySessionSummary(m: SessionMeta): string {
   return summary.slice(0, 180)
 }
 
-function dataSourceBadge(src?: string): string {
-  if (!src || src === 'demo') return 'Demo'
-  const map: Record<string, string> = {
-    openclaw: 'OpenClaw',
-    zeroclaw: 'ZeroClaw',
-    claw: 'Claw',
-  }
-  return map[src] ?? src
-}
-
 interface SessionStep {
   index: number
   timestamp: string
@@ -77,6 +75,9 @@ interface SessionStep {
   outputTokens: number
   cost: number
   durationMs: number
+  pairedResultIndex?: number
+  retryOfIndex?: number
+  retryCount?: number
 }
 
 interface SessionReplay {
@@ -218,8 +219,13 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
               </span>
             )}
             {step.model && <span className="text-[11px] text-slate-400">{step.model}</span>}
+            {step.retryOfIndex !== undefined && (
+              <span className="rounded-full border border-yellow-300 bg-yellow-50 px-2 py-0.5 text-[11px] text-yellow-700">
+                ↩ {t('replay.retry.label', { n: String(step.retryOfIndex) })}
+              </span>
+            )}
           </div>
-          {(isHighCost || isToolFailure) && (
+          {(isHighCost || isToolFailure || (step.retryCount !== undefined && step.retryCount > 0)) && (
             <div className="flex items-center gap-2 text-[11px]">
               {isHighCost && (
                 <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700">
@@ -229,6 +235,11 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
               {isToolFailure && (
                 <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-orange-700">
                   {t('replay.badge.callFailed')}
+                </span>
+              )}
+              {step.retryCount !== undefined && step.retryCount > 0 && (
+                <span className="rounded-full border border-orange-300 bg-orange-100 px-2 py-0.5 text-orange-800">
+                  ⚠ {t('replay.retry.triggered', { n: String(step.retryCount) })}
                 </span>
               )}
             </div>
@@ -351,6 +362,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
   const [sessionTags, setSessionTags] = useState<Record<string, string[]>>({})
   const [tagInfos, setTagInfos] = useState<TagInfo[]>([])
   const [selectedTag, setSelectedTag] = useState(TAG_ALL)
+  const [selectedSourceFilter, setSelectedSourceFilter] = useState<SessionSourceFilterKey>('all')
   const [openSessionId, setOpenSessionId] = useState<string | null>(null)
   const [replay, setReplay] = useState<SessionReplay | null>(null)
   const [loading, setLoading] = useState(true)
@@ -380,10 +392,18 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
     return m
   }, [tagInfos])
 
+  const sourceFilterCounts = useMemo(
+    () => Object.fromEntries(SESSION_SOURCE_FILTERS.map(filter => [filter, countSessionsForSourceFilter(sessions, filter)])) as Record<SessionSourceFilterKey, number>,
+    [sessions],
+  )
+
   const filteredSessions = useMemo(() => {
-    if (selectedTag === TAG_ALL) return sessions
-    return sessions.filter(s => sessionTags[s.id]?.includes(selectedTag))
-  }, [sessions, sessionTags, selectedTag])
+    return sessions.filter(session => {
+      const matchesTag = selectedTag === TAG_ALL || sessionTags[session.id]?.includes(selectedTag)
+      const matchesSource = matchesSessionSourceFilter(session.dataSource, selectedSourceFilter)
+      return matchesTag && matchesSource
+    })
+  }, [selectedSourceFilter, selectedTag, sessions, sessionTags])
 
   useEffect(() => {
     if (view !== 'list') return
@@ -751,7 +771,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <h2 className="text-lg font-bold text-slate-900 truncate min-w-0 flex-1">{replaySessionTitle(replay.meta, t('replay.untitled'))}</h2>
                 <span className={cn(getSupportingElementPriority('replayMetaBadge').className, 'shrink-0')}>
-                  {dataSourceBadge(replay.meta.dataSource)}
+                  {getSessionSourceDisplayName(replay.meta.dataSource, t)}
                 </span>
               </div>
 
@@ -985,32 +1005,55 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
       )}
 
       {!loading && !error && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          <button
-            type="button"
-            onClick={() => setSelectedTag(TAG_ALL)}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
-              selectedTag === TAG_ALL ? 'bg-accent text-white' : 'glass-raised text-slate-500 hover:text-slate-900 hover:bg-surface-overlay',
-            )}
-          >
-            {t('replay.tag.all')}
-          </button>
-          {tagInfos.map(ti => (
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {SESSION_SOURCE_FILTERS.map(filter => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setSelectedSourceFilter(filter)}
+                className={cn(
+                  'rounded-lg px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
+                  selectedSourceFilter === filter
+                    ? 'bg-[#3b82c4] text-white'
+                    : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900',
+                )}
+              >
+                {getSessionSourceFilterLabel(filter, t)}
+                <span className={cn('ml-2 text-xs', selectedSourceFilter === filter ? 'text-white/80' : 'text-slate-400')}>
+                  {sourceFilterCounts[filter] ?? 0}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
             <button
-              key={ti.tag}
               type="button"
-              onClick={() => setSelectedTag(ti.tag)}
+              onClick={() => setSelectedTag(TAG_ALL)}
               className={cn(
-                'rounded-lg px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
-                selectedTag === ti.tag
-                  ? 'bg-[#3b82c4] text-white'
-                  : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900',
+                'px-4 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
+                selectedTag === TAG_ALL ? 'bg-accent text-white' : 'glass-raised text-slate-500 hover:text-slate-900 hover:bg-surface-overlay',
               )}
             >
-              {ti.tag}
+              {t('replay.tag.all')}
             </button>
-          ))}
+            {tagInfos.map(ti => (
+              <button
+                key={ti.tag}
+                type="button"
+                onClick={() => setSelectedTag(ti.tag)}
+                className={cn(
+                  'rounded-lg px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
+                  selectedTag === ti.tag
+                    ? 'bg-[#3b82c4] text-white'
+                    : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900',
+                )}
+              >
+                {ti.tag}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1055,7 +1098,7 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
                       )}
                     </div>
                     <div className={cn('flex shrink-0 items-center gap-1.5', getSupportingElementPriority('replayListMeta').className)}>
-                      <span>{dataSourceBadge(session.dataSource)}</span>
+                      <span>{getSessionSourceDisplayName(session.dataSource, t)}</span>
                       <span>{formatRelativeTime(session.startTime, locale)}</span>
                     </div>
                   </div>

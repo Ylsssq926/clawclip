@@ -64,6 +64,12 @@ export interface SessionStep {
   /** 当前 cost 是否基于已知模型定价估算得出 */
   costEstimated?: boolean;
   durationMs: number;
+  /** tool_call 对应的 tool_result 的 index */
+  pairedResultIndex?: number;
+  /** 这是对哪个失败 call 的重试（指向失败的 tool_call 的 index） */
+  retryOfIndex?: number;
+  /** 这个 call 被重试了几次 */
+  retryCount?: number;
 }
 
 export interface SessionReplay {

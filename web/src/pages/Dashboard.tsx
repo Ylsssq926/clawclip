@@ -1,5 +1,5 @@
 import { Activity, AlertTriangle, ArrowRight, Bot, ChevronDown, ChevronUp, Cloud, DollarSign, Play, Trophy, Wifi, WifiOff, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Tab } from '../App'
 import WordCloud, { type KeywordItem } from '../components/WordCloud'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
@@ -8,6 +8,13 @@ import { formatDuration, formatRelativeTime, sessionMetaSubtitle } from '../lib/
 import { useI18n, type Locale } from '../lib/i18n'
 import { apiGetSafe } from '../lib/api'
 import { readDashboardDiagnosticsDismissed, writeDashboardDiagnosticsDismissed } from '../lib/dashboardDiagnosticsPreference'
+import {
+  getSessionSourceDisplayName,
+  getSessionSourceFilterLabel,
+  matchesSessionSourceFilter,
+  SESSION_SOURCE_FILTERS,
+  type SessionSourceFilterKey,
+} from '../lib/sessionSources'
 import type { SessionMeta } from '../types/session'
 
 interface LobsterDataRootStatus {
@@ -181,6 +188,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const [kwLoading, setKwLoading] = useState(true)
   const [sessions, setSessions] = useState<SessionMeta[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [selectedSourceFilter, setSelectedSourceFilter] = useState<SessionSourceFilterKey>('all')
   const [diagnostics, setDiagnostics] = useState<ReplayDiagnosticsData | null>(null)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [diagnosticsDismissed, setDiagnosticsDismissed] = useState(() => readDashboardDiagnosticsDismissed())
@@ -257,6 +265,10 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const hasConnectedSessions = Boolean(status?.hasRealSessionData)
   const sessionCountLabel = formatDashboardNumber(parsableCount, locale)
   const diagnosticCountLabel = formatDashboardNumber(diagnosticSessions.length, locale)
+  const filteredRecentSessions = useMemo(
+    () => sessions.filter(session => matchesSessionSourceFilter(session.dataSource, selectedSourceFilter)),
+    [sessions, selectedSourceFilter],
+  )
   const latestSession = sessions[0] ?? null
   const latestSessionSubtitle = latestSession ? sessionMetaSubtitle(latestSession, locale) : null
   const benchmarkLatest = benchmarkProof?.latest ?? null
@@ -686,7 +698,27 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
           </button>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          {!sessionsLoading && sessions.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {SESSION_SOURCE_FILTERS.map(filter => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setSelectedSourceFilter(filter)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
+                    selectedSourceFilter === filter
+                      ? 'bg-[#3b82c4] text-white'
+                      : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900',
+                  )}
+                >
+                  {getSessionSourceFilterLabel(filter, t)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {sessionsLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(item => <div key={item} className="skeleton h-20 w-full rounded-2xl" />)}
@@ -695,10 +727,15 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
             <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
               {t('dashboard.recent.empty')}
             </p>
+          ) : filteredRecentSessions.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+              {t('replay.empty.filtered')}
+            </p>
           ) : (
             <div className="space-y-3">
-              {sessions.slice(0, 5).map(session => {
+              {filteredRecentSessions.slice(0, 5).map(session => {
                 const subtitle = sessionMetaSubtitle(session, locale)
+                const sourceLabel = getSessionSourceDisplayName(session.dataSource, t)
 
                 return (
                   <button
@@ -720,6 +757,8 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
                         ) : null}
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                           <span>{session.agentName}</span>
+                          <span>·</span>
+                          <span>{sourceLabel}</span>
                           <span>·</span>
                           <span>{formatDuration(session.durationMs, locale)}</span>
                           <span>·</span>

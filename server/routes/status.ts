@@ -1,6 +1,6 @@
 import { Router, type Response } from 'express';
 import { openclawBridge } from '../services/openclaw-bridge.js';
-import { sessionParser } from '../services/session-parser.js';
+import { getMergedSessionMetas, getRealMergedReplays } from '../services/replay-repository.js';
 
 const router = Router();
 
@@ -50,11 +50,13 @@ function sendStatusError(res: Response, err: unknown): void {
 router.get('/', async (_req, res) => {
   try {
     const status = await openclawBridge.getStatus();
-    const sessions = sessionParser.getSessions();
-    const realSessions = sessionParser.getRealReplays().map(replay => replay.meta);
+    const sessions = getMergedSessionMetas();
+    const realSessions = getRealMergedReplays().map(replay => replay.meta);
 
     res.json({
       ...status,
+      parsableSessionCount: realSessions.length,
+      hasRealSessionData: realSessions.length > 0,
       latestSessionAt: resolveLatestSessionAt(sessions),
       latestRealSessionAt: resolveLatestSessionAt(realSessions),
       lastStatusCheckedAt: new Date().toISOString(),

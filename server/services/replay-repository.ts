@@ -4,6 +4,8 @@ import { getClawclipStateDir } from './agent-data-root.js';
 import { normalizeSessionId, sessionParser } from './session-parser.js';
 import type { CostMeta } from '../types/index.js';
 import type { SessionMeta, SessionReplay, SessionStep } from '../types/replay.js';
+import { DEMO_SESSIONS } from './demo-sessions.js';
+import { getOtelSessionReplays } from './otel-session-store.js';
 
 const ALLOWED_STEP_TYPES = new Set<SessionStep['type']>([
   'thinking',
@@ -152,31 +154,88 @@ export function saveImportedSessions(replays: SessionReplay[]): void {
   fs.writeFileSync(importedSessionsPath(), JSON.stringify(replays, null, 2), 'utf-8');
 }
 
-export function getMergedReplays(): SessionReplay[] {
-  const parserReplays = sessionParser.getSessionReplays();
-  const importedReplays = loadImportedSessions();
+function isDemoReplay(replay: SessionReplay): boolean {
+  return replay.meta.dataSource === 'demo';
+}
+
+function sortReplaysByStartTime(replays: SessionReplay[]): SessionReplay[] {
+  return [...replays].sort((left, right) => {
+    const startDelta = right.meta.startTime.getTime() - left.meta.startTime.getTime();
+    if (startDelta !== 0) return startDelta;
+    return right.meta.endTime.getTime() - left.meta.endTime.getTime();
+  });
+}
+
+function pickPreferredReplay(current: SessionReplay | undefined, candidate: SessionReplay): SessionReplay {
+  if (!current) return candidate;
+  const currentRank = current.meta.storeUpdatedAt ?? current.meta.endTime.getTime();
+  const candidateRank = candidate.meta.storeUpdatedAt ?? candidate.meta.endTime.getTime();
+  return candidateRank >= currentRank ? candidate : current;
+}
+
+function dedupeReplays(replays: SessionReplay[]): SessionReplay[] {
   const byNormalizedId = new Map<string, SessionReplay>();
 
-  for (const replay of parserReplays) {
-    byNormalizedId.set(normalizeSessionId(replay.meta.id), replay);
-  }
-
-  for (const replay of importedReplays) {
+  for (const replay of replays) {
     const normalizedId = normalizeSessionId(replay.meta.id);
-    if (!byNormalizedId.has(normalizedId)) {
-      byNormalizedId.set(normalizedId, replay);
-    }
+    byNormalizedId.set(normalizedId, pickPreferredReplay(byNormalizedId.get(normalizedId), replay));
   }
 
-  return Array.from(byNormalizedId.values());
+  return sortReplaysByStartTime(Array.from(byNormalizedId.values()));
+}
+
+function getImportedReplays(includeDemo = true): SessionReplay[] {
+  const imported = loadImportedSessions();
+  return includeDemo ? imported : imported.filter(replay => !isDemoReplay(replay));
+}
+
+export function getRealMergedReplays(): SessionReplay[] {
+  return dedupeReplays([
+    ...sessionParser.getRealReplays(),
+    ...getImportedReplays(false),
+    ...getOtelSessionReplays(),
+  ]);
+}
+
+interface GetMergedReplayOptions {
+  includeDemoFallback?: boolean;
+  minCount?: number;
+  limit?: number;
+}
+
+export function getMergedReplays(options: GetMergedReplayOptions = {}): SessionReplay[] {
+  const { includeDemoFallback = true, minCount = 1, limit } = options;
+  const realReplays = getRealMergedReplays();
+
+  let merged = realReplays;
+  if (includeDemoFallback && realReplays.length < minCount) {
+    merged = dedupeReplays([
+      ...realReplays,
+      ...getImportedReplays(true),
+      ...DEMO_SESSIONS,
+    ]);
+  }
+
+  if (limit != null && limit > 0) {
+    return merged.slice(0, limit);
+  }
+  return merged;
+}
+
+export function getMergedSessionMetas(options: GetMergedReplayOptions = {}): SessionMeta[] {
+  return getMergedReplays(options).map(replay => replay.meta);
 }
 
 export function findReplayById(sessionId: string): SessionReplay | null {
-  const parserReplay = sessionParser.getSessionReplay(sessionId);
-  if (parserReplay) return parserReplay;
-
   const normalizedId = normalizeSessionId(sessionId);
-  for (const replay of loadImportedSessions()) {
+
+  const candidates = dedupeReplays([
+    ...getRealMergedReplays(),
+    ...getImportedReplays(true),
+    ...DEMO_SESSIONS,
+  ]);
+
+  for (const replay of candidates) {
     if (normalizeSessionId(replay.meta.id) === normalizedId) return replay;
   }
 

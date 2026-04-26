@@ -120,6 +120,17 @@ router.get('/models', (req, res) => {
   }
 });
 
+/** 按框架分组 */
+router.get('/frameworks', (req, res) => {
+  const days = parseDays(req);
+  try {
+    const frameworks = costParser.getFrameworkBreakdown(days);
+    res.json(frameworks);
+  } catch (e) {
+    res.status(500).json({ error: '获取框架数据失败 / Failed to get framework data', detail: String(e) });
+  }
+});
+
 /** 高消耗会话排行 */
 router.get('/top-sessions', (req, res) => {
   const days = parseDays(req);

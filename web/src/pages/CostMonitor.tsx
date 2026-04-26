@@ -20,6 +20,7 @@ import {
   type CostReconciliationSortKey,
 } from '../lib/costReconciliationRows'
 import { splitCostMonitorSections, type CostMonitorSectionId } from './costMonitorSectionOrder'
+import { getSessionSourceDisplayName } from '../lib/sessionSources'
 import type { Tab } from '../App'
 
 interface DailyData {
@@ -451,6 +452,14 @@ interface ModelBreakdownRow {
   percentage: number
 }
 
+interface FrameworkBreakdownRow {
+  source: string
+  label: string
+  totalCost: number
+  totalTokens: number
+  sessionCount: number
+}
+
 type ModelValueLabel = 'cheap-workhorse' | 'balanced' | 'premium-specialist' | 'experimental'
 
 interface ModelValueRow {
@@ -629,6 +638,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   const [savings, setSavings] = useState<SavingsReport | null>(null)
   const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
   const [modelBreakdown, setModelBreakdown] = useState<ModelBreakdown>({})
+  const [frameworkBreakdownRows, setFrameworkBreakdownRows] = useState<FrameworkBreakdownRow[]>([])
   const [modelValueRows, setModelValueRows] = useState<ModelValueRow[]>([])
   const [alternatives, setAlternatives] = useState<Record<string, AlternativesResult>>({})
   const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null)
@@ -663,6 +673,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
         apiGetSafe<SavingsReport>(`/api/cost/savings?days=${days}`),
         apiGetSafe<TokenWasteReport>(`/api/analytics/token-waste?days=${days}`),
         apiGetSafe<ModelBreakdown>(`/api/cost/models?days=${days}`),
+        apiGetSafe<Array<{ source: string; totalCost: number; totalTokens: number; sessionCount: number }>>(`/api/cost/frameworks?days=${days}`),
         apiGetSafe<ModelValueReport>(`/api/analytics/model-value?days=${days}`),
         apiGetSafe<BudgetConfig>('/api/cost/budget'),
       ])
@@ -676,8 +687,9 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
       const sav = results[6].status === 'fulfilled' ? results[6].value : null
       const waste = results[7].status === 'fulfilled' ? results[7].value : null
       const models = results[8].status === 'fulfilled' ? results[8].value : null
-      const modelValue = results[9].status === 'fulfilled' ? results[9].value : null
-      const budget = results[10].status === 'fulfilled' ? results[10].value : null
+      const frameworks = results[9].status === 'fulfilled' ? results[9].value : null
+      const modelValue = results[10].status === 'fulfilled' ? results[10].value : null
+      const budget = results[11].status === 'fulfilled' ? results[11].value : null
 
       const normalizedModels: ModelBreakdown = {}
       if (models && typeof models === 'object' && !Array.isArray(models)) {
@@ -690,6 +702,19 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
           }
         }
       }
+
+      const normalizedFrameworks = Array.isArray(frameworks)
+        ? frameworks
+          .filter(row => row && typeof row === 'object')
+          .map(row => ({
+            source: String(row.source ?? 'otel'),
+            label: getSessionSourceDisplayName(typeof row.source === 'string' ? row.source : 'otel', t),
+            totalCost: Number(row.totalCost ?? 0),
+            totalTokens: Number(row.totalTokens ?? 0),
+            sessionCount: Number(row.sessionCount ?? 0),
+          }))
+          .filter(row => row.sessionCount > 0)
+        : []
 
       const normalizedBudget =
         budget && typeof budget.monthly === 'number' && typeof budget.alertThreshold === 'number'
@@ -709,6 +734,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
       setSavings(sav)
       setTokenWaste(waste?.summary ? waste : null)
       setModelBreakdown(normalizedModels)
+      setFrameworkBreakdownRows(normalizedFrameworks)
       setModelValueRows(
         Array.isArray(modelValue?.rows)
           ? modelValue.rows.filter((row): row is NonNullable<typeof row> => row != null && typeof row === 'object')
@@ -754,7 +780,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
     } finally {
       setLoading(false)
     }
-  }, [copy.errorLoad, days])
+  }, [copy.errorLoad, days, t])
 
   useEffect(() => {
     void loadData()
@@ -782,6 +808,8 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
         percentage: (row.cost / modelTotalCost) * 100,
       }))
     : []
+  const hasMultipleFrameworks = frameworkBreakdownRows.length > 1
+  const hasFrameworkComparisonData = hasMultipleFrameworks && frameworkBreakdownRows.some(row => row.totalCost > 0)
   const modelValueDisplayRows = modelValueRows
     .filter(row => row.sessions > 0)
     .slice(0, 6)
@@ -1356,40 +1384,106 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
     ),
   })
 
-  if (modelBreakdownRows.length > 0) {
+  if (modelBreakdownRows.length > 0 || frameworkBreakdownRows.length > 0) {
     costMonitorSections.push({
       id: 'model-breakdown',
       content: (
         <div className={secondarySectionCardClass}>
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-            <h3 className="text-base font-semibold">{copy.modelBreakdown.title}</h3>
+            <h3 className="text-base font-semibold">{modelBreakdownRows.length > 0 ? copy.modelBreakdown.title : t('cost.byFramework')}</h3>
             <span className="text-xs text-slate-500">
-              {copy.modelBreakdown.subtitle}
+              {modelBreakdownRows.length > 0 ? copy.modelBreakdown.subtitle : (locale === 'zh' ? '按来源看成本、Token 和会话数。' : 'Compare cost, tokens, and sessions by source.')}
             </span>
           </div>
-          <ResponsiveContainer width="100%" height={Math.max(220, modelBreakdownRows.length * 46)}>
-            <BarChart
-              data={modelBreakdownRows}
-              layout="vertical"
-              margin={{ top: 4, right: 24, left: 12, bottom: 4 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.14)" />
-              <XAxis
-                type="number"
-                domain={[0, 100]}
-                stroke="#64748b"
-                tick={{ fontSize: 12 }}
-                tickFormatter={value => `${value}%`}
-              />
-              <YAxis type="category" dataKey="model" stroke="#64748b" tick={{ fontSize: 12 }} width={140} />
-              <Tooltip
-                contentStyle={chartTooltipStyle}
-                labelStyle={{ color: '#64748b' }}
-                itemStyle={{ color: '#0f172a' }}
-              />
-              <Bar dataKey="percentage" name={copy.modelBreakdown.series} fill="#3b82c4" radius={[0, 8, 8, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {modelBreakdownRows.length > 0 && (
+            <ResponsiveContainer width="100%" height={Math.max(220, modelBreakdownRows.length * 46)}>
+              <BarChart
+                data={modelBreakdownRows}
+                layout="vertical"
+                margin={{ top: 4, right: 24, left: 12, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.14)" />
+                <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  stroke="#64748b"
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={value => `${value}%`}
+                />
+                <YAxis type="category" dataKey="model" stroke="#64748b" tick={{ fontSize: 12 }} width={140} />
+                <Tooltip
+                  contentStyle={chartTooltipStyle}
+                  labelStyle={{ color: '#64748b' }}
+                  itemStyle={{ color: '#0f172a' }}
+                />
+                <Bar dataKey="percentage" name={copy.modelBreakdown.series} fill="#3b82c4" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+
+          {frameworkBreakdownRows.length > 0 && (
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h4 className="text-sm font-semibold text-slate-900">{t('cost.byFramework')}</h4>
+                <span className="text-xs text-slate-500">
+                  {locale === 'zh' ? `${frameworkBreakdownRows.length} 个来源` : `${frameworkBreakdownRows.length} sources`}
+                </span>
+              </div>
+
+              <div className={cn('mt-4 grid gap-4', hasFrameworkComparisonData ? 'xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]' : '')}>
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="bg-slate-50/80 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3">{locale === 'zh' ? '来源' : 'Source'}</th>
+                        <th className="px-4 py-3 text-right">{locale === 'zh' ? '成本' : 'Cost'}</th>
+                        <th className="px-4 py-3 text-right">Tokens</th>
+                        <th className="px-4 py-3 text-right">{locale === 'zh' ? '会话' : 'Sessions'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {frameworkBreakdownRows.map(row => (
+                        <tr key={row.source}>
+                          <td className="px-4 py-3 font-medium text-slate-900">{row.label}</td>
+                          <td className="px-4 py-3 text-right font-mono text-slate-700">${formatWasteCost(row.totalCost)}</td>
+                          <td className="px-4 py-3 text-right text-slate-600">{row.totalTokens.toLocaleString(getIntlLocale(locale))}</td>
+                          <td className="px-4 py-3 text-right text-slate-600">{row.sessionCount.toLocaleString(getIntlLocale(locale))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {hasFrameworkComparisonData && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+                    <ResponsiveContainer width="100%" height={Math.max(220, frameworkBreakdownRows.length * 46)}>
+                      <BarChart
+                        data={frameworkBreakdownRows}
+                        layout="vertical"
+                        margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.14)" />
+                        <XAxis
+                          type="number"
+                          stroke="#64748b"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={value => `$${formatWasteCost(Number(value))}`}
+                        />
+                        <YAxis type="category" dataKey="label" stroke="#64748b" tick={{ fontSize: 12 }} width={96} />
+                        <Tooltip
+                          contentStyle={chartTooltipStyle}
+                          labelStyle={{ color: '#64748b' }}
+                          itemStyle={{ color: '#0f172a' }}
+                          formatter={value => [`$${formatWasteCost(Number(value))}`, locale === 'zh' ? '成本' : 'Cost']}
+                        />
+                        <Bar dataKey="totalCost" name={locale === 'zh' ? '成本' : 'Cost'} fill="#10b981" radius={[0, 8, 8, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 更便宜的替代方案 */}
           {Object.keys(alternatives).length > 0 && (

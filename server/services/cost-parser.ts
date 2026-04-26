@@ -23,8 +23,8 @@ import {
   type CostReconciliationResult,
 } from '../types/index.js';
 import { getClawclipStateDir, getLobsterDataRoots } from './agent-data-root.js';
-import { sessionParser } from './session-parser.js';
 import { DEMO_SESSIONS } from './demo-sessions.js';
+import { getRealMergedReplays } from './replay-repository.js';
 import {
   getConfiguredPricingReference,
   getPricingSnapshot,
@@ -47,6 +47,13 @@ interface ModelBreakdownEntry {
   totalTokens: number;
   tokens: number;
   cost: number;
+}
+
+export interface FrameworkBreakdownEntry {
+  source: string;
+  totalCost: number;
+  totalTokens: number;
+  sessionCount: number;
 }
 
 const ALT_TIERS: { threshold: number; models: string[] }[] = [
@@ -348,6 +355,21 @@ const SWITCH_MODEL_GUARDRAIL_EN = 'Roll this out on lower-risk tasks first, then
 const HIGH_VALUE_SWITCH_MODEL_GUARDRAIL_ZH = '如果这是高价值任务，建议先在低风险任务灰度切换，确认质量稳定后再扩大范围。';
 const HIGH_VALUE_SWITCH_MODEL_GUARDRAIL_EN = 'If this is a high-value workflow, roll this out on lower-risk tasks first, then expand once quality stays stable.';
 
+function normalizeFrameworkSource(source?: string): string {
+  const normalized = (source ?? '').trim().toLowerCase();
+  if (!normalized) return 'unknown';
+  if (normalized === 'claw') return 'openclaw';
+  if (normalized.includes('langgraph') || normalized.includes('autogen') || normalized === 'otel') return normalized;
+  if (normalized.includes('openclaw')) return 'openclaw';
+  if (normalized.includes('zeroclaw')) return 'zeroclaw';
+  if (normalized.includes('hermes')) return 'hermes';
+  return normalized;
+}
+
+function getFrameworkBucket(source?: string): string {
+  return normalizeFrameworkSource(source);
+}
+
 function getSavingPriorityRank(priority: SavingPriority | undefined): number {
   switch (priority) {
     case 'high':
@@ -510,7 +532,7 @@ export class CostParser {
   }
 
   private parseLogFiles(pricing = getPricingSnapshot()): Pick<UsageCacheEntry, 'data' | 'pricing' | 'replays' | 'isDemo' | 'usageSource'> {
-    const realReplays = sessionParser.getRealReplays();
+    const realReplays = getRealMergedReplays();
     const realUsages: TokenUsage[] = [];
     const realSeen = new Set<string>();
 
@@ -1116,6 +1138,60 @@ export class CostParser {
       models[u.model].cost += u.cost;
     }
     return models;
+  }
+
+  getFrameworkBreakdown(days: number = 30): FrameworkBreakdownEntry[] {
+    const batch = this.getCachedUsageBatch();
+    const filtered = this.getFilteredUsages(batch, days);
+    const cutoff = this.getReferenceNow(batch.data, batch.isDemo) - days * 24 * 60 * 60 * 1000;
+    const metaLookup = this.buildReplayMetaLookup(batch.replays);
+    const frameworks = new Map<string, FrameworkBreakdownEntry & { sessionIds: Set<string> }>();
+
+    const ensureEntry = (source: string): FrameworkBreakdownEntry & { sessionIds: Set<string> } => {
+      const existing = frameworks.get(source);
+      if (existing) return existing;
+      const created = {
+        source,
+        totalCost: 0,
+        totalTokens: 0,
+        sessionCount: 0,
+        sessionIds: new Set<string>(),
+      };
+      frameworks.set(source, created);
+      return created;
+    };
+
+    for (const replay of batch.replays) {
+      const startedAt = replay.meta.startTime.getTime();
+      if (Number.isNaN(startedAt) || startedAt <= cutoff) continue;
+      const source = getFrameworkBucket(replay.meta.dataSource);
+      ensureEntry(source).sessionIds.add(replay.meta.id);
+    }
+
+    for (const usage of filtered) {
+      const meta =
+        metaLookup.get(usage.sessionId) ??
+        metaLookup.get(this.decodeTaskLabel(usage.sessionId)) ??
+        metaLookup.get(usage.taskId) ??
+        metaLookup.get(this.decodeTaskLabel(usage.taskId));
+      const source = getFrameworkBucket(meta?.dataSource);
+      const entry = ensureEntry(source);
+      entry.totalCost += usage.cost;
+      entry.totalTokens += usage.inputTokens + usage.outputTokens;
+      entry.sessionIds.add(meta?.id ?? usage.sessionId ?? usage.taskId);
+    }
+
+    return Array.from(frameworks.values())
+      .map(({ sessionIds, ...entry }) => ({
+        ...entry,
+        sessionCount: sessionIds.size,
+      }))
+      .filter(entry => entry.sessionCount > 0)
+      .sort((left, right) => {
+        if (right.totalCost !== left.totalCost) return right.totalCost - left.totalCost;
+        if (right.totalTokens !== left.totalTokens) return right.totalTokens - left.totalTokens;
+        return right.sessionCount - left.sessionCount;
+      });
   }
 
   getRequestCount(days: number = 30): number {

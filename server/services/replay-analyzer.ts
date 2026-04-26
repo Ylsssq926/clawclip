@@ -17,6 +17,7 @@ export function analyzeReplay(replay: SessionReplay): ReplayInsight[] {
   const totalCost = replay.meta.totalCost;
   const totalTokens = replay.meta.totalTokens;
 
+  checkRetryChains(steps, insights);
   checkThinkingWaste(steps, insights);
   checkToolRetryLoop(steps, insights);
   checkModelMixing(steps, insights);
@@ -26,6 +27,50 @@ export function analyzeReplay(replay: SessionReplay): ReplayInsight[] {
   checkTokenEfficiency(steps, totalTokens, insights);
 
   return insights;
+}
+
+function checkRetryChains(steps: SessionStep[], out: ReplayInsight[]) {
+  // 统计有重试链路的工具调用
+  const retryChains = new Map<number, { toolName: string; retryCount: number; wastedTokens: number }>();
+  
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    if (step.retryCount !== undefined && step.retryCount > 0) {
+      // 计算浪费的 tokens（所有重试的总和）
+      let wastedTokens = 0;
+      for (let j = i + 1; j < steps.length; j++) {
+        const retryStep = steps[j];
+        if (retryStep.retryOfIndex === i) {
+          wastedTokens += retryStep.inputTokens + retryStep.outputTokens;
+        }
+      }
+      
+      retryChains.set(i, {
+        toolName: step.toolName || 'unknown',
+        retryCount: step.retryCount,
+        wastedTokens,
+      });
+    }
+  }
+  
+  if (retryChains.size > 0) {
+    const totalChains = retryChains.size;
+    const chainDetails: string[] = [];
+    let totalWastedTokens = 0;
+    
+    for (const chain of retryChains.values()) {
+      chainDetails.push(`${chain.toolName} (${chain.retryCount}次)`);
+      totalWastedTokens += chain.wastedTokens;
+    }
+    
+    out.push({
+      type: 'warning',
+      titleZh: `发现 ${totalChains} 个重试链路`,
+      titleEn: `Found ${totalChains} retry chains`,
+      descZh: `${chainDetails.slice(0, 3).join('、')}${chainDetails.length > 3 ? '等' : ''}工具失败后触发了重试，浪费了约 ${totalWastedTokens} tokens。建议检查工具配置或输入参数。`,
+      descEn: `Tools ${chainDetails.slice(0, 3).join(', ')}${chainDetails.length > 3 ? ', etc.' : ''} failed and triggered retries, wasting ~${totalWastedTokens} tokens. Consider checking tool configuration or input parameters.`,
+    });
+  }
 }
 
 function checkThinkingWaste(steps: SessionStep[], out: ReplayInsight[]) {

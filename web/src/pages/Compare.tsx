@@ -32,8 +32,27 @@ interface CompareSession {
   costPerStep: number
 }
 
+interface DecisionDiff {
+  stepIndex: number
+  type: 'tool_choice' | 'model_choice' | 'output_divergence'
+  sessionA: { value: string; cost: number }
+  sessionB: { value: string; cost: number }
+  description: string
+}
+
 interface ComparePayload {
   sessions: CompareSession[]
+  decisionDiff?: DecisionDiff[]
+}
+
+interface SimilarSession {
+  id: string
+  agentName: string
+  summary: string
+  similarity: number
+  totalCost: number
+  totalTokens: number
+  stepCount: number
 }
 
 interface SessionReplayLite {
@@ -110,12 +129,14 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sessions, setSessions] = useState<CompareSession[] | null>(null)
+  const [decisionDiff, setDecisionDiff] = useState<DecisionDiff[]>([])
   const [partialWarning, setPartialWarning] = useState(false)
   const [availableSessions, setAvailableSessions] = useState<SessionMeta[]>([])
   const [availableSessionsLoading, setAvailableSessionsLoading] = useState(true)
   const [availableSessionsError, setAvailableSessionsError] = useState<string | null>(null)
   const [toolCallCounts, setToolCallCounts] = useState<Record<string, number | null>>({})
-
+  const [similarSessions, setSimilarSessions] = useState<SimilarSession[]>([])
+  const [loadingSimilar, setLoadingSimilar] = useState(false)
   const sessionAlias = useCallback(
     (index: number) => t('compare.sessionAlias', { letter: sessionAliasLetter(index) }),
     [t],
@@ -161,6 +182,33 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
       cancelled = true
     }
   }, [sessionsLoadErrorText])
+
+  // 当第一个 slot 选中时，自动加载相似 session
+  useEffect(() => {
+    let cancelled = false
+    const firstSessionId = slots[0]?.trim()
+    
+    if (!firstSessionId) {
+      setSimilarSessions([])
+      return () => { cancelled = true }
+    }
+    
+    setLoadingSimilar(true)
+    apiGet<{ similar: SimilarSession[] }>(`/api/replay/similar?sessionId=${encodeURIComponent(firstSessionId)}&limit=5`)
+      .then(data => {
+        if (cancelled) return
+        setSimilarSessions(data.similar || [])
+      })
+      .catch(() => {
+        if (cancelled) return
+        setSimilarSessions([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSimilar(false)
+      })
+    
+    return () => { cancelled = true }
+  }, [slots[0]])
 
   useEffect(() => {
     let cancelled = false
@@ -274,16 +322,36 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
           : 'compare.conclusion.stepPhrase.more',
       )
 
-      messages.push(
-        t('compare.conclusion.cheaper', {
-          alias: cheapest.alias,
-          lowCost: cheapest.totalCost.toFixed(4),
-          highCost: mostExpensive.totalCost.toFixed(4),
-          stepPhrase,
-          lowSteps: cheapest.stepCount,
-          highSteps: mostExpensive.stepCount,
-        }),
-      )
+      // 如果有决策差异，添加具体说明
+      let costExplanation = t('compare.conclusion.cheaper', {
+        alias: cheapest.alias,
+        lowCost: cheapest.totalCost.toFixed(4),
+        highCost: mostExpensive.totalCost.toFixed(4),
+        stepPhrase,
+        lowSteps: cheapest.stepCount,
+        highSteps: mostExpensive.stepCount,
+      })
+
+      if (decisionDiff.length > 0 && sessions.length === 2) {
+        const toolDiffs = decisionDiff.filter(d => d.type === 'tool_choice')
+        const modelDiffs = decisionDiff.filter(d => d.type === 'model_choice')
+        
+        if (toolDiffs.length > 0) {
+          const firstToolDiff = toolDiffs[0]
+          const savedCost = Math.abs(firstToolDiff.sessionB.cost - firstToolDiff.sessionA.cost)
+          if (savedCost > 0.0001) {
+            costExplanation += ` 主要差异在第 ${firstToolDiff.stepIndex + 1} 步的工具选择，节省了 $${savedCost.toFixed(4)}。`
+          }
+        } else if (modelDiffs.length > 0) {
+          const firstModelDiff = modelDiffs[0]
+          const savedCost = Math.abs(firstModelDiff.sessionB.cost - firstModelDiff.sessionA.cost)
+          if (savedCost > 0.0001) {
+            costExplanation += ` 主要差异在第 ${firstModelDiff.stepIndex + 1} 步的模型选择，节省了 $${savedCost.toFixed(4)}。`
+          }
+        }
+      }
+
+      messages.push(costExplanation)
     }
 
     const bestCostPerStep = sessionEntries.reduce((best, current) =>
@@ -341,7 +409,7 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
     }
 
     return messages
-  }, [sessions, toolCallCounts, toolCallStatus, sessionAlias, t, locale])
+  }, [sessions, toolCallCounts, toolCallStatus, sessionAlias, t, locale, decisionDiff])
 
   const addSlot = () => {
     setSlots(s => (s.length < 5 ? [...s, ''] : s))
@@ -369,15 +437,18 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
     setError(null)
     setPartialWarning(false)
     setToolCallCounts({})
+    setDecisionDiff([])
     setLoading(true)
     try {
       const data = await apiPost<ComparePayload>('/api/replay/compare', { ids })
       setSessions(data.sessions ?? [])
+      setDecisionDiff(data.decisionDiff ?? [])
       if ((data.sessions?.length ?? 0) < ids.length) {
         setPartialWarning(true)
       }
     } catch (e) {
       setSessions(null)
+      setDecisionDiff([])
       setError(parseApiErrorMessage(e, t('compare.error.load')))
     } finally {
       setLoading(false)
@@ -481,6 +552,19 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                   <option value="" disabled>
                     {selectPlaceholder}
                   </option>
+                  {i === 1 && similarSessions.length > 0 && (
+                    <optgroup label={t('compare.similar.label')}>
+                      {similarSessions.map(session => (
+                        <option key={session.id} value={session.id}>
+                          {formatSessionOptionLabel({ 
+                            id: session.id, 
+                            agentName: session.agentName, 
+                            summary: session.summary 
+                          } as SessionMeta)} — {t('compare.similar.score', { n: Math.round(session.similarity * 100) })}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                   {availableSessions.map(session => (
                     <option key={session.id} value={session.id}>
                       {formatSessionOptionLabel(session)}
@@ -513,6 +597,9 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
               {loading ? t('compare.loading') : t('compare.submit')}
             </button>
           </div>
+          {loadingSimilar && slots[0] && (
+            <p className="text-xs text-slate-400">加载相似推荐中...</p>
+          )}
           {availableSessionsError && <p className="text-sm text-rose-400">{availableSessionsError}</p>}
           {error && <p className="text-sm text-rose-400">{error}</p>}
         </div>
@@ -649,6 +736,63 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                 </>
               )}
             </div>
+
+            {decisionDiff.length > 0 && (
+              <div className="card p-5">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">{t('compare.decision.title')}</h3>
+                <div className="space-y-3">
+                  {decisionDiff.map((diff, index) => {
+                    const costDiff = diff.sessionB.cost - diff.sessionA.cost
+                    const isBetter = costDiff < 0
+                    const isWorse = costDiff > 0
+                    const colorClass = isBetter 
+                      ? 'border-emerald-500/15 bg-emerald-500/[0.05]' 
+                      : isWorse 
+                        ? 'border-rose-500/15 bg-rose-500/[0.05]' 
+                        : 'border-slate-200 bg-slate-50'
+                    
+                    const typeLabel = diff.type === 'tool_choice' 
+                      ? t('compare.decision.toolChoice')
+                      : diff.type === 'model_choice'
+                        ? t('compare.decision.modelChoice')
+                        : t('compare.decision.outputDivergence')
+                    
+                    return (
+                      <div
+                        key={index}
+                        className={cn('rounded-xl border px-4 py-3 text-sm', colorClass)}
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <span className="font-medium text-slate-700">步骤 {diff.stepIndex + 1}</span>
+                          <span className="text-xs text-slate-500 uppercase tracking-wide">{typeLabel}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <div className="text-slate-500 mb-1">会话 A</div>
+                            <div className="text-slate-800 font-medium">{diff.sessionA.value}</div>
+                            {diff.sessionA.cost > 0 && (
+                              <div className="text-slate-500 mt-0.5">${diff.sessionA.cost.toFixed(4)}</div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-slate-500 mb-1">会话 B</div>
+                            <div className="text-slate-800 font-medium">{diff.sessionB.value}</div>
+                            {diff.sessionB.cost > 0 && (
+                              <div className="text-slate-500 mt-0.5">${diff.sessionB.cost.toFixed(4)}</div>
+                            )}
+                          </div>
+                        </div>
+                        {Math.abs(costDiff) > 0.0001 && (
+                          <div className={cn('mt-2 text-xs', isBetter ? 'text-emerald-600' : isWorse ? 'text-rose-600' : 'text-slate-600')}>
+                            成本差异: {costDiff > 0 ? '+' : ''}${costDiff.toFixed(4)}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="card p-5">
               <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">

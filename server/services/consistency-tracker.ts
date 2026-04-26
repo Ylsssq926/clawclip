@@ -349,3 +349,6 @@ export function analyzeConsistency(sessions: SessionReplay[]): ConsistencyReport
     verdict: computeVerdict(reportBase, taskCluster.ratio),
   };
 }
+
+// 导出供其他模块使用
+export { buildTaskDescriptor, textSimilarity };

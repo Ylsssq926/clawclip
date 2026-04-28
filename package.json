@@ -1,6 +1,6 @@
 {
   "name": "clawclip",
-  "version": "1.2.0",
+  "version": "2.2.0",
   "description": "ClawClip（虾片）— 本地 Agent 诊断台：Run Insights / Agent Scorecard / Cost Report",
   "workspaces": [
     "server",

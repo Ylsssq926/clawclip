@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, ArrowRight, Bot, ChevronDown, ChevronUp, Cloud, DollarSign, Play, Trophy, Wifi, WifiOff, X } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowRight, Bot, ChevronDown, ChevronUp, Cloud, DollarSign, Play, Plug, Trophy, Wifi, WifiOff, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { Tab } from '../App'
 import WordCloud, { type KeywordItem } from '../components/WordCloud'
@@ -192,6 +192,7 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const [diagnostics, setDiagnostics] = useState<ReplayDiagnosticsData | null>(null)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [diagnosticsDismissed, setDiagnosticsDismissed] = useState(() => readDashboardDiagnosticsDismissed())
+  const [onboardingGuideOpen, setOnboardingGuideOpen] = useState(false)
 
   useEffect(() => {
     Promise.allSettled([apiGetSafe('/api/status'), apiGetSafe('/api/cost/summary?days=30')])
@@ -291,6 +292,8 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
   const connectionBody = hasJsonlButUnparsed
     ? t('dashboard.connection.processingHint')
     : t('dashboard.connection.demoHint')
+  const dataSource = loading ? 'loading' : hasConnectedSessions ? 'real' : hasJsonlButUnparsed ? 'processing' : 'demo'
+  const toggleOnboardingGuide = () => setOnboardingGuideOpen(prev => !prev)
 
   const decisionBodyKey = hasConnectedSessions
     ? 'dashboard.entry.body.connected'
@@ -458,6 +461,73 @@ export default function Dashboard({ onNavigate, onKnowledgeSearch, onOpenReplayS
           <p className="max-w-3xl text-sm leading-relaxed text-slate-600">{t(decisionBodyKey)}</p>
         </div>
       </div>
+
+      {dataSource === 'demo' && (
+        <div className="mb-1 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-5 shadow-sm shadow-blue-100/50">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+              <Plug className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-slate-900">
+                {t('onboarding.title')}
+              </h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                {t('onboarding.body')}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={toggleOnboardingGuide}
+                  aria-expanded={onboardingGuideOpen}
+                  aria-controls="dashboard-onboarding-guide"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2"
+                >
+                  {t('onboarding.cta')}
+                  {onboardingGuideOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {onboardingGuideOpen && (
+                <div id="dashboard-onboarding-guide" className="mt-4 rounded-2xl border border-blue-200/80 bg-white/80 p-4">
+                  <ol className="space-y-4">
+                    <li className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                        1
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{t('onboarding.step1.title')}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">{t('onboarding.step1.body')}</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                        2
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-900">{t('onboarding.step2.title')}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">{t('onboarding.step2.body')}</p>
+                        <pre className="mt-2 overflow-x-auto rounded-xl bg-slate-900 px-3 py-3 text-xs text-slate-100">
+                          <code>{t('onboarding.step2.cmd')}</code>
+                        </pre>
+                      </div>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                        3
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{t('onboarding.step3.title')}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">{t('onboarding.step3.body')}</p>
+                      </div>
+                    </li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">

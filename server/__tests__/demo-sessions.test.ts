@@ -35,12 +35,10 @@ describe('DEMO_SESSIONS', () => {
     const replay = getDemoSession('email-helper');
     const models = new Set(replay.steps.map(step => step.model).filter(Boolean));
     const response = replay.steps.find(step => step.type === 'response');
-    const expectedDate = response
-      ? `日期：${response.timestamp.getFullYear()} 年 ${response.timestamp.getMonth() + 1} 月 ${response.timestamp.getDate()} 日`
-      : '';
 
-    expect(Array.from(models)).toContain('claude-sonnet-4.6');
-    expect(response?.content).toContain(expectedDate);
+    expect(Array.from(models)).toContain('gpt-4o');
+    expect(response?.content).toContain('亲爱的团队');
     expect(response?.timestamp.getTime()).toBeLessThan(Date.now());
+    expect(replay.meta.stepCount).toBeLessThanOrEqual(4);
   });
 });

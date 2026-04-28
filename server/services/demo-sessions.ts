@@ -62,17 +62,11 @@ function demoIso(baseMs: number, offsetMs = 0): string {
   return demoTime(baseMs, offsetMs).toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
-function formatDateZh(date: Date): string {
-  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日`;
-}
-
 const INVENTORY_UPDATED_AT = {
   a100: demoIso(DEMO_BASE_TS.dataHelper, -5 * DAY_MS),
   b220: demoIso(DEMO_BASE_TS.dataHelper, -6 * DAY_MS + 5 * 60 * 60 * 1000),
   c009: demoIso(DEMO_BASE_TS.dataHelper, -7 * DAY_MS + 90 * 60 * 1000),
 } as const;
-
-const EMAIL_HELPER_SENT_DATE = formatDateZh(demoTime(DEMO_BASE_TS.emailHelper, 28_000));
 
 /** 没装 OpenClaw 时的完整回放样本：8 条场景化 Demo */
 export const DEMO_SESSIONS: SessionReplay[] = [
@@ -706,7 +700,7 @@ Kubernetes 调度器（kube-scheduler）会根据 **资源请求（requests）**
     ],
   }),
 
-  /* 6 — React Debug（debugger / gpt-4o-mini）总时长约 78s */
+  /* 6 — React Debug（debugger / gpt-4o）总时长约 95s，展示重试循环浪费 */
   finalizeReplay({
     meta: {
       id: encodeURIComponent('demo/debugger'),
@@ -748,36 +742,36 @@ export function List() {
       },
       {
         index: 1,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 5_000),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 4_000),
         type: 'thinking',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         content:
-          '典型原因：items 初始为 undefined，首屏 render 在 fetch 完成前就执行 items.map。先尝试 read_file 对上项目里的真实路径；如果连续读不到，再退回用户贴的代码做判断。',
-        inputTokens: 410,
-        outputTokens: 112,
+          '典型原因：items 初始为 undefined，首屏 render 在 fetch 完成前就执行 items.map。先尝试 read_file 对上项目里的真实路径，确认完整上下文。',
+        inputTokens: 420,
+        outputTokens: 95,
         cost: 0,
         durationMs: 0,
       },
       {
         index: 2,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 12_000),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 10_000),
         type: 'tool_call',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         content: '',
         toolName: 'read_file',
-        toolInput: JSON.stringify({ path: 'src/components/List.tsx', offset: 0, limit: 200 }),
-        inputTokens: 540,
-        outputTokens: 68,
+        toolInput: JSON.stringify({ path: 'src/utils/helper.ts', offset: 0, limit: 200 }),
+        inputTokens: 530,
+        outputTokens: 72,
         cost: 0,
         durationMs: 0,
       },
       {
         index: 3,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 18_000),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 15_000),
         type: 'tool_result',
         content: '',
-        toolOutput: 'ENOENT: no such file or directory, open "src/components/List.tsx"',
-        error: 'ENOENT: no such file or directory, open "src/components/List.tsx"',
+        toolOutput: 'ENOENT: no such file or directory, open "src/utils/helper.ts"',
+        error: 'ENOENT: no such file or directory, open "src/utils/helper.ts"',
         isError: true,
         inputTokens: 0,
         outputTokens: 0,
@@ -786,36 +780,24 @@ export function List() {
       },
       {
         index: 4,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 24_000),
-        type: 'thinking',
-        model: 'gpt-4o-mini',
-        content:
-          '第一条路径读不到，可能在 app 子目录里；再试一次 app/src/components/List.tsx。如果还是失败，就别继续猜太多层目录了。',
-        inputTokens: 620,
-        outputTokens: 128,
-        cost: 0,
-        durationMs: 0,
-      },
-      {
-        index: 5,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 31_000),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 20_000),
         type: 'tool_call',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         content: '',
         toolName: 'read_file',
-        toolInput: JSON.stringify({ path: 'app/src/components/List.tsx', offset: 0, limit: 200 }),
-        inputTokens: 690,
+        toolInput: JSON.stringify({ path: 'src/lib/helper.ts', offset: 0, limit: 200 }),
+        inputTokens: 620,
         outputTokens: 70,
         cost: 0,
         durationMs: 0,
       },
       {
-        index: 6,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 38_000),
+        index: 5,
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 25_000),
         type: 'tool_result',
         content: '',
-        toolOutput: 'ENOENT: no such file or directory, open "app/src/components/List.tsx"',
-        error: 'ENOENT: no such file or directory, open "app/src/components/List.tsx"',
+        toolOutput: 'ENOENT: no such file or directory, open "src/lib/helper.ts"',
+        error: 'ENOENT: no such file or directory, open "src/lib/helper.ts"',
         isError: true,
         inputTokens: 0,
         outputTokens: 0,
@@ -823,33 +805,85 @@ export function List() {
         durationMs: 0,
       },
       {
+        index: 6,
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 31_000),
+        type: 'tool_call',
+        model: 'gpt-4o',
+        content: '',
+        toolName: 'read_file',
+        toolInput: JSON.stringify({ path: 'src/helpers/index.ts', offset: 0, limit: 200 }),
+        inputTokens: 710,
+        outputTokens: 68,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
         index: 7,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 45_000),
-        type: 'thinking',
-        model: 'gpt-4o-mini',
-        content:
-          '已经连续两次读文件失败，最后只再试一次 frontend/src/components/List.tsx；不管成不成功，都直接回到用户贴的组件代码给修法，避免继续空转。',
-        inputTokens: 760,
-        outputTokens: 150,
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 36_000),
+        type: 'tool_result',
+        content: '',
+        toolOutput: 'ENOENT: no such file or directory, open "src/helpers/index.ts"',
+        error: 'ENOENT: no such file or directory, open "src/helpers/index.ts"',
+        isError: true,
+        inputTokens: 0,
+        outputTokens: 0,
         cost: 0,
         durationMs: 0,
       },
       {
         index: 8,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 54_000),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 42_000),
         type: 'tool_call',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         content: '',
         toolName: 'read_file',
-        toolInput: JSON.stringify({ path: 'frontend/src/components/List.tsx', offset: 0, limit: 200 }),
-        inputTokens: 730,
-        outputTokens: 72,
+        toolInput: JSON.stringify({ path: 'lib/utils/helper.ts', offset: 0, limit: 200 }),
+        inputTokens: 800,
+        outputTokens: 70,
         cost: 0,
         durationMs: 0,
       },
       {
         index: 9,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 62_000),
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 47_000),
+        type: 'tool_result',
+        content: '',
+        toolOutput: 'ENOENT: no such file or directory, open "lib/utils/helper.ts"',
+        error: 'ENOENT: no such file or directory, open "lib/utils/helper.ts"',
+        isError: true,
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 10,
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 53_000),
+        type: 'thinking',
+        model: 'gpt-4o',
+        content:
+          '已经尝试了 4 个路径都失败，可能组件文件在不同位置。让我试试 src/components/List.tsx，这是 React 组件的常见路径。',
+        inputTokens: 890,
+        outputTokens: 88,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 11,
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 60_000),
+        type: 'tool_call',
+        model: 'gpt-4o',
+        content: '',
+        toolName: 'read_file',
+        toolInput: JSON.stringify({ path: 'src/components/List.tsx', offset: 0, limit: 200 }),
+        inputTokens: 990,
+        outputTokens: 72,
+        cost: 0,
+        durationMs: 0,
+      },
+      {
+        index: 12,
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 66_000),
         type: 'tool_result',
         content: '',
         toolOutput: `import { useEffect, useState } from "react";
@@ -877,10 +911,10 @@ export function List() {
         durationMs: 0,
       },
       {
-        index: 10,
-        timestamp: demoTime(DEMO_BASE_TS.debugger, 76_000),
+        index: 13,
+        timestamp: demoTime(DEMO_BASE_TS.debugger, 93_000),
         type: 'response',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         content: `## 原因
 
 \`useState<string[] | undefined>(undefined)\` 让 **第一次渲染** 时 \`items\` 为 \`undefined\`。  
@@ -1046,20 +1080,30 @@ const [items, setItems] = useState<string[]>([]);
     ],
   }),
 
-  /* 8 — 求职邮件（email-helper / claude-sonnet-4.6）总时长约 28s */
+  /* 8 — 邮件翻译（email-helper / gpt-4o）总时长约 18s，展示贵模型干轻活 */
   finalizeReplay({
     meta: {
       id: encodeURIComponent('demo/email-helper'),
       agentName: 'email-helper',
-      summary: '我要申请字节跳动的前端工程师岗位，帮我写一封正式的求职邮件。',
+      summary: '帮我把这封英文邮件翻译成中文',
     },
     steps: [
       {
         index: 0,
         timestamp: demoTime(DEMO_BASE_TS.emailHelper, 0),
         type: 'user',
-        content:
-          '我要申请字节跳动的前端工程师岗位，帮我写一封求职邮件。我有 4 年前端经验，熟悉 React、TypeScript，做过中后台与活动页，附过简历 PDF。语气正式但不僵硬。',
+        content: `帮我把这封英文邮件翻译成中文：
+
+Dear Team,
+
+I hope this email finds you well. I wanted to follow up on our previous discussion regarding the Q1 project timeline. As we discussed in last week's meeting, we need to finalize the technical specifications by the end of this month.
+
+Could you please review the attached document and share your feedback by Friday? This will help us stay on track with our delivery schedule.
+
+Thank you for your cooperation.
+
+Best regards,
+John`,
         inputTokens: 0,
         outputTokens: 0,
         cost: 0,
@@ -1067,53 +1111,42 @@ const [items, setItems] = useState<string[]>([]);
       },
       {
         index: 1,
-        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 6_000),
+        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 5_000),
         type: 'thinking',
-        model: 'claude-sonnet-4.6',
+        model: 'gpt-4o',
         content:
-          '了解了，需要突出 React/TypeScript、工程化与业务落地；结构：主题行、称呼、自我介绍、与岗位匹配的三点、作品集/简历、收尾与联系方式；避免夸大，用可核实表述。',
-        inputTokens: 260,
-        outputTokens: 95,
+          '这是一封简单的商务邮件，内容是关于项目进度跟进和文档审阅请求。我来翻译成中文，保持商务邮件的正式语气。',
+        inputTokens: 820,
+        outputTokens: 78,
         cost: 0,
         durationMs: 0,
       },
       {
         index: 2,
-        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 28_000),
+        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 17_500),
         type: 'response',
-        model: 'claude-sonnet-4.6',
-        content: `**邮件主题**：应聘前端工程师—张三—4年React/TypeScript经验
+        model: 'gpt-4o',
+        content: `亲爱的团队：
 
-尊敬的招聘负责人：
+希望这封邮件送达时你们一切安好。我想跟进一下我们之前关于第一季度项目时间表的讨论。正如我们在上周会议中讨论的那样，我们需要在本月底前敲定技术规格说明。
 
-您好！我是在拉勾/字节招聘官网看到贵司「前端工程师」岗位信息的应聘者张三。本人从事前端开发约 4 年，主要技术栈为 **React** 与 **TypeScript**，参与过 **中后台系统** 与 **高并发活动页** 的完整交付，涵盖性能优化、组件库沉淀与跨团队协作。随信附上个人简历（PDF），方便您查阅。
+能否请你们在周五之前审阅附件文档并分享反馈意见？这将帮助我们按计划完成交付进度。
 
-**与岗位匹配的经历摘要**  
-1. **中大型 Web 应用**：负责订单与运营中台模块，主导表格/表单复杂交互与权限体系落地，推动接口类型约束与错误边界统一。  
-2. **活动与增长场景**：承担过多次营销落地页与玩法 H5，关注首屏与交互流畅度，配合数据埋点做迭代。  
-3. **工程化与质量**：熟悉 ESLint/Prettier、单元测试与 CI 基础配置，能在团队规范内保持可维护的代码风格。
+感谢你们的配合。
 
-我非常认同字节跳动在内容与平台技术上的产品实践，也期待能在贵团队继续深耕 **现代前端架构与用户体验** 方向。若您认为我的背景与岗位契合，恳请安排一次沟通；我可按您方便的时间参与视频或现场面试。
-
-感谢您在百忙之中阅读此信！
-
-此致  
+此致
 敬礼
-
-张三  
-手机：138-xxxx-xxxx  
-邮箱：zhangsan@example.com  
-日期：${EMAIL_HELPER_SENT_DATE}`,
-        inputTokens: 420,
-        outputTokens: 380,
+John`,
+        inputTokens: 920,
+        outputTokens: 580,
         cost: 0,
         durationMs: 0,
       },
       {
         index: 3,
-        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 29_200),
+        timestamp: demoTime(DEMO_BASE_TS.emailHelper, 18_200),
         type: 'system',
-        content: '会话完成：求职邮件草稿已生成，用户可自行替换姓名与联系方式后发送。',
+        content: '会话完成：邮件翻译已完成。',
         inputTokens: 0,
         outputTokens: 0,
         cost: 0,

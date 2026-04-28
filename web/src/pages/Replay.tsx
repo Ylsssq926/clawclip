@@ -1110,9 +1110,15 @@ export default function Replay({ initialSessionId, onInitialSessionHandled, onNa
       {error && <div className="bg-red-50 border border-red-500/30 rounded-xl p-4 mb-6 text-red-700 text-sm">{error}</div>}
 
       {!loading && !error && sessions.length === 0 && (
-        <div className="text-center py-12 text-slate-500">
-          <p className="text-lg mb-1">{t('replay.empty.title')}</p>
-          <p className="text-sm">{t('replay.empty.hint')}</p>
+        <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-6 text-left shadow-sm shadow-blue-100/50">
+          <p className="text-lg font-semibold text-slate-900">{t('replay.empty.title')}</p>
+          <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-600">
+            <p>{t('replay.empty.guideAuto')}</p>
+            <p>{t('replay.empty.guideRestart')}</p>
+          </div>
+          <pre className="mt-4 overflow-x-auto rounded-xl bg-slate-900 px-4 py-3 text-xs text-slate-100">
+            <code>{t('onboarding.step2.cmd')}</code>
+          </pre>
         </div>
       )}
 

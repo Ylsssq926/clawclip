@@ -29,6 +29,8 @@ interface Solution {
     url: string
     signupUrl?: string
     requiresCreditCard?: boolean
+    notes?: string
+    lastVerified?: string
   }
   configSnippet?: string
   tags: string[]
@@ -228,6 +230,22 @@ export default function Solutions() {
       default:
         return 'border-slate-200 bg-slate-50 text-slate-700'
     }
+  }
+
+  const isFreeTierStale = (lastVerified?: string): boolean => {
+    if (!lastVerified) return false
+    const verifiedDate = new Date(lastVerified)
+    const now = new Date()
+    const daysDiff = Math.floor((now.getTime() - verifiedDate.getTime()) / (1000 * 60 * 60 * 24))
+    return daysDiff > 90
+  }
+
+  const formatVerifiedDate = (lastVerified: string): string => {
+    const date = new Date(lastVerified)
+    return date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', { 
+      year: 'numeric', 
+      month: 'short' 
+    })
   }
 
   return (
@@ -711,6 +729,14 @@ export default function Solutions() {
                             ? t('solutions.card.requiresCreditCard')
                             : t('solutions.card.noCreditCard')}
                         </span>
+                      </div>
+                    )}
+                    {solution.freeTier.lastVerified && isFreeTierStale(solution.freeTier.lastVerified) && (
+                      <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        <div className="font-medium">
+                          {t('solutions.stale.warning', { date: formatVerifiedDate(solution.freeTier.lastVerified) })}
+                        </div>
+                        <div className="mt-0.5">{t('solutions.stale.checkOfficial')}</div>
                       </div>
                     )}
                   </div>

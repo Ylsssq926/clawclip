@@ -233,6 +233,34 @@ OPENAI_API_KEY=your_deepseek_key
       },
       tags: ['expensive-model'],
     },
+    {
+      id: 'cerebras-free',
+      title: 'Switch to Cerebras (Free)',
+      titleZh: '切换到 Cerebras（免费）',
+      description: 'Llama 3.3 70B: 1M tokens/day free. Fastest inference (2000+ tok/s). 30 RPM, no credit card.',
+      descriptionZh: 'Llama 3.3 70B：每天 100 万 token 免费，推理速度极快（2000+ tok/s），30 RPM，无需信用卡。',
+      type: 'free-tier',
+      effort: 'low',
+      savingsEstimate: '100%',
+      freeTier: {
+        provider: 'Cerebras',
+        model: 'llama-3.3-70b',
+        freeLimit: '1M tokens/day, 30 RPM',
+        requiresCreditCard: false,
+        url: 'https://cloud.cerebras.ai',
+        signupUrl: 'https://cloud.cerebras.ai/register',
+        notes: 'Email verification required. Llama 3.3 70B only.',
+        lastVerified: '2026-04',
+      },
+      configSnippet: `# OpenAI-compatible
+OPENAI_BASE_URL=https://api.cerebras.ai/v1
+OPENAI_API_KEY=your_cerebras_key
+# Model: llama-3.3-70b (1M tokens/day free, 2000+ tok/s)`,
+      recommendationPriority: {
+        'expensive-model': 2,
+      },
+      tags: ['expensive-model'],
+    },
 
     // ===== 成本优化工具 =====
     {

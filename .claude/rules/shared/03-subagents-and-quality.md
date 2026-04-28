@@ -1,3 +1,5 @@
+<!-- AUTO-GENERATED: do not edit directly. Source: .claude/rules/shared/03-subagents-and-quality.md -->
+
 # 子代理、提示词与质量规则
 
 > 提示词写作规范详见 → `06-prompt-engineering.md`（核心原则：目标导向，少堆规则）

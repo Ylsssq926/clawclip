@@ -1,3 +1,5 @@
+<!-- AUTO-GENERATED: do not edit directly. Source: .claude/rules/shared/06-prompt-engineering.md -->
+
 # 提示词写作规范
 
 > **一句话核心：写提示词就像给聪明同事布置任务——说清目标和边界，别堆规则手册。**

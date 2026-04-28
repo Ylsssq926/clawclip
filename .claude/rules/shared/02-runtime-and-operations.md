@@ -33,25 +33,39 @@
 
 ## 服务器
 - 主服务器：`121.4.98.150`
-- SSH 连接：**必须使用 `ssh ruxi-server`**（已配置密钥认证，免密登录）
-- 禁止使用 `ssh ubuntu@121.4.98.150`（会弹密码框，阻塞自动化流程）
-- SSH 配置位于 `~/.ssh/config`，使用 `~/.ssh/id_ed25519_ruxi` 密钥
-- 服务器用户：`ubuntu`，密码：`Weijiang1.`（仅在密钥不可用时备用）
-- 海外 / 测试服务器：`43.133.60.168`
+- 海外 / 测试服务器（Hermes）：`43.133.60.168`
+- 服务器用户：`ubuntu`，密码：`Weijiang1.`
+
+### SSH 连接方式（Windows Git Bash 环境，实测结果）
+
+**主服务器 (121.4.98.150)**：
+- ✅ 首选自动化：`python deploy/remote.py "<命令>"`（paramiko 密码认证，无交互）
+- ✅ 可用：`ssh ruxi-server`（SSH 别名 + 密钥，免密）
+- ✅ 可用：`ssh -i ~/.ssh/id_ed25519_ruxi ubuntu@121.4.98.150`（密钥直连）
+- ❌ 禁止：`ssh ubuntu@121.4.98.150`（无密钥时弹密码框，阻塞自动化）
+
+**海外服务器 (43.133.60.168)**：
+- ✅ 首选自动化：`python deploy/remote-hermes.py "<命令>"`（paramiko 密码认证，无交互）
+- ✅ 可用：`ssh zeroclaw-server`（SSH 别名 + 密钥，免密）
+- ✅ 可用：`ssh -i ~/.ssh/id_ed25519_ruxi ubuntu@43.133.60.168`（密钥直连）
+- ❌ 不可用：`ssh openclaw-server`（别名解析超时，废弃）
+- ❌ 禁止：`ssh ubuntu@43.133.60.168`（无密钥时弹密码框，阻塞自动化）
+
+**SSH 别名配置**（`~/.ssh/config`，密钥 `~/.ssh/id_ed25519_ruxi`）：
+- `ruxi-server` → `121.4.98.150`，User ubuntu
+- `zeroclaw-server` → `43.133.60.168`，User ubuntu
+- `openclaw-server` → `43.133.60.168`（别名超时，不可靠，用 zeroclaw-server 代替）
+
+**权限说明**：
+- `ubuntu / Weijiang1.` 可登录并可 `sudo`
+- `openclaw / Weijiang1.` 可登录但无 sudo
+- `root` 不能用同密码登录
+- **腾讯云控制台"执行命令"只作为 SSH 完全不可用时的兜底，不是首选**
 
 ## Claw 服务器连接与业务路由（共享权威事实）
 ### 统一 SSH 入口
-- 主服务器：`ssh ruxi-server`（密钥认证，免密）
-- 海外服务器首选：`ssh zeroclaw-server`
-- 海外服务器别名：`ssh openclaw-server`
-- `zeroclaw-server` / `openclaw-server` 在 `~/.ssh/config` 中都指向：
-  - `HostName 43.133.60.168`
-  - `User ubuntu`
-  - `IdentityFile ~/.ssh/id_ed25519_ruxi`
-- 如果本机 SSH 别名失效，海外服务器的明文回退方式是：`ssh ubuntu@43.133.60.168`
-- 已实测：`ubuntu / Weijiang1.` 可登录并可 `sudo`；`openclaw / Weijiang1.` 可登录但无 sudo；`root` 不能用同密码登录
-- **腾讯云控制台“执行命令”只作为 SSH 不可用时的兜底方案，不是首选连接方式**
-- 如需维护旧 `zeroclaw.service`，在 `zeroclaw-server` 上可切换到 `ubuntu` 视角处理
+- 主服务器：`python deploy/remote.py` 或 `ssh ruxi-server`
+- 海外服务器：`python deploy/remote-hermes.py` 或 `ssh zeroclaw-server`
 
 ### 第二台服务器（`zeroclaw-server`）上的 Claw 实例
 | 实例 | 域名 | systemd 服务 | 运行用户 | 监听 / 入口 | 登录方式 | 业务定位 |

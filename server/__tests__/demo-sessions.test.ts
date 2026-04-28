@@ -36,7 +36,7 @@ describe('DEMO_SESSIONS', () => {
     const models = new Set(replay.steps.map(step => step.model).filter(Boolean));
     const response = replay.steps.find(step => step.type === 'response');
 
-    expect(Array.from(models)).toContain('gpt-4o');
+    expect(Array.from(models)).toContain('gpt-5.4');
     expect(response?.content).toContain('亲爱的团队');
     expect(response?.timestamp.getTime()).toBeLessThan(Date.now());
     expect(replay.meta.stepCount).toBeLessThanOrEqual(4);

@@ -17,6 +17,7 @@ import exportRouter from './routes/export.js';
 import alertsRouter from './routes/alerts.js';
 import otelRouter from './routes/otel.js';
 import solutionsRouter from './routes/solutions.js';
+import quotaRouter from './routes/quota.js';
 import { initPricingFetcher } from './services/pricing-fetcher.js';
 import { log } from './services/logger.js';
 
@@ -54,6 +55,7 @@ app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/otel', otelRouter);
 app.use('/api/solutions', solutionsRouter);
+app.use('/api/quota', quotaRouter);
 
 app.use('/share', shareRouter);
 

@@ -120,17 +120,18 @@ describe('TokenWasteAnalyzer', () => {
     vi.setSystemTime(new Date('2026-03-20T08:00:00.000Z'));
 
     const expensiveReplay: SessionReplay = {
-      meta: makeMeta('expensive-model', 4_800, 0.06, 2, ['gpt-4o']),
+      meta: makeMeta('expensive-model', 12_000, 0.12, 3, ['gpt-5.4']),
       steps: [
-        makeStep({ index: 0, type: 'user', content: '给我一份详细策略。' }),
-        makeStep({ index: 1, type: 'response', content: '这是详细策略。', model: 'gpt-4o', inputTokens: 1_800, outputTokens: 900, cost: 0.06 }),
+        makeStep({ index: 0, type: 'user', content: '给我一份策略。' }),
+        makeStep({ index: 1, type: 'response', content: '这是策略。', model: 'gpt-5.4', inputTokens: 4_500, outputTokens: 2_500, cost: 0.12 }),
       ],
     };
+
     const cheapVariantReplay: SessionReplay = {
-      meta: makeMeta('cheap-variant', 4_800, 0.004, 2, ['gpt-4o-mini']),
+      meta: makeMeta('cheap-variant', 4_800, 0.004, 2, ['gpt-5.4-mini']),
       steps: [
         makeStep({ index: 0, type: 'user', content: '给我一份简版策略。' }),
-        makeStep({ index: 1, type: 'response', content: '这是简版策略。', model: 'gpt-4o-mini', inputTokens: 1_800, outputTokens: 900, cost: 0.004 }),
+        makeStep({ index: 1, type: 'response', content: '这是简版策略。', model: 'gpt-5.4-mini', inputTokens: 1_800, outputTokens: 900, cost: 0.004 }),
       ],
     };
 

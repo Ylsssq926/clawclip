@@ -184,6 +184,7 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
 
   // ── Google Gemini ──
   'gemini-3.1-pro':     { input: 2.00, output: 12.0 },
+  'gemini-3.1-flash':    { input: 0.50, output: 3.0 },
   'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
   'gemini-3-flash':      { input: 0.50, output: 3.0 },
   'gemini-2.5-pro':     { input: 1.25, output: 10.0 },
@@ -304,6 +305,7 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
 
   // ── Google Gemini (ai.google.dev/gemini-api/docs/pricing  2026-03) ──
   'gemini-3.1-pro':     12.0,   // $2.00 in / $12 out (preview)
+  'gemini-3.1-flash':    3.0,   // $0.50 in / $3 out (preview)
   'gemini-3.1-flash-lite': 1.5,  // $0.25 in / $1.50 out (preview)
   'gemini-3-flash':      3.0,   // $0.50 in / $3 out (preview)
   'gemini-2.5-pro':     10.0,   // $1.25 in / $10 out (≤200k)

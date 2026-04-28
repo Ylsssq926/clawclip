@@ -83,7 +83,7 @@ stop:
   - "\n\nEND"
 system: "Return only the requested fields."`;
 
-const DEFAULT_LITELLM_PRIMARY_MODEL = 'openai/gpt-4o';
+const DEFAULT_LITELLM_PRIMARY_MODEL = 'openai/gpt-5.4';
 
 function sanitizePrimaryModelName(modelName?: string): string {
   const normalized = modelName?.trim()?.replace(/\s+/g, ' ');
@@ -98,7 +98,7 @@ function buildLiteLLMRoutingSnippet(modelName?: string): string {
 model_list:
   - model_name: cheap-default
     litellm_params:
-      model: gpt-4o-mini
+      model: gpt-5.4-mini
       api_key: os.environ/OPENAI_API_KEY
   - model_name: premium-primary
     litellm_params:
@@ -209,8 +209,8 @@ OPENAI_API_KEY=your_openrouter_key
       id: 'deepseek-cheap',
       title: 'Switch to DeepSeek V3 (20x cheaper)',
       titleZh: '切换到 DeepSeek V3（便宜 20 倍）',
-      description: 'DeepSeek V3.2: $0.14/M input tokens. 20-50x cheaper than GPT-4o, comparable quality.',
-      descriptionZh: 'DeepSeek V3.2：输入 $0.14/百万 token，比 GPT-4o 便宜 20-50 倍，质量相当。',
+      description: 'DeepSeek V3.2: $0.14/M input tokens. 20-50x cheaper than GPT-5.4, comparable quality.',
+      descriptionZh: 'DeepSeek V3.2：输入 $0.14/百万 token，比 GPT-5.4 便宜 20-50 倍，质量相当。',
       type: 'free-tier',
       effort: 'low',
       savingsEstimate: '95%',
@@ -352,8 +352,8 @@ print(f"Saved {compressed['saving']} tokens")`,
       id: 'ollama-local',
       title: 'Run Models Locally with Ollama',
       titleZh: '用 Ollama 在本地跑模型',
-      description: 'Zero marginal cost after setup. Break-even vs GPT-4o-mini at ~500 req/day. Best for privacy-sensitive or high-volume tasks.',
-      descriptionZh: '安装后边际成本为零，每天 500+ 请求时比 GPT-4o-mini 更划算，适合隐私敏感或高频任务。',
+      description: 'Zero marginal cost after setup. Break-even vs GPT-5.4-mini at ~500 req/day. Best for privacy-sensitive or high-volume tasks.',
+      descriptionZh: '安装后边际成本为零，每天 500+ 请求时比 GPT-5.4-mini 更划算，适合隐私敏感或高频任务。',
       type: 'local-model',
       effort: 'medium',
       savingsEstimate: '100% (after hardware)',
@@ -373,7 +373,7 @@ OPENAI_API_KEY=ollama  # any string works
 OPENAI_BASE_URL=http://localhost:11434/v1
 # Model: llama3.1:8b
 
-# Break-even vs GPT-4o-mini: ~500 req/day`,
+# Break-even vs GPT-5.4-mini: ~500 req/day`,
       recommendationPriority: {
         'expensive-model': 2,
         'retry-loop': 4,

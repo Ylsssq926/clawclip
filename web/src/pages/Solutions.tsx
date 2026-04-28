@@ -71,6 +71,34 @@ interface GeneratedConfig {
   warningZh?: string
 }
 
+interface QuotaSnapshot {
+  provider: string
+  model: string
+  remaining: {
+    requests?: number
+    tokens?: number
+  }
+  limit: {
+    requests?: number
+    tokens?: number
+  }
+  percentage: number
+  resetAt?: string
+  checkedAt: string
+  status: 'healthy' | 'low' | 'exhausted' | 'unknown'
+}
+
+interface QuotaCheckResult {
+  providers: QuotaSnapshot[]
+  recommendation?: {
+    action: 'switch' | 'none'
+    reason: string
+    reasonZh: string
+    suggestedModel: string
+    suggestedProvider: string
+  }
+}
+
 const SOLUTION_TYPE_ICONS = {
 
   'free-tier': Zap,
@@ -86,6 +114,7 @@ export default function Solutions() {
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false })
   const [filterType, setFilterType] = useState<'all' | Solution['type']>('all')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [quotaData, setQuotaData] = useState<QuotaCheckResult>({ providers: [] })
 
   // Config generator state
   const [selectedRuntime, setSelectedRuntime] = useState<'openclaw' | 'zeroclaw'>('openclaw')
@@ -126,6 +155,15 @@ export default function Solutions() {
       })
       .catch(() => {
         setDetectedModel(null)
+      })
+
+    // 获取免费额度状态
+    apiGetSafe<QuotaCheckResult>('/api/quota/status')
+      .then((data) => {
+        if (data) setQuotaData(data)
+      })
+      .catch(() => {
+        setQuotaData({ providers: [] })
       })
   }, [])
 
@@ -255,6 +293,61 @@ export default function Solutions() {
         <h1 className="text-2xl font-bold text-slate-900">{t('solutions.page.title')}</h1>
         <p className="mt-1 text-sm text-slate-500">{t('solutions.page.subtitle')}</p>
       </div>
+
+      {/* Quota Monitor Panel */}
+      {quotaData.providers.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
+          <h3 className="text-base font-semibold text-slate-900">
+            {t('quota.title')}
+          </h3>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {quotaData.providers.map((provider) => (
+              <div key={provider.provider} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-900">{provider.provider}</span>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-xs font-medium',
+                      provider.status === 'healthy' && 'bg-emerald-50 text-emerald-700',
+                      provider.status === 'low' && 'bg-amber-50 text-amber-700',
+                      provider.status === 'exhausted' && 'bg-red-50 text-red-700',
+                      provider.status === 'unknown' && 'bg-slate-50 text-slate-700',
+                    )}
+                  >
+                    {provider.percentage}%
+                  </span>
+                </div>
+                {/* 进度条 */}
+                <div className="mt-2 h-2 rounded-full bg-slate-100">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all',
+                      provider.percentage > 50 && 'bg-emerald-500',
+                      provider.percentage <= 50 && provider.percentage > 20 && 'bg-amber-500',
+                      provider.percentage <= 20 && 'bg-red-500',
+                    )}
+                    style={{ width: `${provider.percentage}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-slate-500">{provider.model}</p>
+                {provider.remaining.requests !== undefined && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {provider.remaining.requests.toLocaleString()} / {provider.limit.requests?.toLocaleString()} requests
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          {/* 推荐切换 */}
+          {quotaData.recommendation?.action === 'switch' && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm text-amber-800">
+                {locale === 'zh' ? quotaData.recommendation.reasonZh : quotaData.recommendation.reason}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Config Generator */}
       <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm">

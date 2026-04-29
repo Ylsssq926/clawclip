@@ -367,7 +367,7 @@ export default function Solutions() {
                 <div className="font-mono text-sm text-slate-900">{detectedModel}</div>
               ) : (
                 <div className="space-y-2">
-                  <div className="text-xs text-amber-600">未检测到模型，请手动选择</div>
+                  <div className="text-xs text-amber-600">{t('solutions.generator.noModelDetected')}</div>
                   <select
                     value={manualModel}
                     onChange={(e) => setManualModel(e.target.value)}
@@ -475,7 +475,7 @@ export default function Solutions() {
               disabled={isGenerating}
               className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
             >
-              {isGenerating ? '生成中...' : t('solutions.generator.generate')}
+              {isGenerating ? t('solutions.generator.generating') : t('solutions.generator.generate')}
             </button>
 
             {generatorError && (
@@ -586,7 +586,7 @@ export default function Solutions() {
               onClick={() => setGeneratedConfig(null)}
               className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
-              {locale === 'zh' ? '生成其他配置' : 'Generate another config'}
+              {t('solutions.generator.generateAnother')}
             </button>
           </div>
         )}

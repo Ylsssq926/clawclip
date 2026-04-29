@@ -292,6 +292,8 @@ function extractToolResultCallId(...records: Array<Record<string, unknown> | und
 const FIELD_ALIASES: Record<string, string[]> = {
   inputTokens: ['input_tokens', 'inputTokens', 'prompt_tokens', 'promptTokens'],
   outputTokens: ['output_tokens', 'outputTokens', 'completion_tokens', 'completionTokens'],
+  cachedTokens: ['cached_tokens', 'cachedTokens', 'cache_read_tokens', 'cacheReadTokens'],
+  reasoningTokens: ['reasoning_tokens', 'reasoningTokens', 'thinking_tokens', 'thinkingTokens'],
 };
 
 /** 版本感知字段读取：按别名列表依次尝试 */
@@ -375,6 +377,23 @@ function pickToolCalls(body: JsonlLine, outer: JsonlLine): unknown[] | undefined
 
 type LineStepResult = SessionStep | SessionStep[] | null;
 
+const KNOWN_EVENT_TYPES = new Set([
+  'session',
+  'custom',
+  'compaction',
+  'branch_summary',
+  'message',
+  'custom_message',
+  'error',
+  'user_message',
+  'assistant_message',
+  'tool_call',
+  'function_call',
+  'tool_result',
+  'toolResult',
+  'function_call_output',
+]);
+
 /**
  * 从一行 JSONL 揪出一步；认不出来的行交给 null。assistant 一条里多个 tool_calls 时返回多步。
  */
@@ -440,6 +459,19 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
     inputTokens: includeUsage ? input : 0,
     outputTokens: includeUsage ? output : 0,
   });
+  const unknownEventStep = (): SessionStep | null => {
+    if (!outerType || KNOWN_EVENT_TYPES.has(outerType)) return null;
+    return {
+      index,
+      timestamp,
+      type: 'system',
+      content: `未识别事件: ${outerType}`,
+      model,
+      ...base(false),
+      cost: 0,
+      durationMs: 0,
+    };
+  };
 
   const { text, reasoning: contentReasoning } = extractLineTextAndReasoning(body);
   const reasoningExtra = extractReasoningText(body, obj, contentReasoning);
@@ -575,7 +607,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
         durationMs: 0,
       };
     }
-    return null;
+    return unknownEventStep();
   }
 
   if (role === 'tool' || outerType === 'tool_result' || outerType === 'function_call_output') {
@@ -631,7 +663,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
     };
   }
 
-  return null;
+  return unknownEventStep();
 }
 
 /**

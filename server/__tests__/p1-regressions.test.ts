@@ -156,6 +156,48 @@ describe('P1 regressions', () => {
     }
   });
 
+  it('surfaces unknown typed events as system steps instead of dropping them', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'clawclip-session-parser-'));
+    const agentsDir = path.join(tempRoot, 'agents');
+    const sessionsDir = path.join(agentsDir, 'test-agent', 'sessions');
+
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'unknown-event.jsonl'),
+      [
+        JSON.stringify({
+          type: 'future_event',
+          role: 'assistant',
+          timestamp: '2026-03-18T08:00:00.000Z',
+          payload: { foo: 'bar' },
+        }),
+      ].join('\n'),
+      'utf-8',
+    );
+
+    try {
+      vi.spyOn(agentDataRoot, 'getLobsterDataRoots').mockReturnValue([
+        {
+          id: 'env-0',
+          label: 'temp-root',
+          homeDir: tempRoot,
+          agentsDir,
+        },
+      ]);
+      vi.spyOn(hermesParser, 'loadReplays').mockReturnValue([]);
+
+      const replays = new SessionParser().getRealReplays();
+      expect(replays).toHaveLength(1);
+      expect(replays[0]?.steps).toHaveLength(1);
+      expect(replays[0]?.steps[0]).toMatchObject({
+        type: 'system',
+        content: '未识别事件: future_event',
+      });
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('skips retry-loop diagnostics for low-confidence search/open_url cycles', () => {
     const steps: SessionStep[] = [
       makeStep({

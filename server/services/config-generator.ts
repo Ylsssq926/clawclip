@@ -188,8 +188,8 @@ export function generateOpenClawConfig(
         preset: 'cheap-cloud',
         presetName: 'Cheap Cloud (Groq)',
         presetNameZh: '便宜云端（Groq）',
-        description: 'Groq Llama 3.1 8B: 500K tokens/day free, fastest inference.',
-        descriptionZh: 'Groq Llama 3.1 8B：每天 50 万 token 免费，推理速度极快。',
+        description: 'Groq Llama 4 Scout: 500K tokens/day free, modern general-purpose default.',
+        descriptionZh: 'Groq Llama 4 Scout：每天 50 万 token 免费，适合作为更现代的通用默认模型。',
         estimatedSavings: '100%',
         configFile: {
           path: '~/.openclaw/openclaw.json',
@@ -201,7 +201,7 @@ export function generateOpenClawConfig(
               agents: {
                 defaults: {
                   model: {
-                    primary: 'groq/llama-3.1-8b-instant',
+                    primary: 'groq/meta-llama/llama-4-scout-17b-16e-instruct',
                   },
                 },
               },
@@ -467,13 +467,13 @@ base_url = "https://api.deepseek.com"`,
         preset: 'cheap-cloud',
         presetName: 'Cheap Cloud (Groq)',
         presetNameZh: '便宜云端（Groq）',
-        description: 'Groq Llama 3.1 8B: 500K tokens/day free, fastest inference.',
-        descriptionZh: 'Groq Llama 3.1 8B：每天 50 万 token 免费，推理速度极快。',
+        description: 'Groq Llama 4 Scout: 500K tokens/day free, modern general-purpose default.',
+        descriptionZh: 'Groq Llama 4 Scout：每天 50 万 token 免费，适合作为更现代的通用默认模型。',
         estimatedSavings: '100%',
         configFile: {
           path: '~/.zeroclaw/config.toml',
           content: `default_provider = "groq"
-default_model = "llama-3.1-8b-instant"
+default_model = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 [providers.groq]
 api_key = "YOUR_GROQ_KEY"`,

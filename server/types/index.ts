@@ -132,16 +132,17 @@ export type DetailedModelPricing = { [model: string]: ModelPriceDetail };
 
 /**
  * 默认详细模型定价表 — 同时包含 input 和 output 价格。
- * 数据来源 & 校验日期 (2026-03-25):
+ * 数据来源 & 校验日期 (2026-04-01):
  *   OpenAI, Anthropic, Google, DeepSeek, Qwen, 智谱/Kimi, 百度, 腾讯, 零一万物 等
  *   详见各厂商官方文档 / pricepertoken.com 交叉校验
  */
 export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   // ── OpenAI ──
-  'gpt-5.4':        { input: 2.50, output: 15.0 },
+  'gpt-5.5':         { input: 5.0, output: 30.0, inputCached: 0.50 },
+  'gpt-5.4':         { input: 2.50, output: 15.0, inputCached: 0.25 },
   'gpt-5.4-mini':    { input: 0.75, output: 4.50 },
   'gpt-5.4-nano':    { input: 0.20, output: 1.25 },
-  'gpt-5.4-pro':   { input: 30.0, output: 180.0 },
+  'gpt-5.4-pro':     { input: 30.0, output: 180.0 },
   'gpt-5.2':        { input: 1.75, output: 14.0 },
   'gpt-5.2-pro':   { input: 21.0, output: 168.0 },
   'gpt-5.1':        { input: 1.25, output: 10.0 },
@@ -166,19 +167,22 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'o1-pro':        { input: 150.0, output: 600.0 },
 
   // ── Anthropic ──
-  'claude-opus-4.6':     { input: 5.0, output: 25.0, inputCached: 1.50, outputCached: 15.0 },
+  'claude-opus-4.7':     { input: 5.0, output: 25.0, inputCached: 0.50 },
+  'claude-opus-4.6':     { input: 5.0, output: 25.0, inputCached: 0.50 },
   'claude-opus-4.5':     { input: 5.0, output: 25.0 },
   'claude-opus-4.1':     { input: 15.0, output: 75.0 },
   'claude-opus-4':       { input: 15.0, output: 75.0 },
-  'claude-sonnet-4.6':   { input: 3.0, output: 15.0 },
+  'claude-sonnet-4.6':   { input: 3.0, output: 15.0, inputCached: 0.30 },
   'claude-sonnet-4.5':   { input: 3.0, output: 15.0 },
   'claude-sonnet-4':     { input: 3.0, output: 15.0 },
   'claude-sonnet-3.7':   { input: 3.0, output: 15.0 },
   'claude-3.5-sonnet':   { input: 3.0, output: 15.0 },
   'claude-3-5-sonnet-20241022': { input: 3.0, output: 15.0, inputCached: 0.30, outputCached: 3.75 },
-  'claude-haiku-4.5':     { input: 1.0, output: 5.0 },
-  'claude-3.5-haiku':     { input: 0.80, output: 4.0 },
+  'claude-haiku-4.5':    { input: 1.0, output: 5.0, inputCached: 0.10 },
+  'claude-haiku-3.5':    { input: 0.80, output: 4.0 },
+  'claude-3.5-haiku':    { input: 0.80, output: 4.0 },
   'claude-3-5-haiku-20241022': { input: 0.80, output: 4.0, inputCached: 0.08, outputCached: 1.0 },
+  'claude-haiku-3':      { input: 0.25, output: 1.25 },
   'claude-3-opus':       { input: 15.0, output: 75.0 },
   'claude-3-haiku':       { input: 0.25, output: 1.25 },
 
@@ -193,6 +197,8 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'gemini-2.0-flash':    { input: 0.10, output: 0.40 },
 
   // ── DeepSeek ──
+  'deepseek-v4-pro':     { input: 1.74, output: 3.48 },
+  'deepseek-v4-flash':   { input: 0.50, output: 1.0 },
   'deepseek-chat':       { input: 0.14, output: 0.28, inputCached: 0.014 },
   'deepseek-reasoner':   { input: 0.14, output: 0.28 },
 
@@ -233,6 +239,12 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
   'yi-lightning':    { input: 0.10, output: 0.14 },
   'yi-large':        { input: 1.50, output: 3.0 },
 
+  // ── 托管开源 / 免费路由 ──
+  'meta-llama/llama-4-scout-17b-16e-instruct': { input: 0.11, output: 0.34 },
+  'llama-3.3-70b-versatile': { input: 0.59, output: 0.79 },
+  'openrouter/free':  { input: 0.0, output: 0.0 },
+  'deepseek/deepseek-r1:free': { input: 0.0, output: 0.0 },
+
   // ── 开源模型（托管平台均价）──
   'llama-3.3-70b':   { input: 0.50, output: 0.80 },
 
@@ -250,7 +262,7 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
  * cost-parser 用同一个值乘以 (inputTokens + outputTokens)，
  * 因此实际成本仅作相对比较用途，精确账单请以各云厂商为准。
  *
- * 数据来源 & 校验日期 (2026-03-25):
+ * 数据来源 & 校验日期 (2026-04-01):
  *   OpenAI      — developers.openai.com/api/docs/pricing
  *   Anthropic   — docs.anthropic.com/en/about-claude/pricing
  *   Google      — ai.google.dev/gemini-api/docs/pricing
@@ -260,7 +272,8 @@ export const DEFAULT_DETAILED_PRICING: DetailedModelPricing = {
  *   其他国内厂商 — 各自官方文档 / pricepertoken.com 交叉校验
  */
 export const DEFAULT_MODEL_PRICING: ModelPricing = {
-  // ── OpenAI (developers.openai.com/api/docs/pricing  2026-03) ──
+  // ── OpenAI (developers.openai.com/api/docs/pricing  2026-04) ──
+  'gpt-5.5':        30.0,    // $5.00 in  / $30 out
   'gpt-5.4':        15.0,    // $2.50 in  / $15 out
   'gpt-5.4-mini':    4.5,    // $0.75 in  / $4.50 out
   'gpt-5.4-nano':    1.25,   // $0.20 in  / $1.25 out
@@ -288,7 +301,8 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
   'o1-mini':         4.4,    // $1.10 in  / $4.40 out
   'o1-pro':        600.0,    // $150 in   / $600 out
 
-  // ── Anthropic (docs.anthropic.com/en/about-claude/pricing  2026-03) ──
+  // ── Anthropic (docs.anthropic.com/en/about-claude/pricing  2026-04) ──
+  'claude-opus-4.7':     25.0,   // $5 in  / $25 out
   'claude-opus-4.6':     25.0,   // $5 in  / $25 out
   'claude-opus-4.5':     25.0,   // $5 in  / $25 out
   'claude-opus-4.1':     75.0,   // $15 in / $75 out
@@ -299,8 +313,10 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
   'claude-sonnet-3.7':   15.0,   // $3 in  / $15 out (deprecated)
   'claude-3.5-sonnet':   15.0,   // legacy alias → Sonnet 3.7 同价
   'claude-haiku-4.5':     5.0,   // $1 in  / $5 out
+  'claude-haiku-3.5':     4.0,   // $0.80 in / $4 out
   'claude-3.5-haiku':     4.0,   // $0.80 in / $4 out
-  'claude-3-opus':       75.0,   // $15 in / $75 out (deprecated)
+  'claude-haiku-3':       1.25,  // $0.25 in / $1.25 out
+  'claude-3-opus':       75.0,   // $15 in / $75 out
   'claude-3-haiku':       1.25,  // $0.25 in / $1.25 out
 
   // ── Google Gemini (ai.google.dev/gemini-api/docs/pricing  2026-03) ──
@@ -314,6 +330,8 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
   'gemini-2.0-flash':    0.4,   // $0.10 in / $0.40 out (deprecated June 2026)
 
   // ── DeepSeek (api-docs.deepseek.com/quick_start/pricing  2026-03) ──
+  'deepseek-v4-pro':     3.48,  // $1.74 in / $3.48 out
+  'deepseek-v4-flash':   1.0,   // $0.50 in / $1.00 out
   'deepseek-chat':       0.28,  // $0.14 in / $0.28 out（兼容 deepseek-v4-flash 非思考模式）
   'deepseek-reasoner':   0.28,  // $0.14 in / $0.28 out（兼容 deepseek-v4-flash 思考模式）
 
@@ -353,6 +371,12 @@ export const DEFAULT_MODEL_PRICING: ModelPricing = {
   // ── 零一万物 (01.ai  2026-03) ──
   'yi-lightning':    0.14,  // $0.14/M
   'yi-large':        3.0,   // $3.00/M
+
+  // ── 托管开源 / 免费路由 ──
+  'meta-llama/llama-4-scout-17b-16e-instruct': 0.34, // $0.11 in / $0.34 out
+  'llama-3.3-70b-versatile': 0.79, // $0.59 in / $0.79 out
+  'openrouter/free':  0.0,  // Free router
+  'deepseek/deepseek-r1:free': 0.0, // Free variant
 
   // ── 开源模型（托管平台均价）──
   'llama-3.3-70b':   0.8,  // Fireworks / Together ≈ $0.80/M

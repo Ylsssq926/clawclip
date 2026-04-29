@@ -147,7 +147,7 @@ const DEMO_ENTRIES: LeaderboardEntry[] = [
     nickname: 'CodeWizard',
     score: 88,
     rank: 'A',
-    topModel: 'gpt-4o',
+    topModel: 'gpt-5.4',
     totalSessions: 98,
     dimensions: [
       { dimension: 'writing', score: 82 },
@@ -198,7 +198,7 @@ const DEMO_ENTRIES: LeaderboardEntry[] = [
     nickname: 'Explorer',
     score: 78,
     rank: 'A',
-    topModel: 'gpt-4o-mini',
+    topModel: 'gpt-5.4-mini',
     totalSessions: 134,
     dimensions: [
       { dimension: 'writing', score: 80 },
@@ -266,7 +266,7 @@ const DEMO_ENTRIES: LeaderboardEntry[] = [
     nickname: 'Rookie',
     score: 52,
     rank: 'C',
-    topModel: 'gpt-4o-mini',
+    topModel: 'gpt-5.4-mini',
     totalSessions: 19,
     dimensions: [
       { dimension: 'writing', score: 55 },
@@ -283,7 +283,7 @@ const DEMO_ENTRIES: LeaderboardEntry[] = [
     nickname: 'Passerby',
     score: 45,
     rank: 'C',
-    topModel: 'gpt-4o',
+    topModel: 'gpt-5.4',
     totalSessions: 12,
     dimensions: [
       { dimension: 'writing', score: 48 },

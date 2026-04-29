@@ -1,7 +1,7 @@
 /**
  * free-tiers.ts — 免费 tier 和低成本模型数据
  * 
- * 数据来源 & 校验日期 (2026-03-25):
+ * 数据来源 & 校验日期 (2026-04-01):
  *   Groq, Google Gemini, OpenRouter, DeepSeek 等官方文档
  */
 
@@ -27,67 +27,57 @@ export const FREE_TIERS: FreeTierInfo[] = [
   // Groq
   {
     provider: 'Groq',
-    model: 'Llama 3.1 8B',
-    modelId: 'llama-3.1-8b-instant',
+    model: 'Llama 4 Scout',
+    modelId: 'meta-llama/llama-4-scout-17b-16e-instruct',
     freeLimit: { requestsPerDay: 14400, tokensPerDay: 500000 },
     rateLimit: { rpm: 30, tpm: 6000 },
     requiresCreditCard: false,
     url: 'https://console.groq.com',
-    notes: '速度极快，适合轻量任务',
+    notes: '当前免费主推模型之一，适合通用 Agent 与轻中度推理任务',
   },
   {
     provider: 'Groq',
-    model: 'Llama 3.1 70B',
-    modelId: 'llama-3.1-70b-versatile',
+    model: 'Llama 3.3 70B',
+    modelId: 'llama-3.3-70b-versatile',
     freeLimit: { requestsPerDay: 14400, tokensPerDay: 500000 },
     rateLimit: { rpm: 30, tpm: 6000 },
     requiresCreditCard: false,
     url: 'https://console.groq.com',
-    notes: '速度快，适合中等复杂任务',
+    notes: '更强但略慢，适合中等复杂任务',
   },
 
   // Google Gemini
   {
     provider: 'Google',
-    model: 'Gemini 2.5 Flash-Lite',
-    modelId: 'gemini-2.5-flash-lite',
+    model: 'Gemini 3.1 Flash-Lite',
+    modelId: 'gemini-3.1-flash-lite',
     freeLimit: { requestsPerDay: 1000, tokensPerDay: 250000 },
     rateLimit: { rpm: 30, tpm: 250000 },
     requiresCreditCard: false,
     url: 'https://aistudio.google.com',
-    notes: '每天 1000 次请求，适合中频使用',
-  },
-  {
-    provider: 'Google',
-    model: 'Gemini 2.0 Flash',
-    modelId: 'gemini-2.0-flash',
-    freeLimit: { requestsPerDay: 1500 },
-    rateLimit: { rpm: 15 },
-    requiresCreditCard: false,
-    url: 'https://aistudio.google.com',
-    notes: '免费额度较高',
+    notes: 'Flash-Lite 仍有免费额度；Pro 模型免费层已于 2026-04-01 移除',
   },
 
   // OpenRouter 免费模型
   {
     provider: 'OpenRouter',
-    model: 'DeepSeek V3 (free)',
-    modelId: 'deepseek/deepseek-chat:free',
+    model: 'OpenRouter Free Router',
+    modelId: 'openrouter/free',
     freeLimit: { requestsPerDay: 200 },
     rateLimit: { rpm: 20 },
     requiresCreditCard: false,
     url: 'https://openrouter.ai',
-    notes: '充值 $10 后每天 1000 次',
+    notes: '自动路由到当前可用的免费模型池；充值 $10 后通常可升至 1000 req/day',
   },
   {
     provider: 'OpenRouter',
-    model: 'Llama 3.1 8B (free)',
-    modelId: 'meta-llama/llama-3.1-8b-instruct:free',
+    model: 'DeepSeek R1 (free)',
+    modelId: 'deepseek/deepseek-r1:free',
     freeLimit: { requestsPerDay: 200 },
     rateLimit: { rpm: 20 },
     requiresCreditCard: false,
     url: 'https://openrouter.ai',
-    notes: '免费额度有限',
+    notes: '如需固定某个 :free 模型，可直接锁定具体免费变体',
   },
 
   // DeepSeek 新用户
@@ -100,6 +90,18 @@ export const FREE_TIERS: FreeTierInfo[] = [
     requiresCreditCard: false,
     url: 'https://platform.deepseek.com',
     notes: '新用户赠送 500 万 tokens',
+  },
+
+  // Cerebras
+  {
+    provider: 'Cerebras',
+    model: 'Llama 3.3 70B',
+    modelId: 'llama-3.3-70b',
+    freeLimit: { tokensPerDay: 1000000 },
+    rateLimit: { rpm: 30 },
+    requiresCreditCard: false,
+    url: 'https://cloud.cerebras.ai',
+    notes: '官方免费层按 1M tokens/day 口径维护，适合大输出任务',
   },
 ];
 
@@ -130,18 +132,18 @@ export const LOW_COST_MODELS: LowCostModelInfo[] = [
   },
   {
     provider: 'Groq',
-    model: 'Llama 3.1 8B',
-    modelId: 'llama-3.1-8b-instant',
-    inputPrice: 0.05,
-    outputPrice: 0.08,
-    suitableFor: ['分类', '提取', '简单问答', '格式转换'],
-    notSuitableFor: ['复杂推理', '长文本生成', '专业领域'],
-    notes: '速度极快，适合轻量任务',
+    model: 'Llama 4 Scout',
+    modelId: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    inputPrice: 0.11,
+    outputPrice: 0.34,
+    suitableFor: ['分类', '提取', '简单问答', '格式转换', '通用 Agent'],
+    notSuitableFor: ['极高精度推理', '超长复杂规划'],
+    notes: '当前免费优先推荐，速度快且上下文更现代',
   },
   {
     provider: 'Groq',
-    model: 'Llama 3.1 70B',
-    modelId: 'llama-3.1-70b-versatile',
+    model: 'Llama 3.3 70B',
+    modelId: 'llama-3.3-70b-versatile',
     inputPrice: 0.59,
     outputPrice: 0.79,
     suitableFor: ['代码生成', '复杂分析', '多步推理'],
@@ -150,13 +152,13 @@ export const LOW_COST_MODELS: LowCostModelInfo[] = [
   },
   {
     provider: 'Google',
-    model: 'Gemini 2.5 Flash-Lite',
-    modelId: 'gemini-2.5-flash-lite',
-    inputPrice: 0.1,
+    model: 'Gemini 3.1 Flash-Lite',
+    modelId: 'gemini-3.1-flash-lite',
+    inputPrice: 0.25,
     outputPrice: 1.5,
     suitableFor: ['快速响应', '简单任务', '分类'],
     notSuitableFor: ['长文本生成', '复杂推理'],
-    notes: '输出价格较高，适合短输出任务',
+    notes: '免费层仍可用，但 Pro 模型免费层已移除',
   },
   {
     provider: 'Qwen',

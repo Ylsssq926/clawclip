@@ -50,31 +50,35 @@ const VERBOSE_OUTPUT_THRESHOLD = 1000;
 const CONTEXT_BLOAT_THRESHOLD = 1500;
 const MODEL_DATE_SUFFIX_RE = /-(?:\d{8}|\d{4}-\d{2}-\d{2})$/;
 const EXPENSIVE_MODEL_NAMES = new Set([
-  'gpt-5-4',
-  'gpt-5-4-pro',
-  'gpt-5-2',
-  'gpt-5-2-pro',
-  'gpt-5-1',
+  'gpt-5.5',
+  'gpt-5.5-pro',
+  'gpt-5.4',
+  'gpt-5.4-pro',
+  'gpt-5.2',
+  'gpt-5.2-pro',
+  'gpt-5.1',
   'gpt-5',
   'gpt-5-pro',
-  'gpt-4-1',
+  'gpt-4.1',
   'gpt-4-turbo',
   'gpt-4',
   'o3-pro',
   'o3',
   'o1',
-  'claude-opus-4-6',
-  'claude-opus-4-5',
-  'claude-opus-4-1',
+  'claude-opus-4.7',
+  'claude-opus-4.6',
+  'claude-opus-4.5',
+  'claude-opus-4.1',
   'claude-opus-4',
-  'claude-sonnet-4-6',
-  'claude-sonnet-4-5',
+  'claude-sonnet-4.6',
+  'claude-sonnet-4.5',
   'claude-sonnet-4',
-  'claude-3-7-sonnet',
-  'claude-3-5-sonnet',
+  'claude-3.7-sonnet',
+  'claude-3.5-sonnet',
   'claude-3-opus',
-  'gemini-3-1-pro',
-  'gemini-2-5-pro',
+  'gemini-3.1-pro',
+  'gemini-2.5-pro',
+  'deepseek-v4-pro',
 ]);
 
 function roundCost(value: number): number {
@@ -108,7 +112,7 @@ function estimateSeverity(estimatedWasteTokens: number, estimatedWasteCost: numb
 }
 
 function normalizeModelName(value: string): string {
-  return value.toLowerCase().replace(/[._\s]+/g, '-').replace(/:+/g, ':');
+  return value.toLowerCase().replace(/[_\s]+/g, '-').replace(/:+/g, ':');
 }
 
 function getModelNameVariants(value: string): string[] {

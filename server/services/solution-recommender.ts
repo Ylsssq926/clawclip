@@ -124,25 +124,25 @@ function buildSolutionDatabase(modelName?: string): Solution[] {
       id: 'groq-free',
       title: 'Switch to Groq (Free)',
       titleZh: '切换到 Groq（免费）',
-      description: 'Llama 3.1 8B on Groq: 500K tokens/day free, no credit card needed. Fastest inference available. Rate limit: 30 RPM.',
-      descriptionZh: 'Groq 上的 Llama 3.1 8B：每天 50 万 token 免费，无需信用卡，推理速度极快。速率限制：30 RPM。',
+      description: 'Llama 4 Scout on Groq: 500K tokens/day free, no credit card needed. Fast inference and better general-purpose quality than older 8B defaults.',
+      descriptionZh: 'Groq 上的 Llama 4 Scout：每天 50 万 token 免费，无需信用卡；比老的 8B 默认模型更现代，通用任务更稳。',
       type: 'free-tier',
       effort: 'low',
       savingsEstimate: '100%',
       freeTier: {
         provider: 'Groq',
-        model: 'llama-3.1-8b-instant',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         freeLimit: '500K tokens/day, 14,400 req/day',
         requiresCreditCard: false,
         url: 'https://console.groq.com',
         signupUrl: 'https://console.groq.com/keys',
-        notes: '速率限制 30 RPM',
-        lastVerified: '2026-04',
+        notes: '速率限制 30 RPM；也可切到 llama-3.3-70b-versatile',
+        lastVerified: '2026-04-01',
       },
       configSnippet: `# OpenAI-compatible endpoint
 OPENAI_BASE_URL=https://api.groq.com/openai/v1
 OPENAI_API_KEY=your_groq_key
-# Model: llama-3.1-8b-instant (fast, free)
+# Model: meta-llama/llama-4-scout-17b-16e-instruct (fast, free)
 # Or: llama-3.3-70b-versatile (smarter, still free)`,
       recommendationPriority: {
         'expensive-model': 1,
@@ -151,26 +151,27 @@ OPENAI_API_KEY=your_groq_key
     },
     {
       id: 'gemini-free',
-      title: 'Switch to Gemini Flash-Lite (Free)',
-      titleZh: '切换到 Gemini Flash-Lite（免费）',
-      description: 'Google Gemini 2.5 Flash-Lite: 1,000 req/day free, 250K tokens/day. No credit card.',
-      descriptionZh: 'Google Gemini 2.5 Flash-Lite：每天 1000 次请求免费，25 万 token，无需信用卡。',
+      title: 'Switch to Gemini 3.1 Flash-Lite (Free)',
+      titleZh: '切换到 Gemini 3.1 Flash-Lite（免费）',
+      description: 'Google Gemini 3.1 Flash-Lite: 1,000 req/day free, 250K tokens/day. No credit card. Note: Gemini Pro free tier was removed on 2026-04-01.',
+      descriptionZh: 'Google Gemini 3.1 Flash-Lite：每天 1000 次请求免费，25 万 token，无需信用卡。注意：Gemini Pro 免费层已于 2026-04-01 移除。',
       type: 'free-tier',
       effort: 'low',
       savingsEstimate: '100%',
       freeTier: {
         provider: 'Google',
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-3.1-flash-lite',
         freeLimit: '1,000 req/day, 250K tokens/day',
         requiresCreditCard: false,
         url: 'https://aistudio.google.com',
         signupUrl: 'https://aistudio.google.com/apikey',
-        lastVerified: '2026-04',
+        notes: 'Pro 模型不再有免费层，仅 Flash / Flash-Lite 保留免费额度',
+        lastVerified: '2026-04-01',
       },
       configSnippet: `# OpenAI-compatible via LiteLLM
 OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 OPENAI_API_KEY=your_gemini_key
-# Model: gemini-2.5-flash-lite-preview-06-17`,
+# Model: gemini-3.1-flash-lite`,
       recommendationPriority: {
         'expensive-model': 3,
       },
@@ -178,28 +179,29 @@ OPENAI_API_KEY=your_gemini_key
     },
     {
       id: 'openrouter-free',
-      title: 'Use OpenRouter Free Models',
-      titleZh: '使用 OpenRouter 免费模型',
-      description: '25+ free models via one API. DeepSeek V3, Llama, Qwen and more. No credit card for basic use.',
-      descriptionZh: '一个 API 访问 25+ 免费模型，包括 DeepSeek V3、Llama、Qwen 等，基础使用无需信用卡。',
+      title: 'Use OpenRouter Free Router',
+      titleZh: '使用 OpenRouter 免费路由',
+      description: 'Use OpenRouter free routing or pin a current :free model. This avoids hardcoding an outdated free model list that changes frequently.',
+      descriptionZh: '优先使用 OpenRouter 免费路由，或手动固定当前可用的 :free 模型，避免把经常变动的免费列表写死。',
       type: 'free-tier',
       effort: 'low',
       savingsEstimate: '100%',
       freeTier: {
         provider: 'OpenRouter',
-        model: 'deepseek/deepseek-chat:free',
+        model: 'openrouter/free',
         freeLimit: '200 req/day (free), 1000 req/day (after $10 deposit)',
         requiresCreditCard: false,
         url: 'https://openrouter.ai',
         signupUrl: 'https://openrouter.ai/keys',
-        lastVerified: '2026-04',
+        notes: '具体免费模型池请以 OpenRouter /models 或 free collection 为准',
+        lastVerified: '2026-04-01',
       },
       configSnippet: `# OpenAI-compatible
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_API_KEY=your_openrouter_key
-# Free models end with :free
-# e.g. deepseek/deepseek-chat:free
-#      meta-llama/llama-3.1-8b-instruct:free`,
+# Prefer the free router:
+# Model: openrouter/free
+# Or pin a specific free variant, e.g. deepseek/deepseek-r1:free`,
       recommendationPriority: {
         'expensive-model': 4,
       },
@@ -237,8 +239,8 @@ OPENAI_API_KEY=your_deepseek_key
       id: 'cerebras-free',
       title: 'Switch to Cerebras (Free)',
       titleZh: '切换到 Cerebras（免费）',
-      description: 'Llama 3.3 70B: 1M tokens/day free. Fastest inference (2000+ tok/s). 30 RPM, no credit card.',
-      descriptionZh: 'Llama 3.3 70B：每天 100 万 token 免费，推理速度极快（2000+ tok/s），30 RPM，无需信用卡。',
+      description: 'Llama 3.3 70B: 1M tokens/day free. Fast inference, no credit card, good for heavier output workloads.',
+      descriptionZh: 'Llama 3.3 70B：每天 100 万 token 免费，无需信用卡，适合输出更重的任务。',
       type: 'free-tier',
       effort: 'low',
       savingsEstimate: '100%',
@@ -249,13 +251,13 @@ OPENAI_API_KEY=your_deepseek_key
         requiresCreditCard: false,
         url: 'https://cloud.cerebras.ai',
         signupUrl: 'https://cloud.cerebras.ai/register',
-        notes: 'Email verification required. Llama 3.3 70B only.',
-        lastVerified: '2026-04',
+        notes: 'Email verification required. Free tier baseline maintained at 1M tokens/day.',
+        lastVerified: '2026-04-01',
       },
       configSnippet: `# OpenAI-compatible
 OPENAI_BASE_URL=https://api.cerebras.ai/v1
 OPENAI_API_KEY=your_cerebras_key
-# Model: llama-3.3-70b (1M tokens/day free, 2000+ tok/s)`,
+# Model: llama-3.3-70b (1M tokens/day free)`,
       recommendationPriority: {
         'expensive-model': 2,
       },

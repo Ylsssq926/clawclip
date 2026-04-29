@@ -199,7 +199,7 @@ export const DEMO_SESSIONS: SessionReplay[] = [
     ],
   }),
 
-  /* 2 — Python 性能（code-helper / gpt-4o-mini）总时长约 105s */
+  /* 2 — Python 性能（code-helper / gpt-5.4-mini）总时长约 105s */
   finalizeReplay({
     meta: {
       id: encodeURIComponent('demo/code-helper'),
@@ -276,12 +276,12 @@ export const DEMO_SESSIONS: SessionReplay[] = [
           cost: 0,
           durationMs: 0,
         },
-        {
-          index: 5,
-          timestamp: demoTime(DEMO_BASE_TS.codeHelper, 68_000),
-          type: 'response' as const,
-          model: 'gpt-4o-mini',
-          content: `这段代码在大列表上慢，主要来自 **三类性能瓶颈**：
+      {
+        index: 5,
+        timestamp: demoTime(DEMO_BASE_TS.codeHelper, 68_000),
+        type: 'response' as const,
+        model: 'gpt-5.4-mini',
+        content: `这段代码在大列表上慢，主要来自 **三类性能瓶颈**：
 
 **1）O(n²) 的双重循环**  
 对所有 \`(i, j)\` 对做比较，元素量上来后比较次数爆炸式增长。
@@ -335,7 +335,7 @@ def find_duplicates_set(items):
     })(),
   }),
 
-  /* 3 — 竞品分析（analyst / gpt-4o）总时长约 180s */
+  /* 3 — 竞品分析（analyst / gpt-5.4）总时长约 180s */
   finalizeReplay({
     meta: {
       id: encodeURIComponent('demo/analyst'),
@@ -700,7 +700,7 @@ Kubernetes 调度器（kube-scheduler）会根据 **资源请求（requests）**
     ],
   }),
 
-  /* 6 — React Debug（debugger / gpt-4o）总时长约 95s，展示重试循环浪费 */
+  /* 6 — React Debug（debugger / gpt-5.4）总时长约 95s，展示重试循环浪费 */
   finalizeReplay({
     meta: {
       id: encodeURIComponent('demo/debugger'),
@@ -975,7 +975,7 @@ const [items, setItems] = useState<string[]>([]);
         index: 1,
         timestamp: demoTime(DEMO_BASE_TS.newsBot, 6_000),
         type: 'thinking',
-        model: 'gemini-3.1-flash',
+        model: 'gemini-3-flash',
         content:
           '做两轮检索：一轮泛搜「AI 行业新闻 today」,一轮聚焦「大模型最新发布 2026」,合并去重后挑 5 条,统一标题+一两句摘要+来源名。',
         inputTokens: 290,
@@ -987,7 +987,7 @@ const [items, setItems] = useState<string[]>([]);
         index: 2,
         timestamp: demoTime(DEMO_BASE_TS.newsBot, 18_000),
         type: 'tool_call',
-        model: 'gemini-3.1-flash',
+        model: 'gemini-3-flash',
         content: '',
         toolName: 'web_search',
         toolInput: JSON.stringify({ query: 'AI 行业新闻 today', freshness: 'day', lang: 'zh' }),
@@ -1017,7 +1017,7 @@ const [items, setItems] = useState<string[]>([]);
         index: 4,
         timestamp: demoTime(DEMO_BASE_TS.newsBot, 52_000),
         type: 'tool_call',
-        model: 'gemini-3.1-flash',
+        model: 'gemini-3-flash',
         content: '',
         toolName: 'web_search',
         toolInput: JSON.stringify({ query: '大模型最新发布 2026', max_results: 6 }),
@@ -1046,7 +1046,7 @@ const [items, setItems] = useState<string[]>([]);
         index: 6,
         timestamp: demoTime(DEMO_BASE_TS.newsBot, 120_000),
         type: 'response',
-        model: 'gemini-3.1-flash',
+        model: 'gemini-3-flash',
         content: `## 今日 AI 行业热点速报（简报）
 
 **1. 多国监管机构讨论生成式 AI 透明义务草案**  
@@ -1080,7 +1080,7 @@ const [items, setItems] = useState<string[]>([]);
     ],
   }),
 
-  /* 8 — 邮件翻译（email-helper / gpt-4o）总时长约 18s，展示贵模型干轻活 */
+  /* 8 — 邮件翻译（email-helper / gpt-5.4）总时长约 18s，展示贵模型干轻活 */
   finalizeReplay({
     meta: {
       id: encodeURIComponent('demo/email-helper'),

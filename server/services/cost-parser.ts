@@ -57,9 +57,9 @@ export interface FrameworkBreakdownEntry {
 }
 
 const ALT_TIERS: { threshold: number; models: string[] }[] = [
-  { threshold: 50, models: ['gpt-5.4-mini', 'claude-sonnet-4.6', 'gemini-2.5-pro'] },
-  { threshold: 5, models: ['gpt-5-mini', 'deepseek-chat', 'gemini-2.5-flash'] },
-  { threshold: 1, models: ['deepseek-chat', 'qwen-turbo', 'yi-lightning'] },
+  { threshold: 50, models: ['gpt-5.4-mini', 'claude-sonnet-4.6', 'gemini-3.1-pro'] },
+  { threshold: 5, models: ['gpt-4.1-mini', 'deepseek-chat', 'gemini-3-flash'] },
+  { threshold: 1, models: ['deepseek-chat', 'qwen-turbo', 'gemini-3.1-flash-lite', 'yi-lightning'] },
 ];
 
 const LARGE_LOG_FILE_BYTES = 50 * 1024 * 1024;
@@ -181,9 +181,9 @@ export function suggestCheaperAlternatives(
       });
     }
 
-    // Groq Llama 70B
-    const groq70bDetail = resolveModelDetail(pricing.detailed, 'llama-3.1-70b-versatile');
-    const groq70bInfo = LOW_COST_MODELS.find(m => m.modelId === 'llama-3.1-70b-versatile');
+    // Groq Llama 3.3 70B
+    const groq70bDetail = resolveModelDetail(pricing.detailed, 'llama-3.3-70b-versatile');
+    const groq70bInfo = LOW_COST_MODELS.find(m => m.modelId === 'llama-3.3-70b-versatile');
     if (groq70bInfo) {
       const savingsPercent = ((currentDetail.output - groq70bDetail.output) / currentDetail.output) * 100;
       alternatives.push({
@@ -201,21 +201,21 @@ export function suggestCheaperAlternatives(
 
   // 如果是轻量任务，额外推荐免费模型
   if (isLightweightTask(taskType)) {
-    const groq8bDetail = resolveModelDetail(pricing.detailed, 'llama-3.1-8b-instant');
-    const groq8bInfo = LOW_COST_MODELS.find(m => m.modelId === 'llama-3.1-8b-instant');
-    const groq8bFreeTier = FREE_TIERS.find(f => f.modelId === 'llama-3.1-8b-instant');
-    if (groq8bInfo) {
-      const savingsPercent = ((currentDetail.output - groq8bDetail.output) / currentDetail.output) * 100;
+    const groqScoutDetail = resolveModelDetail(pricing.detailed, 'meta-llama/llama-4-scout-17b-16e-instruct');
+    const groqScoutInfo = LOW_COST_MODELS.find(m => m.modelId === 'meta-llama/llama-4-scout-17b-16e-instruct');
+    const groqScoutFreeTier = FREE_TIERS.find(f => f.modelId === 'meta-llama/llama-4-scout-17b-16e-instruct');
+    if (groqScoutInfo) {
+      const savingsPercent = ((currentDetail.output - groqScoutDetail.output) / currentDetail.output) * 100;
       alternatives.push({
-        model: groq8bInfo.model,
-        provider: groq8bInfo.provider,
-        inputPrice: groq8bDetail.input,
-        outputPrice: groq8bDetail.output,
+        model: groqScoutInfo.model,
+        provider: groqScoutInfo.provider,
+        inputPrice: groqScoutDetail.input,
+        outputPrice: groqScoutDetail.output,
         savingsPercent: Math.round(savingsPercent),
-        freeTier: groq8bFreeTier,
-        suitableFor: groq8bInfo.suitableFor,
-        notSuitableFor: groq8bInfo.notSuitableFor,
-        notes: groq8bInfo.notes,
+        freeTier: groqScoutFreeTier,
+        suitableFor: groqScoutInfo.suitableFor,
+        notSuitableFor: groqScoutInfo.notSuitableFor,
+        notes: groqScoutInfo.notes,
       });
     }
   }
@@ -389,10 +389,10 @@ function getSavingSafetyRank(reasonType: SavingReasonType | undefined): number {
 export class CostParser {
   private static readonly CHEAP_MODELS = [
     'deepseek-chat', 'deepseek-coder', 'qwen-turbo', 'qwen3.5-flash',
-    'gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5.4-nano',
-    'claude-3.5-haiku', 'claude-3-haiku', 'claude-haiku-4.5',
-    'gemini-2.5-flash-lite', 'gemini-2.0-flash',
-    'glm-4-flash', 'glm-4.5-flash', 'glm-4.7-flash',
+    'gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5.4-mini', 'gpt-5.4-nano',
+    'claude-haiku-3.5', 'claude-3.5-haiku', 'claude-3-haiku', 'claude-haiku-4.5',
+    'gemini-3-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.0-flash',
+    'meta-llama/llama-4-scout-17b-16e-instruct', 'glm-4-flash', 'glm-4.5-flash', 'glm-4.7-flash',
     'minimax-01', 'yi-lightning', 'doubao-lite', 'hunyuan-lite',
   ];
 

@@ -341,13 +341,19 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
           const firstToolDiff = toolDiffs[0]
           const savedCost = Math.abs(firstToolDiff.sessionB.cost - firstToolDiff.sessionA.cost)
           if (savedCost > 0.0001) {
-            costExplanation += ` 主要差异在第 ${firstToolDiff.stepIndex + 1} 步的工具选择，节省了 $${savedCost.toFixed(4)}。`
+            costExplanation += ` ${t('compare.conclusion.toolChoiceSavings', {
+              step: firstToolDiff.stepIndex + 1,
+              saving: savedCost.toFixed(4),
+            })}`
           }
         } else if (modelDiffs.length > 0) {
           const firstModelDiff = modelDiffs[0]
           const savedCost = Math.abs(firstModelDiff.sessionB.cost - firstModelDiff.sessionA.cost)
           if (savedCost > 0.0001) {
-            costExplanation += ` 主要差异在第 ${firstModelDiff.stepIndex + 1} 步的模型选择，节省了 $${savedCost.toFixed(4)}。`
+            costExplanation += ` ${t('compare.conclusion.modelChoiceSavings', {
+              step: firstModelDiff.stepIndex + 1,
+              saving: savedCost.toFixed(4),
+            })}`
           }
         }
       }
@@ -651,8 +657,8 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                                 type="button"
                                 onClick={() => onOpenReplaySession(s.id)}
                                 className="inline-flex shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
-                                title={locale === 'zh' ? '打开回放' : 'Open replay'}
-                                aria-label={locale === 'zh' ? '打开回放' : 'Open replay'}
+                                title={t('compare.openReplay')}
+                                aria-label={t('compare.openReplay')}
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </button>
@@ -770,19 +776,19 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                         className={cn('rounded-xl border px-4 py-3 text-sm', colorClass)}
                       >
                         <div className="flex items-start justify-between gap-3 mb-2">
-                          <span className="font-medium text-slate-700">步骤 {diff.stepIndex + 1}</span>
+                          <span className="font-medium text-slate-700">{t('compare.decision.step', { n: diff.stepIndex + 1 })}</span>
                           <span className="text-xs text-slate-500 uppercase tracking-wide">{typeLabel}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-xs">
                           <div>
-                            <div className="text-slate-500 mb-1">会话 A</div>
+                            <div className="text-slate-500 mb-1">{t('compare.decision.sessionA')}</div>
                             <div className="text-slate-800 font-medium">{diff.sessionA.value}</div>
                             {diff.sessionA.cost > 0 && (
                               <div className="text-slate-500 mt-0.5">${diff.sessionA.cost.toFixed(4)}</div>
                             )}
                           </div>
                           <div>
-                            <div className="text-slate-500 mb-1">会话 B</div>
+                            <div className="text-slate-500 mb-1">{t('compare.decision.sessionB')}</div>
                             <div className="text-slate-800 font-medium">{diff.sessionB.value}</div>
                             {diff.sessionB.cost > 0 && (
                               <div className="text-slate-500 mt-0.5">${diff.sessionB.cost.toFixed(4)}</div>
@@ -791,7 +797,7 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                         </div>
                         {Math.abs(costDiff) > 0.0001 && (
                           <div className={cn('mt-2 text-xs', isBetter ? 'text-emerald-600' : isWorse ? 'text-rose-600' : 'text-slate-600')}>
-                            成本差异: {costDiff > 0 ? '+' : ''}${costDiff.toFixed(4)}
+                            {t('compare.decision.costDelta', { delta: `${costDiff > 0 ? '+' : ''}$${costDiff.toFixed(4)}` })}
                           </div>
                         )}
                       </div>

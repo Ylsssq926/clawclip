@@ -107,6 +107,17 @@ function readUsageLogContent(filePath: string): string {
   return readUtf8TailLines(filePath, LARGE_LOG_FILE_TAIL_LINES, stat.size);
 }
 
+function readUsageNumber(records: Array<Record<string, unknown> | undefined>, aliases: string[]): number {
+  for (const record of records) {
+    if (!record) continue;
+    for (const alias of aliases) {
+      const value = Number(record[alias]);
+      if (Number.isFinite(value) && value > 0) return value;
+    }
+  }
+  return 0;
+}
+
 function suggestAlternativeDetailed(
   currentModel: string,
   data: ModelBreakdownEntry,
@@ -135,18 +146,14 @@ function suggestAlternativeDetailed(
   return null;
 }
 
-/**
- * 判断任务类型是否适合轻量模型
- */
+/** 判断任务类型是否适合轻量模型。 */
 function isLightweightTask(taskType?: string): boolean {
   if (!taskType) return false;
   const lightweightTypes = ['classification', 'extraction', 'format', 'simple'];
   return lightweightTypes.some(type => taskType.toLowerCase().includes(type));
 }
 
-/**
- * 推荐更便宜的替代方案
- */
+/** 推荐更便宜的替代方案。 */
 export function suggestCheaperAlternatives(
   currentModel: string,
   taskType?: string,
@@ -162,9 +169,7 @@ export function suggestCheaperAlternatives(
     currentModelLower.includes('claude-opus') ||
     currentModelLower.includes('claude-sonnet');
 
-  // 如果是贵模型，推荐 DeepSeek 和 Groq
   if (isExpensiveModel) {
-    // DeepSeek V3.2
     const deepseekDetail = resolveModelDetail(pricing.detailed, 'deepseek-chat');
     const deepseekInfo = LOW_COST_MODELS.find(m => m.modelId === 'deepseek-chat');
     if (deepseekInfo) {
@@ -181,7 +186,6 @@ export function suggestCheaperAlternatives(
       });
     }
 
-    // Groq Llama 3.3 70B
     const groq70bDetail = resolveModelDetail(pricing.detailed, 'llama-3.3-70b-versatile');
     const groq70bInfo = LOW_COST_MODELS.find(m => m.modelId === 'llama-3.3-70b-versatile');
     if (groq70bInfo) {
@@ -199,7 +203,6 @@ export function suggestCheaperAlternatives(
     }
   }
 
-  // 如果是轻量任务，额外推荐免费模型
   if (isLightweightTask(taskType)) {
     const groqScoutDetail = resolveModelDetail(pricing.detailed, 'meta-llama/llama-4-scout-17b-16e-instruct');
     const groqScoutInfo = LOW_COST_MODELS.find(m => m.modelId === 'meta-llama/llama-4-scout-17b-16e-instruct');
@@ -220,7 +223,6 @@ export function suggestCheaperAlternatives(
     }
   }
 
-  // 按节省百分比排序
   return alternatives.sort((a, b) => b.savingsPercent - a.savingsPercent);
 }
 
@@ -316,6 +318,7 @@ interface SessionUsageSummary {
   cost: number;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
   modelCosts: Map<string, number>;
 }
@@ -327,6 +330,7 @@ interface SessionModelUsageSummary {
   cost: number;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
 }
 
@@ -455,7 +459,8 @@ export class CostParser {
           model,
           inputTokens: step.inputTokens,
           outputTokens: step.outputTokens,
-          cost: repriceStep(step.model, step.inputTokens, step.outputTokens, pricing),
+          cacheReadTokens: step.cacheReadTokens,
+          cost: repriceStep(step.model, step.inputTokens, step.outputTokens, pricing, step.cacheReadTokens),
           sessionId: replay.meta.id,
           usageSource,
         });
@@ -670,8 +675,14 @@ export class CostParser {
           const outputTokens = Number(
             usage.output_tokens ?? usage.completion_tokens ?? usage.outputTokens ?? usage.completionTokens ?? 0,
           );
+          const promptDetails = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+          const inputDetails = (usage.input_tokens_details ?? usage.input_token_details) as Record<string, unknown> | undefined;
+          const cacheReadTokens = readUsageNumber(
+            [usage, promptDetails, inputDetails],
+            ['cache_read_tokens', 'cached_tokens', 'cacheReadTokens', 'cachedTokens'],
+          );
           if (!Number.isFinite(inputTokens) || !Number.isFinite(outputTokens)) continue;
-          const cost = repriceStep(model, inputTokens, outputTokens, pricing);
+          const cost = repriceStep(model, inputTokens, outputTokens, pricing, cacheReadTokens);
 
           const rawTs = parsed.timestamp ?? parsed.created_at ?? parsed.createdAt;
           let ts = new Date();
@@ -692,6 +703,7 @@ export class CostParser {
             model,
             inputTokens,
             outputTokens,
+            cacheReadTokens: cacheReadTokens > 0 ? cacheReadTokens : undefined,
             cost,
             sessionId: (parsed.session_id as string) || 'unknown',
             usageSource: 'log',
@@ -713,7 +725,7 @@ export class CostParser {
 
   private getRepricedTotalCost(usages: TokenUsage[], pricing: PricingSnapshot): number {
     return usages.reduce(
-      (sum, usage) => sum + repriceStep(usage.model, usage.inputTokens, usage.outputTokens, pricing),
+      (sum, usage) => sum + repriceStep(usage.model, usage.inputTokens, usage.outputTokens, pricing, usage.cacheReadTokens),
       0,
     );
   }
@@ -918,8 +930,8 @@ export class CostParser {
           sessionId;
         const provider = replayMeta?.storeProvider?.trim() || null;
         const preferredModel = replayMeta?.storeModel?.trim() || null;
-        const currentCost = repriceStep(model || undefined, inputTokens, outputTokens, currentPricing);
-        const baselineCost = repriceStep(model || undefined, inputTokens, outputTokens, baselinePricing);
+        const currentCost = repriceStep(model || undefined, inputTokens, outputTokens, currentPricing, usage.cacheReadTokens);
+        const baselineCost = repriceStep(model || undefined, inputTokens, outputTokens, baselinePricing, usage.cacheReadTokens);
 
         const existing = sessionMap.get(sessionId);
         if (existing) {
@@ -1381,6 +1393,7 @@ export class CostParser {
         sessionSummary.cost += usage.cost;
         sessionSummary.inputTokens += usage.inputTokens;
         sessionSummary.outputTokens += usage.outputTokens;
+        sessionSummary.cacheReadTokens += usage.cacheReadTokens ?? 0;
         sessionSummary.totalTokens += totalTokens;
         sessionSummary.modelCosts.set(usage.model, (sessionSummary.modelCosts.get(usage.model) ?? 0) + usage.cost);
       } else {
@@ -1390,6 +1403,7 @@ export class CostParser {
           cost: usage.cost,
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens,
+          cacheReadTokens: usage.cacheReadTokens ?? 0,
           totalTokens,
           modelCosts: new Map([[usage.model, usage.cost]]),
         });
@@ -1401,6 +1415,7 @@ export class CostParser {
         modelSessionSummary.cost += usage.cost;
         modelSessionSummary.inputTokens += usage.inputTokens;
         modelSessionSummary.outputTokens += usage.outputTokens;
+        modelSessionSummary.cacheReadTokens += usage.cacheReadTokens ?? 0;
         modelSessionSummary.totalTokens += totalTokens;
       } else {
         modelSessionSummaries.set(modelSessionKey, {
@@ -1410,6 +1425,7 @@ export class CostParser {
           cost: usage.cost,
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens,
+          cacheReadTokens: usage.cacheReadTokens ?? 0,
           totalTokens,
         });
       }
@@ -1540,7 +1556,7 @@ export class CostParser {
       const currentCost = roundSuggestionMoney(scopedUsage?.cost ?? data.cost);
       const alternativeCost = roundSuggestionMoney(
         scopedUsage
-          ? repriceStep(alternative.name, scopedUsage.inputTokens, scopedUsage.outputTokens, pricing)
+          ? repriceStep(alternative.name, scopedUsage.inputTokens, scopedUsage.outputTokens, pricing, scopedUsage.cacheReadTokens)
           : alternative.cost,
       );
       const saving = roundSuggestionMoney(Math.max(currentCost - alternativeCost, 0));

@@ -198,6 +198,128 @@ describe('P1 regressions', () => {
     }
   });
 
+  it('uses Pi envelope inner timestamp and cached token details when parsing usage', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'clawclip-session-parser-'));
+    const agentsDir = path.join(tempRoot, 'agents');
+    const sessionsDir = path.join(agentsDir, 'test-agent', 'sessions');
+
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'cached-usage.jsonl'),
+      [
+        JSON.stringify({
+          type: 'message',
+          message: {
+            role: 'assistant',
+            timestamp: '2026-03-18T08:12:34.000Z',
+            model: 'gpt-4o',
+            content: 'cached response',
+            usage: {
+              prompt_tokens: 1000,
+              completion_tokens: 100,
+              prompt_tokens_details: { cached_tokens: 800 },
+            },
+          },
+        }),
+      ].join('\n'),
+      'utf-8',
+    );
+
+    try {
+      vi.spyOn(agentDataRoot, 'getLobsterDataRoots').mockReturnValue([
+        {
+          id: 'env-0',
+          label: 'temp-root',
+          homeDir: tempRoot,
+          agentsDir,
+        },
+      ]);
+      vi.spyOn(hermesParser, 'loadReplays').mockReturnValue([]);
+
+      const replays = new SessionParser().getRealReplays();
+      expect(replays).toHaveLength(1);
+      const step = replays[0]?.steps[0];
+
+      expect(step?.timestamp.toISOString()).toBe('2026-03-18T08:12:34.000Z');
+      expect(step?.inputTokens).toBe(1000);
+      expect(step?.outputTokens).toBe(100);
+      expect(step?.cacheReadTokens).toBe(800);
+      expect(step?.cost).toBeCloseTo(0.0025, 10);
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('parses role and tool calls from choices message responses', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'clawclip-session-parser-'));
+    const agentsDir = path.join(tempRoot, 'agents');
+    const sessionsDir = path.join(agentsDir, 'test-agent', 'sessions');
+
+    fs.mkdirSync(sessionsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessionsDir, 'choices-tool-calls.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-03-18T08:00:00.000Z',
+          model: 'gpt-4o-mini',
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: 'I will inspect the file.',
+                tool_calls: [
+                  {
+                    id: 'call-read',
+                    type: 'function',
+                    function: {
+                      name: 'read_file',
+                      arguments: JSON.stringify({ path: 'src/App.tsx' }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+          usage: { prompt_tokens: 120, completion_tokens: 30 },
+        }),
+      ].join('\n'),
+      'utf-8',
+    );
+
+    try {
+      vi.spyOn(agentDataRoot, 'getLobsterDataRoots').mockReturnValue([
+        {
+          id: 'env-0',
+          label: 'temp-root',
+          homeDir: tempRoot,
+          agentsDir,
+        },
+      ]);
+      vi.spyOn(hermesParser, 'loadReplays').mockReturnValue([]);
+
+      const replays = new SessionParser().getRealReplays();
+      expect(replays).toHaveLength(1);
+      expect(replays[0]?.steps.map(step => step.type)).toEqual(['response', 'tool_call']);
+      expect(replays[0]?.steps[0]).toMatchObject({
+        type: 'response',
+        content: 'I will inspect the file.',
+        model: 'gpt-4o-mini',
+        inputTokens: 120,
+        outputTokens: 30,
+      });
+      expect(replays[0]?.steps[1]).toMatchObject({
+        type: 'tool_call',
+        toolName: 'read_file',
+        toolCallId: 'call-read',
+        toolInput: JSON.stringify({ path: 'src/App.tsx' }),
+        inputTokens: 0,
+        outputTokens: 0,
+      });
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('skips retry-loop diagnostics for low-confidence search/open_url cycles', () => {
     const steps: SessionStep[] = [
       makeStep({

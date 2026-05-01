@@ -270,6 +270,186 @@ interface TokenWasteReport {
   diagnostics: TokenWasteDiagnostic[]
 }
 
+type CostAdvisorRiskLevel = 'low' | 'medium' | 'high'
+type CostAdvisorConfidence = 'low' | 'medium' | 'high'
+
+interface GeneratedAdvisorConfig {
+  runtime: 'openclaw' | 'zeroclaw'
+  preset: string
+  presetName: string
+  presetNameZh: string
+  description: string
+  descriptionZh: string
+  estimatedSavings: string
+  configFile: {
+    path: string
+    content: string
+    format: 'json' | 'toml'
+  }
+}
+
+interface CostAdvisorAction {
+  id: string
+  type: SavingReasonType
+  title: string
+  titleZh: string
+  reason: string
+  reasonZh: string
+  nextStep: string
+  nextStepZh: string
+  guardrail: string
+  guardrailZh: string
+  evidence: string[]
+  estimatedSavingsUsd: number
+  estimatedSavingsPercent: number
+  riskLevel: CostAdvisorRiskLevel
+  priority: CostAdvisorConfidence
+  currentModel?: string
+  alternativeModel?: string
+  sessionId?: string
+  sessionLabel?: string
+  relatedSolutions: Solution[]
+  implementation: {
+    steps: string[]
+    stepsZh: string[]
+    configs: {
+      openclaw: GeneratedAdvisorConfig
+      zeroclaw: GeneratedAdvisorConfig
+    }
+  }
+  verifyWith: {
+    route: 'compare' | 'benchmark' | 'replay'
+    label: string
+    labelZh: string
+    sessionId?: string
+  }
+}
+
+interface CostAdvisorPlan {
+  summary: {
+    totalCost: number
+    totalTokens: number
+    estimatedSavingsUsd: number
+    estimatedSavingsPercent: number
+    confidence: CostAdvisorConfidence
+    actionCount: number
+    dataMode: 'demo' | 'real' | 'unknown'
+  }
+  primaryAction: CostAdvisorAction | null
+  secondaryActions: CostAdvisorAction[]
+  diagnostics: TokenWasteDiagnostic[]
+}
+
+function getCostAdvisorCopy(locale: Locale) {
+  if (locale === 'zh') {
+    return {
+      eyebrow: '30 秒省钱计划',
+      title: '现在最该先执行这一步',
+      subtitle: '不再只看图表：这里把浪费原因、预计节省、风险、配置片段和验证入口压成一个可执行方案。',
+      noPlanTitle: '还没有明确的省钱动作',
+      noPlanBody: '先继续跑几条真实会话；一旦出现重复重试、上下文膨胀或高价模型误用，这里会直接给出第一步。',
+      estimatedSave: '预计节省',
+      confidence: '置信度',
+      risk: '风险',
+      evidence: '证据',
+      topWaste: '最浪费的 3 个原因',
+      nextStep: '先改这里',
+      guardrail: '风险与护栏',
+      config: '配置片段',
+      verify: '验证入口',
+      copy: '复制配置',
+      copied: '已复制',
+      openclaw: 'OpenClaw',
+      route: '路线',
+      dataMode: {
+        demo: 'Demo 数据',
+        real: '真实数据',
+        unknown: '等待数据',
+      },
+      riskLabels: {
+        low: '低风险',
+        medium: '中风险',
+        high: '高风险',
+      },
+      confidenceLabels: {
+        low: '低',
+        medium: '中',
+        high: '高',
+      },
+      secondaryTitle: '备选动作',
+    }
+  }
+
+  return {
+    eyebrow: '30-second savings plan',
+    title: 'Do this first to cut spend',
+    subtitle: 'No more chart-first hunting: this turns waste reasons, savings, risk, config, and verification into one executable plan.',
+    noPlanTitle: 'No clear savings action yet',
+    noPlanBody: 'Run a few more real sessions. Once retry loops, context bloat, or premium-model misuse appear, the first action will show here.',
+    estimatedSave: 'Est. savings',
+    confidence: 'Confidence',
+    risk: 'Risk',
+    evidence: 'Evidence',
+    topWaste: 'Top 3 waste reasons',
+    nextStep: 'Change this first',
+    guardrail: 'Risk guardrail',
+    config: 'Config snippet',
+    verify: 'Verify with',
+    copy: 'Copy config',
+    copied: 'Copied',
+    openclaw: 'OpenClaw',
+    route: 'Route',
+    dataMode: {
+      demo: 'Demo data',
+      real: 'Real data',
+      unknown: 'Waiting for data',
+    },
+    riskLabels: {
+      low: 'Low risk',
+      medium: 'Medium risk',
+      high: 'High risk',
+    },
+    confidenceLabels: {
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High',
+    },
+    secondaryTitle: 'Backup actions',
+  }
+}
+
+function getAdvisorActionTitle(action: CostAdvisorAction, locale: Locale): string {
+  return locale === 'zh' ? action.titleZh : action.title
+}
+
+function getAdvisorActionReason(action: CostAdvisorAction, locale: Locale): string {
+  return locale === 'zh' ? action.reasonZh : action.reason
+}
+
+function getAdvisorActionNextStep(action: CostAdvisorAction, locale: Locale): string {
+  return locale === 'zh' ? action.nextStepZh : action.nextStep
+}
+
+function getAdvisorActionGuardrail(action: CostAdvisorAction, locale: Locale): string {
+  return locale === 'zh' ? action.guardrailZh : action.guardrail
+}
+
+function getAdvisorVerifyLabel(action: CostAdvisorAction, locale: Locale): string {
+  return locale === 'zh' ? action.verifyWith.labelZh : action.verifyWith.label
+}
+
+function getAdvisorRiskClass(risk: CostAdvisorRiskLevel): string {
+  switch (risk) {
+    case 'high':
+      return 'border-red-200 bg-red-50 text-red-600'
+    case 'medium':
+      return 'border-amber-200 bg-amber-50 text-amber-700'
+    case 'low':
+    default:
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  }
+}
+
 function formatWasteCost(value: number): string {
   if (value >= 1) return value.toFixed(2)
   if (value >= 0.1) return value.toFixed(3)
@@ -637,6 +817,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   const [insights, setInsights] = useState<CostInsight[]>([])
   const [savings, setSavings] = useState<SavingsReport | null>(null)
   const [tokenWaste, setTokenWaste] = useState<TokenWasteReport | null>(null)
+  const [advisorPlan, setAdvisorPlan] = useState<CostAdvisorPlan | null>(null)
   const [modelBreakdown, setModelBreakdown] = useState<ModelBreakdown>({})
   const [frameworkBreakdownRows, setFrameworkBreakdownRows] = useState<FrameworkBreakdownRow[]>([])
   const [modelValueRows, setModelValueRows] = useState<ModelValueRow[]>([])
@@ -672,6 +853,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
         apiGet<CostInsight[]>(`/api/cost/insights?days=${days}`).catch(() => [] as CostInsight[]),
         apiGetSafe<SavingsReport>(`/api/cost/savings?days=${days}`),
         apiGetSafe<TokenWasteReport>(`/api/analytics/token-waste?days=${days}`),
+        apiGetSafe<CostAdvisorPlan>(`/api/cost-advisor/plan?days=${days}`),
         apiGetSafe<ModelBreakdown>(`/api/cost/models?days=${days}`),
         apiGetSafe<Array<{ source: string; totalCost: number; totalTokens: number; sessionCount: number }>>(`/api/cost/frameworks?days=${days}`),
         apiGetSafe<ModelValueReport>(`/api/analytics/model-value?days=${days}`),
@@ -686,10 +868,11 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
       const ins = results[5].status === 'fulfilled' ? results[5].value : []
       const sav = results[6].status === 'fulfilled' ? results[6].value : null
       const waste = results[7].status === 'fulfilled' ? results[7].value : null
-      const models = results[8].status === 'fulfilled' ? results[8].value : null
-      const frameworks = results[9].status === 'fulfilled' ? results[9].value : null
-      const modelValue = results[10].status === 'fulfilled' ? results[10].value : null
-      const budget = results[11].status === 'fulfilled' ? results[11].value : null
+      const advisor = results[8].status === 'fulfilled' ? results[8].value : null
+      const models = results[9].status === 'fulfilled' ? results[9].value : null
+      const frameworks = results[10].status === 'fulfilled' ? results[10].value : null
+      const modelValue = results[11].status === 'fulfilled' ? results[11].value : null
+      const budget = results[12].status === 'fulfilled' ? results[12].value : null
 
       const normalizedModels: ModelBreakdown = {}
       if (models && typeof models === 'object' && !Array.isArray(models)) {
@@ -733,6 +916,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
       setInsights(Array.isArray(ins) ? ins : [])
       setSavings(sav)
       setTokenWaste(waste?.summary ? waste : null)
+      setAdvisorPlan(advisor?.summary ? advisor : null)
       setModelBreakdown(normalizedModels)
       setFrameworkBreakdownRows(normalizedFrameworks)
       setModelValueRows(
@@ -867,6 +1051,10 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   const wasteMetaText = tokenWaste
     ? `${fillTemplate(copy.tokenWaste.signals, { count: tokenWaste.summary.signals })}${tokenWaste.summary.usingDemo ? copy.tokenWaste.demoSuffix : ''}`
     : copy.tokenWaste.fallback
+  const advisorCopy = getCostAdvisorCopy(locale)
+  const primaryAdvisorAction = advisorPlan?.primaryAction ?? null
+  const advisorConfig = primaryAdvisorAction?.implementation.configs.openclaw ?? null
+  const advisorDiagnostics = advisorPlan?.diagnostics.slice(0, 3) ?? []
   const recommendedSolutions = summary?.recommendations?.slice(0, 3) ?? []
   const hasSwitchModelSuggestion = Boolean(
     savings?.suggestions.some(suggestion => (
@@ -963,6 +1151,17 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
       .catch(() => {})
   }
 
+  const handleAdvisorVerify = (action: CostAdvisorAction) => {
+    const replaySessionId = action.verifyWith.sessionId ?? action.sessionId
+    if (action.verifyWith.route === 'replay' && canOpenReplaySession(replaySessionId)) {
+      onOpenReplaySession(replaySessionId)
+      return
+    }
+    if (action.verifyWith.route === 'compare' || action.verifyWith.route === 'benchmark') {
+      onNavigate?.(action.verifyWith.route)
+    }
+  }
+
   const TrendIcon = summary?.trend === 'up' ? TrendingUp : summary?.trend === 'down' ? TrendingDown : Minus
   const trendColor = summary?.trend === 'up' ? 'text-orange-700' : summary?.trend === 'down' ? 'text-[#3b82c4]' : 'text-slate-500'
   const overviewCardClass = 'glass-raised rounded-2xl border border-surface-border p-6'
@@ -988,6 +1187,171 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   )
 
   const costMonitorSections: CostMonitorRenderableSection[] = []
+
+  if (advisorPlan) {
+    const action = primaryAdvisorAction
+    const config = advisorConfig
+    const advisorConfigCopyId = action ? `advisor-${action.id}` : 'advisor-config'
+    const isAdvisorConfigCopied = copiedSolutionId === advisorConfigCopyId
+    const replaySessionId = action?.verifyWith.sessionId ?? action?.sessionId
+    const canVerifyAdvisor = Boolean(action && (
+      action.verifyWith.route === 'replay'
+        ? canOpenReplaySession(replaySessionId)
+        : onNavigate
+    ))
+
+    costMonitorSections.push({
+      id: 'cost-advisor',
+      content: (
+        <div className="overflow-hidden rounded-2xl border border-[#3b82c4]/20 bg-gradient-to-br from-[#3b82c4]/10 via-white to-emerald-50 p-5 shadow-sm shadow-blue-900/5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-[#3b82c4]/20 bg-white/80 px-3 py-1 text-xs font-medium text-[#2f6fa8]">
+                  {advisorCopy.eyebrow}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs text-slate-600">
+                  {advisorCopy.dataMode[advisorPlan.summary.dataMode]}
+                </span>
+              </div>
+              <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-950">
+                {action ? getAdvisorActionTitle(action, locale) : advisorCopy.noPlanTitle}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {action ? getAdvisorActionReason(action, locale) : advisorCopy.noPlanBody}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-white/85 px-5 py-4 text-right shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">{advisorCopy.estimatedSave}</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums text-emerald-600">
+                -${formatWasteCost(advisorPlan.summary.estimatedSavingsUsd)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {advisorPlan.summary.estimatedSavingsPercent.toFixed(1)}% · {advisorCopy.confidence} {advisorCopy.confidenceLabels[advisorPlan.summary.confidence]}
+              </p>
+            </div>
+          </div>
+
+          {action ? (
+            <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 bg-white/85 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{advisorCopy.nextStep}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">{getAdvisorActionNextStep(action, locale)}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white/85 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-medium', getAdvisorRiskClass(action.riskLevel))}>
+                        {advisorCopy.riskLabels[action.riskLevel]}
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
+                        {advisorCopy.route}: {action.currentModel || '--'}{action.alternativeModel ? ` → ${action.alternativeModel}` : ''}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-slate-700">{getAdvisorActionGuardrail(action, locale)}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white/85 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{advisorCopy.topWaste}</p>
+                    <p className="text-xs text-slate-500">
+                      {advisorCopy.risk} · {advisorCopy.riskLabels[action.riskLevel]}
+                    </p>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    {(advisorDiagnostics.length > 0 ? advisorDiagnostics : tokenWaste?.diagnostics.slice(0, 3) ?? []).map((diagnostic, index) => (
+                      <div key={`${diagnostic.type}-${diagnostic.sessionId ?? index}`} className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-3">
+                        <p className="text-sm font-semibold text-slate-900">{getTokenWasteDiagnosticTitle(diagnostic, locale, copy)}</p>
+                        <p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-600">{getTokenWasteDiagnosticDescription(diagnostic, locale, copy)}</p>
+                        <p className="mt-2 text-xs font-medium text-[#2f6fa8]">${formatWasteCost(diagnostic.estimatedWasteCost)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {action.evidence.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="text-xs font-medium text-slate-500">{advisorCopy.evidence}</span>
+                      {action.evidence.slice(0, 4).map(item => (
+                        <span key={item} className="max-w-[260px] truncate rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] text-slate-600" title={item}>
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleAdvisorVerify(action)}
+                    disabled={!canVerifyAdvisor}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#3b82c4] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-[#2f6fa8] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {advisorCopy.verify}: {getAdvisorVerifyLabel(action, locale)}
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                  {replaySessionId && action.verifyWith.route !== 'replay' && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenReplaySession(replaySessionId)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-[#3b82c4]/30 hover:text-[#2f6fa8]"
+                    >
+                      {replayActionLabel}
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {config && (
+                <div className="rounded-xl border border-slate-900/10 bg-slate-950 p-4 text-slate-100 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{advisorCopy.config} · {advisorCopy.openclaw}</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-white" title={config.configFile.path}>{config.configFile.path}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopySolutionText(advisorConfigCopyId, config.configFile.content)}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-white"
+                    >
+                      {isAdvisorConfigCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {isAdvisorConfigCopied ? advisorCopy.copied : advisorCopy.copy}
+                    </button>
+                  </div>
+                  <pre className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-black/25 p-3 text-xs leading-5 text-slate-100">
+                    {config.configFile.content}
+                  </pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-5 text-sm text-slate-600">
+              {advisorCopy.subtitle}
+            </div>
+          )}
+
+          {advisorPlan.secondaryActions.length > 0 && (
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white/70 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{advisorCopy.secondaryTitle}</p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                {advisorPlan.secondaryActions.map(secondary => (
+                  <div key={secondary.id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-slate-900">{getAdvisorActionTitle(secondary, locale)}</p>
+                      <span className="text-xs font-medium text-emerald-600">-${formatWasteCost(secondary.estimatedSavingsUsd)}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{getAdvisorActionNextStep(secondary, locale)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ),
+    })
+  }
 
   if (savings && savings.suggestions.length > 0) {
     costMonitorSections.push({
@@ -2014,8 +2378,9 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
   }
 
   const orderedCostMonitorSections = splitCostMonitorSections(costMonitorSections)
+  const advisorActionSection = orderedCostMonitorSections.primary.find(section => section.id === 'cost-advisor')?.content ?? null
   const overviewTrendSection = orderedCostMonitorSections.primary.find(section => section.id === 'trend')?.content ?? null
-  const mainlineActionSections = orderedCostMonitorSections.primary.filter(section => section.id !== 'trend')
+  const mainlineActionSections = orderedCostMonitorSections.primary.filter(section => section.id !== 'trend' && section.id !== 'cost-advisor')
   const furtherAnalysisSections = orderedCostMonitorSections.secondary
 
   return (
@@ -2087,6 +2452,8 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
       {!loading && (
         <FadeIn>
           <div className="space-y-6">
+            {advisorActionSection}
+
             <div className={overviewCardClass}>
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>

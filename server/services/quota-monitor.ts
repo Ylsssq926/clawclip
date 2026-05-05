@@ -75,11 +75,14 @@ function calculatePercentage(remaining: number, limit: number): number {
 /**
  * 根据百分比判断状态
  */
-function getStatus(percentage: number): QuotaSnapshot['status'] {
+export function classifyQuotaStatus(percentage: number): QuotaSnapshot['status'] {
   if (percentage > 50) return 'healthy'
-  if (percentage > 20) return 'low'
-  if (percentage > 0) return 'exhausted'
+  if (percentage > 0) return 'low'
   return 'exhausted'
+}
+
+function getStatus(percentage: number): QuotaSnapshot['status'] {
+  return classifyQuotaStatus(percentage)
 }
 
 /**
@@ -280,7 +283,7 @@ export async function checkAllQuotas(): Promise<QuotaCheckResult> {
   }
 
   // 生成推荐
-  const recommendation = generateRecommendation(providers)
+  const recommendation = generateQuotaRecommendation(providers)
 
   return {
     providers,
@@ -291,7 +294,7 @@ export async function checkAllQuotas(): Promise<QuotaCheckResult> {
 /**
  * 生成切换推荐
  */
-function generateRecommendation(
+export function generateQuotaRecommendation(
   providers: QuotaSnapshot[],
 ): QuotaCheckResult['recommendation'] {
   if (providers.length === 0) {
@@ -308,17 +311,6 @@ function generateRecommendation(
     return current.percentage < worst.percentage ? current : worst
   })
 
-  // 如果最差的 provider 剩余额度 < 20%，推荐切换
-  if (worstProvider.percentage < 20 && bestProvider.percentage > worstProvider.percentage) {
-    return {
-      action: 'switch',
-      reason: `${worstProvider.provider} is running low (${worstProvider.percentage}% remaining). Consider switching to ${bestProvider.provider} (${bestProvider.percentage}% remaining).`,
-      reasonZh: `${worstProvider.provider} 额度即将用完（剩余 ${worstProvider.percentage}%），建议切换到 ${bestProvider.provider}（剩余 ${bestProvider.percentage}%）。`,
-      suggestedModel: bestProvider.model,
-      suggestedProvider: bestProvider.provider,
-    }
-  }
-
   // 如果所有 provider 都快用完，推荐切换到 DeepSeek
   const allLow = providers.every((p) => p.percentage < 20)
   if (allLow) {
@@ -328,6 +320,17 @@ function generateRecommendation(
       reasonZh: '所有免费 provider 额度都快用完了，建议切换到 DeepSeek（付费但非常便宜）。',
       suggestedModel: 'deepseek-chat',
       suggestedProvider: 'DeepSeek',
+    }
+  }
+
+  // 如果最差的 provider 剩余额度 < 20%，推荐切换
+  if (worstProvider.percentage < 20 && bestProvider.percentage > worstProvider.percentage) {
+    return {
+      action: 'switch',
+      reason: `${worstProvider.provider} is running low (${worstProvider.percentage}% remaining). Consider switching to ${bestProvider.provider} (${bestProvider.percentage}% remaining).`,
+      reasonZh: `${worstProvider.provider} 额度即将用完（剩余 ${worstProvider.percentage}%），建议切换到 ${bestProvider.provider}（剩余 ${bestProvider.percentage}%）。`,
+      suggestedModel: bestProvider.model,
+      suggestedProvider: bestProvider.provider,
     }
   }
 

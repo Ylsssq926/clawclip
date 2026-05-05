@@ -102,6 +102,7 @@ function reviveStep(raw: Record<string, unknown>, index: number): SessionStep | 
     reasoning: typeof raw.reasoning === 'string' ? raw.reasoning : undefined,
     inputTokens: Number(raw.inputTokens) || 0,
     outputTokens: Number(raw.outputTokens) || 0,
+    cacheReadTokens: Number(raw.cacheReadTokens) || undefined,
     cost: Number(raw.cost) || 0,
     durationMs: Number(raw.durationMs) || 0,
   };

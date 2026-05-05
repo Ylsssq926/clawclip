@@ -4,6 +4,7 @@ export interface TokenUsage {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens?: number;
   cost: number;
   sessionId: string;
   usageSource?: UsageSource;

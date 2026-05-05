@@ -196,6 +196,14 @@ function mergeDistinctStrings(values: Array<string | undefined>, separator = '\n
   return out.join(separator);
 }
 
+function extractChoiceMessage(obj: JsonlLine): Record<string, unknown> | undefined {
+  const choices = obj.choices;
+  if (!Array.isArray(choices) || !choices[0] || typeof choices[0] !== 'object') return undefined;
+  const ch0 = choices[0] as Record<string, unknown>;
+  const message = ch0.message;
+  return message && typeof message === 'object' ? (message as Record<string, unknown>) : undefined;
+}
+
 function extractLineTextAndReasoning(obj: JsonlLine): { text: string; reasoning: string } {
   if (obj.content != null) return extractTextAndReasoning(obj.content);
   const msg = obj.message;
@@ -205,15 +213,10 @@ function extractLineTextAndReasoning(obj: JsonlLine): { text: string; reasoning:
     if (m.content != null) return extractTextAndReasoning(m.content);
     if (typeof m.text === 'string') return { text: m.text, reasoning: '' };
   }
-  const choices = obj.choices;
-  if (Array.isArray(choices) && choices[0] && typeof choices[0] === 'object') {
-    const ch0 = choices[0] as Record<string, unknown>;
-    const message = ch0.message;
-    if (message && typeof message === 'object') {
-      const mm = message as Record<string, unknown>;
-      if (mm.content != null) return extractTextAndReasoning(mm.content);
-      if (typeof mm.text === 'string') return { text: mm.text, reasoning: '' };
-    }
+  const choiceMessage = extractChoiceMessage(obj);
+  if (choiceMessage) {
+    if (choiceMessage.content != null) return extractTextAndReasoning(choiceMessage.content);
+    if (typeof choiceMessage.text === 'string') return { text: choiceMessage.text, reasoning: '' };
   }
   return { text: '', reasoning: '' };
 }
@@ -305,12 +308,35 @@ function readField(obj: Record<string, unknown>, key: string): unknown {
   return undefined;
 }
 
-function readUsage(obj: JsonlLine): { input: number; output: number } {
+function readNumericField(records: Array<Record<string, unknown> | undefined>, key: string): number {
+  for (const record of records) {
+    if (!record) continue;
+    const value = Number(readField(record, key));
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+}
+
+function readUsage(obj: JsonlLine): { input: number; output: number; cacheReadTokens?: number; reasoningTokens?: number } {
   const usage = obj.usage as Record<string, unknown> | undefined;
   if (!usage) return { input: 0, output: 0 };
+
+  const promptDetails = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+  const inputDetails = (usage.input_tokens_details ?? usage.input_token_details) as Record<string, unknown> | undefined;
+  const completionDetails = usage.completion_tokens_details as Record<string, unknown> | undefined;
+  const outputDetails = (usage.output_tokens_details ?? usage.output_token_details) as Record<string, unknown> | undefined;
+
   const input = Number(readField(usage, 'inputTokens')) || 0;
   const output = Number(readField(usage, 'outputTokens')) || 0;
-  return { input, output };
+  const cacheReadTokens = readNumericField([usage, promptDetails, inputDetails], 'cachedTokens');
+  const reasoningTokens = readNumericField([usage, completionDetails, outputDetails], 'reasoningTokens');
+
+  return {
+    input,
+    output: output || reasoningTokens,
+    ...(cacheReadTokens > 0 ? { cacheReadTokens } : {}),
+    ...(reasoningTokens > 0 ? { reasoningTokens } : {}),
+  };
 }
 
 function parseTimestamp(obj: JsonlLine): Date {
@@ -358,6 +384,8 @@ function unwrapPiEnvelope(outer: JsonlLine): JsonlLine {
 
 function resolveMessageRole(body: JsonlLine, outerType: string | undefined): string | undefined {
   if (typeof body.role === 'string') return body.role;
+  const choiceMessage = extractChoiceMessage(body);
+  if (typeof choiceMessage?.role === 'string') return choiceMessage.role;
   if (typeof body.kind === 'string') {
     const k = body.kind.toLowerCase();
     if (k === 'user' || k === 'human') return 'user';
@@ -370,8 +398,14 @@ function resolveMessageRole(body: JsonlLine, outerType: string | undefined): str
 }
 
 function pickToolCalls(body: JsonlLine, outer: JsonlLine): unknown[] | undefined {
+  const choiceMessage = extractChoiceMessage(body) ?? extractChoiceMessage(outer);
   const a =
-    body.tool_calls ?? body.toolCalls ?? outer.tool_calls ?? (outer.toolCalls as unknown[] | undefined);
+    body.tool_calls ??
+    body.toolCalls ??
+    choiceMessage?.tool_calls ??
+    choiceMessage?.toolCalls ??
+    outer.tool_calls ??
+    (outer.toolCalls as unknown[] | undefined);
   return Array.isArray(a) ? a : undefined;
 }
 
@@ -420,6 +454,7 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
       content: parts.join(' · ') || '（上下文压缩）',
       inputTokens: u.input,
       outputTokens: u.output,
+      cacheReadTokens: u.cacheReadTokens,
       cost: 0,
       durationMs: 0,
     };
@@ -437,15 +472,16 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
       content: txt.slice(0, 4000),
       inputTokens: u.input,
       outputTokens: u.output,
+      cacheReadTokens: u.cacheReadTokens,
       cost: 0,
       durationMs: 0,
     };
   }
 
   const body = unwrapPiEnvelope(obj);
-  const timestamp = parseTimestamp(obj);
+  const timestamp = parseTimestamp(body);
   const mergedForUsage = { ...body, usage: body.usage ?? obj.usage } as JsonlLine;
-  const { input, output } = readUsage(mergedForUsage);
+  const { input, output, cacheReadTokens } = readUsage(mergedForUsage);
   const model =
     typeof body.model === 'string'
       ? body.model
@@ -455,9 +491,10 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
           ? obj.model
           : undefined;
 
-  const base = (includeUsage = true): Pick<SessionStep, 'inputTokens' | 'outputTokens'> => ({
+  const base = (includeUsage = true): Pick<SessionStep, 'inputTokens' | 'outputTokens' | 'cacheReadTokens'> => ({
     inputTokens: includeUsage ? input : 0,
     outputTokens: includeUsage ? output : 0,
+    ...(includeUsage && cacheReadTokens != null ? { cacheReadTokens } : {}),
   });
   const unknownEventStep = (): SessionStep | null => {
     if (!outerType || KNOWN_EVENT_TYPES.has(outerType)) return null;
@@ -478,7 +515,8 @@ function lineToStep(obj: JsonlLine, index: number): LineStepResult {
   const role = resolveMessageRole(body, outerType);
   const stepContent = buildStepContent(text, reasoningExtra);
   const errorText = extractErrorText(body, obj);
-  const functionCall = body.function_call as Record<string, unknown> | undefined;
+  const choiceMessage = extractChoiceMessage(body);
+  const functionCall = (body.function_call ?? choiceMessage?.function_call) as Record<string, unknown> | undefined;
   const toolCalls = pickToolCalls(body, obj);
   const isToolResultLike = role === 'tool' || outerType === 'tool_result' || outerType === 'function_call_output';
   const isToolCallLike =
@@ -746,7 +784,7 @@ function annotateRetryChains(steps: SessionStep[]): SessionStep[] {
 function finalizeStepDurationsAndCost(steps: SessionStep[]): SessionStep[] {
   const n = steps.length;
   const withCostAndDuration = steps.map((s, i) => {
-    const cost = computeCost(DEFAULT_DETAILED_PRICING, s.model, s.inputTokens, s.outputTokens);
+    const cost = computeCost(DEFAULT_DETAILED_PRICING, s.model, s.inputTokens, s.outputTokens, s.cacheReadTokens);
     const durationMs =
       i < n - 1 ? Math.max(0, steps[i + 1].timestamp.getTime() - s.timestamp.getTime()) : 0;
     return { ...s, index: i, cost, durationMs };

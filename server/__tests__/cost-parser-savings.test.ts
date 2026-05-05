@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CostParser } from '../services/cost-parser.js';
 import { tokenWasteAnalyzer } from '../services/token-waste-analyzer.js';
+import * as agentDataRoot from '../services/agent-data-root.js';
+import * as replayRepository from '../services/replay-repository.js';
 import { DEFAULT_DETAILED_PRICING, DEFAULT_MODEL_PRICING } from '../types/index.js';
 import type { PricingSnapshot } from '../services/pricing-fetcher.js';
 import type { SessionReplay } from '../types/replay.js';
@@ -52,6 +54,56 @@ function makeReplay(id: string, model: string, now: Date): SessionReplay {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('CostParser replay usage pricing', () => {
+  it('uses cacheReadTokens when converting replay steps into usage costs', () => {
+    const parser = new CostParser();
+    const now = new Date();
+    const replay: SessionReplay = {
+      meta: {
+        id: 'cached-session',
+        agentName: 'cache-test',
+        summary: 'cache test',
+        dataSource: 'real',
+        startTime: now,
+        endTime: now,
+        durationMs: 0,
+        totalCost: 0,
+        totalTokens: 1_100,
+        modelUsed: ['gpt-4o'],
+        stepCount: 1,
+      },
+      steps: [
+        {
+          index: 0,
+          timestamp: now,
+          type: 'response',
+          content: 'cached response',
+          model: 'gpt-4o',
+          inputTokens: 1000,
+          outputTokens: 100,
+          cacheReadTokens: 800,
+          cost: 0,
+          durationMs: 0,
+        },
+      ],
+    };
+
+    vi.spyOn(replayRepository, 'getRealMergedReplays').mockReturnValue([replay]);
+    vi.spyOn(agentDataRoot, 'getLobsterDataRoots').mockReturnValue([
+      {
+        id: 'env-0',
+        label: 'empty-root',
+        homeDir: '/tmp/empty-clawclip-root',
+        agentsDir: '/tmp/empty-clawclip-root/agents',
+      },
+    ]);
+
+    const stats = parser.getUsageStats(30);
+
+    expect(stats.totalCost).toBeCloseTo(0.0025, 10);
+  });
 });
 
 describe('CostParser.getSavingSuggestions', () => {

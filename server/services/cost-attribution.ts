@@ -74,7 +74,7 @@ function resolveStepCost(step: SessionStep, pricing: PricingSnapshot): number {
   const outputTokens = normalizeNumber(step.outputTokens);
   if (inputTokens === 0 && outputTokens === 0) return 0;
 
-  return repriceStep(step.model, inputTokens, outputTokens, pricing);
+  return repriceStep(step.model, inputTokens, outputTokens, pricing, step.cacheReadTokens);
 }
 
 function isToolResultError(step: SessionStep): boolean {

@@ -8,6 +8,22 @@ Date-based releases below are retained as historical milestones from the pre-1.0
 
 ---
 
+## [2.5.0] — 2026-05-05
+
+Cost Monitor now opens with a 30-second Cost Advisor plan. It reads recent real logs, highlights the main waste patterns, estimates savings, explains risk, and gives copyable configuration snippets with validation entry points.
+
+### Added
+- Added `GET /api/cost-advisor/plan?days=30` to aggregate cost stats, waste diagnostics, recommendations, and generated config snippets.
+- Added the Cost Advisor first screen to Cost Monitor while keeping the existing charts, model breakdown, reconciliation, and savings sections available below it.
+
+### Fixed
+- Connected `cacheReadTokens` through replay parsing, attribution, repricing, and savings recommendations so cache-related costs are represented more accurately.
+- Fixed Pi envelope parsing for inner timestamps and `choices[0].message.role`, `content`, and `tool_calls` fields.
+- Adjusted quota thresholds, DeepSeek recommendation handling, and the quota route cache behavior.
+- Replaced hardcoded Chinese strings in Compare with i18n keys.
+
+[2.5.0]: https://github.com/Ylsssq926/clawclip/compare/v2.4.0...v2.5.0
+
 ## [1.2.0] — 2026-04-10
 
 This release straightens ClawClip into a clearer optimization path: replay what happened, benchmark the outcome, then move into cost decisions. It also makes the first screens calmer, the wording sharper, and the multilingual experience more complete across the app and GitHub docs.

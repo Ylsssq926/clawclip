@@ -13,7 +13,7 @@ Agent が何をしたかを見る。
 Run Insights · Agent Scorecard · Cost Report — OpenClaw、ZeroClaw、ローカル JSONL セッションのレビューのために。
 
 <p>
-  <a href="https://clawclip.luelan.online">ライブデモ</a> ·
+  <a href="https://clawclip.luelanai.com">ライブデモ</a> ·
   <a href="#quick-start">クイックスタート</a> ·
   <a href="#visual-proof">プレビュー</a> ·
   <a href="./docs/FAQ.ja.md">FAQ</a> ·
@@ -29,7 +29,7 @@ Run Insights · Agent Scorecard · Cost Report — OpenClaw、ZeroClaw、ロー�
 </p>
 
 <p>
-  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="ライブデモ" /></a>
+  <a href="https://clawclip.luelanai.com"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="ライブデモ" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT ライセンス" /></a>
   <img src="https://img.shields.io/badge/analysis-session%20analysis%20local-0f172a?style=flat-square" alt="セッション解析はローカルで完結" />
   <img src="https://img.shields.io/badge/agents-OpenClaw%20%7C%20ZeroClaw-3b82c4?style=flat-square" alt="OpenClaw と ZeroClaw" />

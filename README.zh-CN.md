@@ -13,7 +13,7 @@
 本地跑 · 读现有日志 · 不上传 · 不改代码
 
 <p>
-  <a href="https://clawclip.luelan.online">在线体验</a> ·
+  <a href="https://clawclip.luelanai.com">在线体验</a> ·
   <a href="#quick-start">快速开始</a> ·
   <a href="#visual-proof">一眼看懂</a> ·
   <a href="./docs/FAQ.md">常见问题</a> ·
@@ -28,7 +28,7 @@
 </p>
 
 <p>
-  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-在线体验-2563eb?style=flat-square" alt="在线体验" /></a>
+  <a href="https://clawclip.luelanai.com"><img src="https://img.shields.io/badge/demo-在线体验-2563eb?style=flat-square" alt="在线体验" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" /></a>
   <img src="https://img.shields.io/badge/分析-本地运行-0f172a?style=flat-square" alt="本地运行" />
   <img src="https://img.shields.io/badge/支持-OpenClaw%20%7C%20ZeroClaw-3b82c4?style=flat-square" alt="OpenClaw 和 ZeroClaw" />

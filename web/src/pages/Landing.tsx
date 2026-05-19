@@ -349,7 +349,7 @@ export default function Landing({ onEnterDemo }: Props) {
               <Github className="h-4 w-4" /> GitHub
             </a>
             <a
-              href="https://luelan.online"
+              href="https://luelanai.com"
               target="_blank"
               rel="noopener noreferrer"
               className="transition-colors hover:text-accent"

@@ -55,7 +55,7 @@ Install it, point it at your log directory, see your first report in 15 seconds.
 本地跑，读现有日志，不上传，不改代码。
 
 GitHub: https://github.com/Ylsssq926/clawclip
-Demo: https://clawclip.luelan.online
+Demo: https://clawclip.luelanai.com
 ```
 
 ## 社区帖子文案（英文）
@@ -71,7 +71,7 @@ ClawClip is a local agent analyzer:
 Runs locally. Reads your existing logs. No upload. No code changes.
 
 GitHub: https://github.com/Ylsssq926/clawclip
-Demo: https://clawclip.luelan.online
+Demo: https://clawclip.luelanai.com
 ```
 
 ## 一句话介绍（按场景）

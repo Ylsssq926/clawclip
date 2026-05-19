@@ -13,7 +13,7 @@ Vergleiche das Ergebnis mit den Kosten.
 Run Insights · Agent Scorecard · Cost Report — für OpenClaw, ZeroClaw und die lokale Auswertung von JSONL-Sessions.
 
 <p>
-  <a href="https://clawclip.luelan.online">Live-Demo</a> ·
+  <a href="https://clawclip.luelanai.com">Live-Demo</a> ·
   <a href="#quick-start">Schnellstart</a> ·
   <a href="#visual-proof">Vorschau</a> ·
   <a href="./docs/FAQ.de.md">FAQ</a> ·
@@ -29,7 +29,7 @@ Run Insights · Agent Scorecard · Cost Report — für OpenClaw, ZeroClaw und d
 </p>
 
 <p>
-  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="Live-Demo" /></a>
+  <a href="https://clawclip.luelanai.com"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="Live-Demo" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT-Lizenz" /></a>
   <img src="https://img.shields.io/badge/analysis-session%20analysis%20local-0f172a?style=flat-square" alt="Session-Analyse läuft lokal" />
   <img src="https://img.shields.io/badge/agents-OpenClaw%20%7C%20ZeroClaw-3b82c4?style=flat-square" alt="OpenClaw und ZeroClaw" />

@@ -13,7 +13,7 @@
 Runs locally · Reads your existing logs · No upload · No code changes
 
 <p>
-  <a href="https://clawclip.luelan.online">Live Demo</a> ·
+  <a href="https://clawclip.luelanai.com">Live Demo</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="#visual-proof">Preview</a> ·
   <a href="./docs/FAQ.md">FAQ</a> ·
@@ -28,7 +28,7 @@ Runs locally · Reads your existing logs · No upload · No code changes
 </p>
 
 <p>
-  <a href="https://clawclip.luelan.online"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="Live Demo" /></a>
+  <a href="https://clawclip.luelanai.com"><img src="https://img.shields.io/badge/demo-live-2563eb?style=flat-square" alt="Live Demo" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a?style=flat-square" alt="MIT License" /></a>
   <img src="https://img.shields.io/badge/analysis-runs%20locally-0f172a?style=flat-square" alt="Runs locally" />
   <img src="https://img.shields.io/badge/works%20with-OpenClaw%20%7C%20ZeroClaw-3b82c4?style=flat-square" alt="OpenClaw and ZeroClaw" />

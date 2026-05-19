@@ -6,13 +6,13 @@
 
 | 项目 | 值 |
 |---|---|
-| 域名 | `clawclip.luelan.online` |
+| 域名 | `clawclip.luelanai.com` |
 | 部署类型 | Node 服务（Express + 静态 Web 构建产物），workspaces：`server` + `web` |
 | 主服务器 | `121.4.98.150` |
 | 远端目录 | `/opt/apps/services/clawclip`（注意：线上目录无 `luelan-` 前缀） |
 | PM2 进程 | `clawclip` |
 | 后端端口 | `8080` |
-| Nginx | `clawclip.luelan.online` → `127.0.0.1:8080` |
+| Nginx | `clawclip.luelanai.com` → `127.0.0.1:8080` |
 
 ## 当前线上状态
 
@@ -72,7 +72,7 @@ module.exports = {
 ```bash
 pm2 status clawclip
 pm2 logs clawclip --lines 30 --nostream
-curl -I https://clawclip.luelan.online/
+curl -I https://clawclip.luelanai.com/
 ```
 
 ## 回滚注意

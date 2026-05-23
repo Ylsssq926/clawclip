@@ -6,8 +6,13 @@
 
 - 根目录是统筹仓库；`apps/*` 和 `luelan-portal/` 多数是独立子仓库。
 - 修改哪个仓库，就在对应仓库内单独审查 `git status` 和 `git diff`。
-- 不自动 commit，不自动 push，除非用户明确要求。
+- **每完成一个独立步骤就 commit**，让历史可追溯、可回滚；commit message 准确描述本步意图。
+  - 独立步骤的判断标准：能用一句话说清"做了什么"且不与下一步耦合即可单独 commit。
+  - 不要把多个不相关改动塞进同一个 commit。
+  - 不要因为"还没完全做完"就拖延 commit；半成品也可以用 `wip:` 前缀提交，便于事后整理。
+- 不自动 push，除非用户明确要求。
 - 不执行破坏性命令，如 `git reset --hard`、`git clean -fd`、强制 push、批量删除。
+- 重写 git 历史前（`reset --soft`、`rebase -i`、`filter-branch` 等）必须先 `git branch backup/<name> HEAD` 打备份。
 - 根仓库忽略子项目目录是有意为之，避免跨仓误提交。
 
 ## 文件修改原则

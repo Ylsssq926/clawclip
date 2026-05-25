@@ -30,6 +30,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Fira Code"', '"SF Mono"', 'Consolas', 'Monaco', 'monospace'],
       },
       animation: {
         'gradient-shift': 'gradient-shift 6s ease infinite',

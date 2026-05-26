@@ -8,77 +8,85 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
- * ClawClip · 暗色优先 token 体系
+ * ClawClip · 暗色 token 体系（先建立基础设施，默认仍亮色）
  *
- * BRAND 调性：GitHub README + Vercel 文档 + JetBrains Mono 终端美学。
- * 开发者夜间长时间使用，默认 dark；可加 `.light` 类切换亮色（toggle UI 由调用方决定）。
+ * 现状（2026-05-26）：暗色 token 已建立但页面层 600+ 亮色 className 未迁移。
+ * 默认仍走亮色路径（避免上次"半成品暗色"破坏视觉）。
+ * 下一阶段全仓 className 迁移到 var(--bg-base) / var(--fg-base) 后切默认 dark。
+ *
+ * 用户切换：手动给 <html> 或 <body> 加 class="dark" 临时启用暗色
+ * （但因为大部分组件未 token 化，效果会破图，仅供未来过渡用）
  * ------------------------------------------------------------------------ */
 
 @layer base {
   :root {
-    /* === 默认：GitHub README 暗色调 === */
-    --bg-base: #0d1117;            /* 主背景：GitHub Dark canvas */
-    --bg-elevated: #161b22;        /* 抬升面：卡片 / 侧栏底色 */
-    --bg-overlay: #1c2128;         /* hover / focus 表面 */
-    --bg-muted: rgba(110, 118, 129, 0.08);
+    /* === 默认：保留亮色路径（与原版本一致） === */
+    --bg-base: #f8fafc;
+    --bg-elevated: #ffffff;
+    --bg-overlay: #f1f5f9;
+    --bg-muted: rgba(15, 23, 42, 0.05);
 
-    --border-base: rgba(240, 246, 252, 0.1);
-    --border-strong: rgba(240, 246, 252, 0.16);
+    --border-base: rgba(15, 23, 42, 0.10);
+    --border-strong: rgba(15, 23, 42, 0.16);
 
-    --fg-base: #e6edf3;            /* GitHub Dark 主文字 */
-    --fg-strong: #f0f6fc;
-    --fg-muted: rgba(230, 237, 243, 0.62);
-    --fg-subtle: rgba(230, 237, 243, 0.4);
+    --fg-base: #1e293b;
+    --fg-strong: #0f172a;
+    --fg-muted: rgba(30, 41, 59, 0.62);
+    --fg-subtle: rgba(30, 41, 59, 0.45);
 
-    --accent: #3b82c4;             /* BRAND 锚点蓝 */
+    --accent: #3b82c4;
     --accent-light: #60a5fa;
-    --accent-soft: rgba(59, 130, 196, 0.16);
-    --accent-glow: rgba(59, 130, 196, 0.32);
+    --accent-soft: rgba(59, 130, 196, 0.12);
+    --accent-glow: rgba(59, 130, 196, 0.3);
 
-    --shadow-card: 0 14px 40px -32px rgba(0, 0, 0, 0.6);
-    --shadow-card-hover: 0 18px 44px -34px rgba(0, 0, 0, 0.7);
+    --shadow-card: 0 4px 12px -4px rgba(15, 23, 42, 0.08);
+    --shadow-card-hover: 0 12px 32px -10px rgba(15, 23, 42, 0.16);
 
-    color-scheme: dark;
+    color-scheme: light;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* === 亮色覆盖（手动加 .light 类启用，不强制 toggle UI） === */
-  .light {
-    --bg-base: #f8fafc;
-    --bg-elevated: #ffffff;
-    --bg-overlay: #f1f5f9;
-    --bg-muted: rgba(148, 163, 184, 0.1);
+  /* 暗色：用户/未来过渡时手动启用 class="dark" 时生效
+     注意：当前大部分页面仍用 bg-white / text-slate-* 等硬编码亮色 className，
+     启用 .dark 会出现"暗背景白卡"半成品视觉。仅作为基础设施保留，不要立即切换。 */
+  .dark {
+    --bg-base: #0d1117;            /* GitHub Dark canvas */
+    --bg-elevated: #161b22;
+    --bg-overlay: #1c2128;
+    --bg-muted: rgba(110, 118, 129, 0.08);
 
-    --border-base: #e2e8f0;
-    --border-strong: #cbd5e1;
+    --border-base: rgba(240, 246, 252, 0.1);
+    --border-strong: rgba(240, 246, 252, 0.16);
 
-    --fg-base: #1e293b;
-    --fg-strong: #0f172a;
-    --fg-muted: #475569;
-    --fg-subtle: #64748b;
+    --fg-base: #e6edf3;
+    --fg-strong: #f0f6fc;
+    --fg-muted: rgba(230, 237, 243, 0.62);
+    --fg-subtle: rgba(230, 237, 243, 0.45);
 
     --accent: #3b82c4;
     --accent-light: #60a5fa;
-    --accent-soft: rgba(59, 130, 196, 0.08);
-    --accent-glow: rgba(59, 130, 196, 0.2);
+    --accent-soft: rgba(59, 130, 196, 0.18);
+    --accent-glow: rgba(59, 130, 196, 0.45);
 
-    --shadow-card: 0 14px 40px -32px rgba(15, 23, 42, 0.18);
-    --shadow-card-hover: 0 18px 44px -34px rgba(15, 23, 42, 0.2);
+    --shadow-card: 0 6px 20px -8px rgba(0, 0, 0, 0.5);
+    --shadow-card-hover: 0 14px 40px -12px rgba(0, 0, 0, 0.7);
 
-    color-scheme: light;
+    color-scheme: dark;
   }
 
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background: var(--bg-base);
     color: var(--fg-base);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
   #root { width: 100%; }
 
@@ -87,6 +95,7 @@
     color: var(--fg-strong);
   }
 }
+
 
 @layer components {
   .card {

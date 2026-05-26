@@ -159,7 +159,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
   }, [showTour, finishTour])
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800">
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--fg-base)]">
       <AnimatePresence>
         {showTour && (
         <motion.div
@@ -241,7 +241,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
       </AnimatePresence>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-[#f8fafc]/80 px-4 py-3 backdrop-blur-xl sm:px-6">
+      <header className="sticky top-0 z-50 border-b border-[var(--border-base)] bg-[var(--bg-base)]/80 px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
@@ -307,7 +307,7 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
       <div className="flex max-w-screen-2xl mx-auto relative">
         <nav
           className={cn(
-            'fixed top-[49px] z-40 flex h-[calc(100vh-49px)] w-56 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-[#f8fafc] px-3 py-4 transition-transform duration-200 lg:sticky lg:top-[49px] lg:translate-x-0',
+            'fixed top-[49px] z-40 flex h-[calc(100vh-49px)] w-56 shrink-0 flex-col overflow-y-auto border-r border-[var(--border-base)] bg-[var(--bg-base)] px-3 py-4 transition-transform duration-200 lg:sticky lg:top-[49px] lg:translate-x-0',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full',
           )}
         >
@@ -407,8 +407,8 @@ function AppShell({ onBackToLanding, initialTab = 'replay' }: { onBackToLanding:
               )
             })}
           </div>
-          <div className="border-t border-slate-200 pt-4">
-            <p className="px-3 text-[10px] font-medium tracking-[0.08em] text-slate-400">{t('app.lobster')}</p>
+          <div className="border-t border-[var(--border-base)] pt-4">
+            <p className="px-3 text-[10px] font-medium tracking-[0.08em] text-[var(--fg-muted)]">{t('app.lobster')}</p>
           </div>
         </nav>
 

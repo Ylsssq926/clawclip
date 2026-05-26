@@ -318,7 +318,7 @@ export default function Knowledge({ initialQuery, navigateTab, onSelectReplaySes
 
         {showSearchEmpty && (
           <EmptyState
-            icon="🔎"
+            icon={<Search className="h-6 w-6" aria-hidden="true" />}
             title={emptySearchTitle}
             description={emptySearchDescription}
             hint={emptySearchHint}

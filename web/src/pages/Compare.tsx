@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Sparkles, GitCompare, FlaskConical } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -553,9 +553,15 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
                 {i === 1 && slots[0] && (
                   <div className="mb-1 flex items-center gap-1.5 text-xs">
                     {loadingSimilar ? (
-                      <span className="text-blue-500">✨ {t('compare.similar.loading')}</span>
+                      <span className="inline-flex items-center gap-1 text-blue-500">
+                        <Sparkles className="h-3 w-3" aria-hidden="true" />
+                        {t('compare.similar.loading')}
+                      </span>
                     ) : similarSessions.length > 0 ? (
-                      <span className="text-blue-500">✨ {formatI18n(t('compare.similar.found'), { n: String(similarSessions.length) })}</span>
+                      <span className="inline-flex items-center gap-1 text-blue-500">
+                        <Sparkles className="h-3 w-3" aria-hidden="true" />
+                        {formatI18n(t('compare.similar.found'), { n: String(similarSessions.length) })}
+                      </span>
                     ) : null}
                   </div>
                 )}
@@ -627,7 +633,9 @@ export default function Compare({ onOpenReplaySession }: CompareProps) {
 
         {!loading && !sessions && !error && !availableSessionsLoading && (
           <EmptyState
-            icon={availableSessions.length === 0 ? '🧪' : '🆚'}
+            icon={availableSessions.length === 0
+              ? <FlaskConical className="h-6 w-6" aria-hidden="true" />
+              : <GitCompare className="h-6 w-6" aria-hidden="true" />}
             title={availableSessions.length === 0 ? noAvailableSessionsTitle : noSelectionTitle}
             description={availableSessions.length === 0 ? noAvailableSessionsDesc : compareHint}
             hint={availableSessions.length === 0 ? noAvailableSessionsHint : noSelectionHint}

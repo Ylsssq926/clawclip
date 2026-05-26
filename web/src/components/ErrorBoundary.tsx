@@ -1,11 +1,12 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
 
 function DefaultErrorFallback({ onRetry }: { onRetry: () => void }) {
   const { t } = useI18n()
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-500">
-      <span className="text-3xl">⚠️</span>
+      <AlertTriangle className="h-7 w-7 text-amber-500" aria-hidden="true" />
       <p className="text-sm">{t('app.error.title')}</p>
       <button
         type="button"

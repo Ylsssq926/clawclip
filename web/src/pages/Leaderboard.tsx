@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Medal, Loader2, AlertCircle, X, HelpCircle } from 'lucide-react'
+import { Medal, Loader2, AlertCircle, X, HelpCircle, Lightbulb } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useI18n } from '../lib/i18n'
 import { apiGet, apiGetSafe, apiPost, parseApiErrorMessage } from '../lib/api'
@@ -215,7 +215,7 @@ export default function Leaderboard() {
           <p className="mt-1 text-sm text-slate-500">{t('leaderboard.subtitle')}</p>
           {showDemoBanner && (
             <div className="state-surface state-surface-brand mt-3 flex items-start gap-2.5 px-4 py-3">
-              <span className="mt-px text-base leading-none" aria-hidden>💡</span>
+              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[#3b82c4]" aria-hidden="true" />
               <p className="text-sm leading-relaxed text-[#3b82c4]">{t('leaderboard.demoBanner')}</p>
             </div>
           )}

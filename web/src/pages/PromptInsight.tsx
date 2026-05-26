@@ -412,7 +412,7 @@ export default function PromptInsight({ onOpenReplaySession }: PromptInsightProp
         </div>
 
         <EmptyState
-          icon="💡"
+          icon={<Lightbulb className="h-6 w-6" aria-hidden="true" />}
           title={emptyPromptTitle}
           description={emptyPromptDesc}
           hint={emptyPromptHint}

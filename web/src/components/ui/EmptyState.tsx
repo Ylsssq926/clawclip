@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Sparkles } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
 interface EmptyStateProps {
@@ -14,10 +15,11 @@ export default function EmptyState({
   title,
   description,
   hint,
-  icon = '✨',
+  icon,
   actions,
   className,
 }: EmptyStateProps) {
+  const renderedIcon = icon ?? <Sparkles className="h-6 w-6" aria-hidden="true" />
   return (
     <div
       className={cn(
@@ -25,8 +27,8 @@ export default function EmptyState({
         className,
       )}
     >
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-2xl ring-1 ring-slate-200">
-        <span aria-hidden="true">{icon}</span>
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-2xl text-slate-500 ring-1 ring-slate-200">
+        <span aria-hidden="true">{renderedIcon}</span>
       </div>
       <h3 className="mt-4 text-lg font-semibold text-slate-900">{title}</h3>
       <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">{description}</p>

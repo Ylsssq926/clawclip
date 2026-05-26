@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Trash2, Download } from 'lucide-react'
+import { Search, Trash2, Download, Puzzle } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
 import { ApiError, apiGet, apiPost } from '../lib/api'
 import EmptyState from '../components/ui/EmptyState'
@@ -176,7 +176,7 @@ export default function SkillManager() {
           </div>
         ) : skills.length === 0 ? (
           <EmptyState
-            icon="🧩"
+            icon={<Puzzle className="h-6 w-6" aria-hidden="true" />}
             title={t('skills.empty.title')}
             description={t('skills.empty.desc')}
             hint={emptySkillsHint}

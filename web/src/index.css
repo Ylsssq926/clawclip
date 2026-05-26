@@ -7,62 +7,123 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+ * ClawClip · 暗色优先 token 体系
+ *
+ * BRAND 调性：GitHub README + Vercel 文档 + JetBrains Mono 终端美学。
+ * 开发者夜间长时间使用，默认 dark；可加 `.light` 类切换亮色（toggle UI 由调用方决定）。
+ * ------------------------------------------------------------------------ */
+
 @layer base {
   :root {
-    color-scheme: light;
+    /* === 默认：GitHub README 暗色调 === */
+    --bg-base: #0d1117;            /* 主背景：GitHub Dark canvas */
+    --bg-elevated: #161b22;        /* 抬升面：卡片 / 侧栏底色 */
+    --bg-overlay: #1c2128;         /* hover / focus 表面 */
+    --bg-muted: rgba(110, 118, 129, 0.08);
+
+    --border-base: rgba(240, 246, 252, 0.1);
+    --border-strong: rgba(240, 246, 252, 0.16);
+
+    --fg-base: #e6edf3;            /* GitHub Dark 主文字 */
+    --fg-strong: #f0f6fc;
+    --fg-muted: rgba(230, 237, 243, 0.62);
+    --fg-subtle: rgba(230, 237, 243, 0.4);
+
+    --accent: #3b82c4;             /* BRAND 锚点蓝 */
+    --accent-light: #60a5fa;
+    --accent-soft: rgba(59, 130, 196, 0.16);
+    --accent-glow: rgba(59, 130, 196, 0.32);
+
+    --shadow-card: 0 14px 40px -32px rgba(0, 0, 0, 0.6);
+    --shadow-card-hover: 0 18px 44px -34px rgba(0, 0, 0, 0.7);
+
+    color-scheme: dark;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* === 亮色覆盖（手动加 .light 类启用，不强制 toggle UI） === */
+  .light {
+    --bg-base: #f8fafc;
+    --bg-elevated: #ffffff;
+    --bg-overlay: #f1f5f9;
+    --bg-muted: rgba(148, 163, 184, 0.1);
+
+    --border-base: #e2e8f0;
+    --border-strong: #cbd5e1;
+
+    --fg-base: #1e293b;
+    --fg-strong: #0f172a;
+    --fg-muted: #475569;
+    --fg-subtle: #64748b;
+
+    --accent: #3b82c4;
+    --accent-light: #60a5fa;
+    --accent-soft: rgba(59, 130, 196, 0.08);
+    --accent-glow: rgba(59, 130, 196, 0.2);
+
+    --shadow-card: 0 14px 40px -32px rgba(15, 23, 42, 0.18);
+    --shadow-card-hover: 0 18px 44px -34px rgba(15, 23, 42, 0.2);
+
+    color-scheme: light;
+  }
+
   html { scroll-behavior: smooth; }
   body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: #f8fafc;
-    color: #1e293b;
+    background: var(--bg-base);
+    color: var(--fg-base);
   }
   #root { width: 100%; }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--fg-strong);
+  }
 }
 
 @layer components {
   .card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-base);
     border-radius: 16px;
-    box-shadow: 0 14px 40px -32px rgba(15, 23, 42, 0.18);
+    box-shadow: var(--shadow-card);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   }
   .card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 18px 44px -34px rgba(15, 23, 42, 0.2);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .glass-raised {
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid #e2e8f0;
+    background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+    border: 1px solid var(--border-base);
     border-radius: 16px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 14px 40px -32px rgba(15, 23, 42, 0.18);
+    box-shadow: var(--shadow-card);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   }
 
   .state-surface {
     border-radius: 14px;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    background: rgba(248, 250, 252, 0.96);
+    border: 1px solid var(--border-base);
+    background: var(--bg-overlay);
   }
 
   .state-surface-brand {
-    border-color: rgba(59, 130, 196, 0.16);
-    background: rgba(59, 130, 196, 0.06);
+    border-color: rgba(59, 130, 196, 0.28);
+    background: rgba(59, 130, 196, 0.08);
   }
 
   .state-surface-danger {
-    border-color: rgba(249, 115, 22, 0.2);
-    background: rgba(249, 115, 22, 0.08);
+    border-color: rgba(249, 115, 22, 0.28);
+    background: rgba(249, 115, 22, 0.1);
   }
 
   .details-summary-reset {
@@ -73,14 +134,19 @@
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #3b82c4, #60a5fa);
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .skeleton {
-    background: linear-gradient(90deg, rgba(226, 232, 240, 0.9) 25%, rgba(241, 245, 249, 1) 50%, rgba(226, 232, 240, 0.9) 75%);
+    background: linear-gradient(
+      90deg,
+      var(--bg-overlay) 25%,
+      var(--bg-elevated) 50%,
+      var(--bg-overlay) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 1.8s ease-in-out infinite;
     border-radius: 8px;

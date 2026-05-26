@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode, useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar } from 'recharts'
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight, ChevronRight, Copy, Check, ExternalLink } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight, ChevronRight, Copy, Check, ExternalLink, Lightbulb } from 'lucide-react'
 import FadeIn from '../components/ui/FadeIn'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import EmptyState from '../components/ui/EmptyState'
@@ -1720,7 +1720,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
 
         {summary && summary.totalCost === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-slate-500">
-            <span className="text-3xl">📉</span>
+            <TrendingDown className="h-7 w-7 text-slate-400" aria-hidden="true" />
             <p className="mt-3 text-sm font-medium text-slate-700">{copy.empty.title}</p>
             <p className="mt-1 text-center text-xs text-slate-500">{copy.empty.desc}</p>
           </div>
@@ -1858,7 +1858,10 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
                 return (
                   <details key={model} className="group rounded-lg border border-slate-200 bg-slate-50/50">
                     <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100/50 transition-colors flex items-center justify-between">
-                      <span>💡 {locale === 'zh' ? `${model} 的更便宜替代方案` : `Cheaper alternatives for ${model}`}</span>
+                      <span className="inline-flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                        <span>{locale === 'zh' ? `${model} 的更便宜替代方案` : `Cheaper alternatives for ${model}`}</span>
+                      </span>
                       <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
                     </summary>
                     <div className="border-t border-slate-200 px-4 py-3 space-y-3">
@@ -1891,10 +1894,13 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
                           </div>
                         </div>
                       ))}
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        {locale === 'zh' 
-                          ? '⚠️ 免责声明：替代方案基于价格和通用能力推荐，实际效果可能因任务而异。建议先在非关键任务上测试，确认质量后再扩大使用范围。'
-                          : '⚠️ Disclaimer: Alternatives are recommended based on pricing and general capabilities. Actual performance may vary by task. Test on non-critical tasks first before wider adoption.'}
+                      <p className="text-xs text-slate-500 leading-relaxed flex items-start gap-2">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" aria-hidden="true" />
+                        <span>
+                          {locale === 'zh'
+                            ? '免责声明：替代方案基于价格和通用能力推荐，实际效果可能因任务而异。建议先在非关键任务上测试，确认质量后再扩大使用范围。'
+                            : 'Disclaimer: Alternatives are recommended based on pricing and general capabilities. Actual performance may vary by task. Test on non-critical tasks first before wider adoption.'}
+                        </span>
                       </p>
                     </div>
                   </details>
@@ -2434,7 +2440,7 @@ export default function CostMonitor({ onOpenReplaySession, onNavigate }: Props) 
       {showGlobalEmptyState && (
         <div className="mb-6">
           <EmptyState
-            icon="📉"
+            icon={<TrendingDown className="h-6 w-6" aria-hidden="true" />}
             title={copy.empty.title}
             description={copy.empty.desc}
             hint={emptyStartHint}

@@ -238,8 +238,9 @@ function StepCard({ step, startTime, totalCost = 0 }: { step: SessionStep; start
                 </span>
               )}
               {step.retryCount !== undefined && step.retryCount > 0 && (
-                <span className="rounded-full border border-orange-300 bg-orange-100 px-2 py-0.5 text-orange-800">
-                  ⚠ {t('replay.retry.triggered', { n: String(step.retryCount) })}
+                <span className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-100 px-2 py-0.5 text-orange-800">
+                  <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                  {t('replay.retry.triggered', { n: String(step.retryCount) })}
                 </span>
               )}
             </div>

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Check, ArrowRight, ChevronDown } from 'lucide-react'
+import { Check, ArrowRight, ChevronDown, Puzzle } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
 import { ApiError, apiGet, apiGetSafe, apiPost } from '../lib/api'
 
 const INSTALLED_TEMPLATES_STORAGE_KEY = 'clawclip-installed-templates'
+const TEMPLATE_ICON_FALLBACK = ''
 
 function formatUserApiError(err: unknown, fallback: string): string {
   if (err instanceof ApiError) {
@@ -142,7 +143,7 @@ function normalizeTemplate(template: Template, index: number, t: TranslateFn): T
     id: typeof template.id === 'string' && template.id.trim() ? template.id.trim() : fallbackId,
     name: typeof template.name === 'string' && template.name.trim() ? template.name.trim() : t('templates.fallback.name', { index: index + 1 }),
     category,
-    icon: typeof template.icon === 'string' && template.icon.trim() ? template.icon.trim() : '🧩',
+    icon: typeof template.icon === 'string' && template.icon.trim() ? template.icon.trim() : TEMPLATE_ICON_FALLBACK,
     skills,
     tags: Array.isArray(template.tags)
       ? template.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
@@ -308,7 +309,13 @@ export default function TemplateMarket() {
             <div key={template.id} className="card flex h-full flex-col p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex items-start gap-3">
-                  <span className="text-3xl leading-none">{template.icon}</span>
+                  {template.icon ? (
+                    <span className="text-3xl leading-none">{template.icon}</span>
+                  ) : (
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                      <Puzzle className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="truncate text-base font-semibold text-slate-900 sm:text-lg">{template.name}</h3>

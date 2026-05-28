@@ -47,11 +47,12 @@
 
 ```
 developer tool aesthetic, terminal-inspired UI,
-dark mode dashboard with data visualization,
+light mode dashboard with data visualization (default theme is light),
 six-dimensional radar chart focus,
 clean monospace typography integration,
-GitHub / Linear inspired design language,
+GitHub / Linear / Vercel inspired design language (light, clean, professional),
 muted blue accent (#3b82c4),
+generous whitespace, near-white surfaces (#f8fafc / #ffffff),
 no marketing fluff, technical credibility
 ```
 

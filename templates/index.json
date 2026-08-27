@@ -1,42 +1,66 @@
 [
   {
-    "id": "daily-reporter",
-    "name": "自媒体日报助手",
-    "description": "每日自动汇总行业新闻，生成公众号/小红书风格的文案",
-    "category": "创作",
-    "icon": "📰",
-    "skills": ["web-search", "content-writer"]
+    "id": "agent-eval-bench",
+    "name": "Agent 评测与诊断助手",
+    "description": "针对智能体运行日志进行七维能力评分，自动定位重试死循环与 Token 浪费",
+    "category": "开发",
+    "icon": "⚡",
+    "skills": ["session-parser", "benchmark-eval", "token-cost-analyzer"]
   },
   {
-    "id": "email-assistant",
-    "name": "邮件助理",
-    "description": "自动分类邮件、草拟回复、提醒重要邮件",
-    "category": "效率",
-    "icon": "📧",
-    "skills": ["gmail", "calendar"]
-  },
-  {
-    "id": "customer-service",
-    "name": "客服值班",
-    "description": "自动回复常见问题，复杂问题标记转人工",
-    "category": "客服",
-    "icon": "💬",
-    "skills": ["knowledge-base", "message-router"]
+    "id": "mcp-orchestrator",
+    "name": "MCP 协议多工具调度器",
+    "description": "通过标准 Model Context Protocol 动态编排数据库、GitHub、Slack 与本地系统工具",
+    "category": "开发",
+    "icon": "🧩",
+    "skills": ["mcp-client", "tool-router", "state-manager"]
   },
   {
     "id": "code-reviewer",
-    "name": "代码审查助手",
-    "description": "PR 自动 review，生成改进建议和安全检查",
+    "name": "代码审查与重构助手",
+    "description": "自动化 PR 代码审查、架构坏味道识别、安全漏洞排查与单元测试用例生成",
     "category": "开发",
     "icon": "🔍",
-    "skills": ["github", "code-analysis"]
+    "skills": ["github", "code-analysis", "security-audit"]
+  },
+  {
+    "id": "e2e-tester",
+    "name": "Playwright 自动化测试智能体",
+    "description": "驱动无头浏览器执行端到端用例，捕获视觉回归快照并输出诊断报告",
+    "category": "开发",
+    "icon": "🧪",
+    "skills": ["playwright", "visual-diff", "test-runner"]
+  },
+  {
+    "id": "daily-reporter",
+    "name": "技术早报与行业情报",
+    "description": "多源检索 AI 与开源领域最新动态，自动去重聚合生成结构化行业简报",
+    "category": "创作",
+    "icon": "📰",
+    "skills": ["web-search", "content-writer", "summarizer"]
+  },
+  {
+    "id": "email-assistant",
+    "name": "多语言邮件助理",
+    "description": "跨时区海外邮件专业收发、重要事项提取、日程冲突校验与语气润色",
+    "category": "效率",
+    "icon": "📧",
+    "skills": ["gmail", "calendar", "translator"]
+  },
+  {
+    "id": "customer-service",
+    "name": "智能客服与工单分流",
+    "description": "基于知识库精准答复高频咨询，自动识别复杂客诉并平滑升级转交人工",
+    "category": "客服",
+    "icon": "💬",
+    "skills": ["knowledge-base", "message-router", "sentiment-analyzer"]
   },
   {
     "id": "schedule-manager",
-    "name": "日程管理",
-    "description": "日历事件提醒、会议纪要自动生成、日程冲突检测",
+    "name": "智能日程与会议纪要",
+    "description": "日历事件提醒、语音转文字会议纪要提炼、行动项（Action Items）指派跟踪",
     "category": "效率",
     "icon": "📅",
-    "skills": ["calendar", "reminder"]
+    "skills": ["calendar", "audio-transcribe", "task-tracker"]
   }
 ]

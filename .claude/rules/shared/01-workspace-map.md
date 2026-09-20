@@ -120,11 +120,14 @@
   `flutter/bin` 或 `FLUTTER_ROOT`。建议移到 `F:\dev-sdk\` 之类位置 —— **待用户决定，未动**。
 - `server-portal/`：门户站时代残骸，只剩 `src/components/{Hero,Projects}.tsx`；与现役 `luelan-portal/`
   无对应关系。完整副本已固化在根仓 `coplay-h5-rescue` 分支。
-- `.server-backups/`（269M）：单个 `hermes-targeted-backup-20260609_113632.tgz`，内含生产 `.env`、
-  `state.db`、`config.yaml`、`credential-scanner.tgz`；**无恢复说明**。
+- `.server-backups/`（269M）：Hermes 生产机 `/root/.hermes` 的 2026-06-09 完整状态转储，
+  **明文未加密、仅此一份副本**，内含生产 `.env`(24KB)、`auth.json`、`config.yaml`、两个 SQLite、
+  `pairing/*.json` 与 170M 的 `credential-scanner.tgz`；包内唯一的 `manifest.txt` 实测是 **0 字节**。
+  逐项清单、恢复注意点与留删取舍见 `.server-backups/README.md`（该目录不入仓，说明只写在本地）。
 - `quarantine-luelan-resume/`（112M）：2026-06-11 旧简历快照，**自带 README** 写明"当前唯一入口是
   `apps/luelan-resume/`、禁止合并回去"，属有意隔离，不要当垃圾删。
-- `governance/archive/`（778M）：其中 726M 是 2026-05-27 整治归档的项目副本（含约 435M `node_modules`）。
+- `governance/archive/`（778M）：其中 726M 是 2026-05-27 整治归档的项目副本（含约 435M `node_modules`
+  与 5 份重复的 `d12.mp4`）。逐项构成、归档规范与可回收量见 `governance/archive/README.md`。
 
 > 这些目录都不是线上站点，不接 SSO，不进 `apps/`；如需独立 git 仓请先 `git init` 并加入根 `.gitignore`。
 

@@ -136,6 +136,11 @@
 - `apps/renpy-8.5.0-sdk/` 是活动 Ren'Py 工作区，用户仍有任务在跑，禁止批量清理、移动、重置或同步规则。
 - ⚠️ 它的 `.git` 是**空壳**（见「工作区结构」），即该目录下的剧本等原创内容目前**没有版本控制**。
   是否补 `git init` 需用户决定；在决定前，任何"整理"都不得触碰此目录。
+- 🚨 **对它会静默操作根仓**：因为 `.git` 无效，`git -C apps/renpy-8.5.0-sdk <任何命令>` 会**向上
+  回落到 `F:/Azure Glance/.git`**，于是你在"renpy 目录"里跑的 `git add` / `git reset` / `git status`
+  其实作用在**根仓**上。2026-09-20 一个批量提交脚本就因此把根仓索引整个 reset 掉（未丢内容）。
+  写任何遍历 `apps/*/` 的 git 脚本时，必须先用 `(dir/'.git'/HEAD').exists()` 之类判据确认它是真仓，
+  或直接跳过 renpy。`discoverProjects()` 本身已排除 renpy，受影响的只有临时脚本。
 - `apps/renpy-8.5.0-sdk-clean/` **现已不存在**（2026-09-20 实测）。它曾经是分支
   `split-gui-studio-from-sdk` 的 worktree；相关历史审计保留在
   `governance/audits/2026-05-11-renpy-clean-worktree-audit.md`。

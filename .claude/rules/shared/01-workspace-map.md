@@ -8,8 +8,16 @@
 
 - 工作区根：`F:\Azure Glance`
 - 根目录有自己的 `.git`
-- `apps/` 下 26 个一级目录中 **21 个有有效 `.git`**，5 个没有：`CoPlay`（门户站时代残骸，只剩 frontend 两文件）、`catpaw books`（原创内容，无版本控制）、`godot-game`（容器目录，真正的仓在其子目录）、`luelan-EndPoint`（只有 docs/，原创方案文档，无版本控制）、`luelan-gengwang-mp`（小程序壳）
-- ⚠️ `apps/renpy-8.5.0-sdk/.git` 是**空壳**（目录内只有 `info/` 与 `mimocode-project-id`，`git --git-dir` 判定 not a git repository）→ 该 Ren'Py 项目当前**没有任何版本控制**，剧本等原创内容为本地唯一副本
+- `apps/` 下 26 个一级项目目录（另有 `.vscode/` 是 IDE 配置，不算项目）中 **22 个有有效 `.git`**，
+  4 个没有：`CoPlay`（门户站时代残骸，只剩 frontend 两文件）、`godot-game`（容器目录，真正的仓在其子目录）、
+  `luelan-gengwang-mp`（小程序壳）、`renpy-8.5.0-sdk`（见下一条）
+- `apps/catpaw books/` 与 `apps/luelan-EndPoint/` 原本是原创内容却零版本控制，**2026-09-20 已各自 `git init` 入库**；
+  两仓都**还没有 remote**，内容仍只在这块盘上（待你定备份方式，见决策清单 D8/D9）。
+  “是否有 remote”是易变状态，交接前用 `node .agent/adapters/workspace-status.js --summary` 复核。
+- ⚠️ `apps/renpy-8.5.0-sdk/.git` 是**空壳**（目录内只有 `info/` 与 `mimocode-project-id`，`git --git-dir` 判定 not a git repository）；
+  但这**不等于整个目录没有版本控制**：活动游戏 `关于我想摆烂却被三个女人逼成金牌主播这档事/` 与
+  `renpy-gui-studio/` 各自是独立 Git 仓（前者 remote `Lazy-No-More.git`，2026-10-23 实测与 origin/main 同步）。
+  顶层 SDK 目录本身仍无版本控制，且对它跑 `git -C` 会回落到根仓——详见下文「Ren'Py 特例」。
 - `luelan-portal/` 在工作区根目录下，也有独立 `.git`
 - 根仓库通过 `.gitignore` 忽略 `apps/`、`luelan-portal/` 等子项目目录，防止跨仓误提交
 - 但 `.gitignore` 管不住"已经被跟踪"的路径：2026-09-20 前根仓仍残留 2 个 `apps/CoPlay/` 文件与 4 个 `server-portal/` 索引项（均为门户站时代遗骸，已清理并由 `coplay-h5-rescue` 分支保住完整副本）。该边界现由 `validate-rules.js` 的 `apps-tracked-in-root-repo` 断言守住
@@ -46,15 +54,15 @@
 
 | 目录 | 状态 | 事实 |
 |---|---|---|
-| `apps/luelan-course/` | **活跃，单机风险** | 全栈项目（frontend/server/deploy + `DEPLOY.md` + `ecosystem.config.js`，端口 **3009**），引用 `auth.luelanai.com` 走 SSO。最后 commit 2026-09-19；**无 remote、无上游**。线上域名待用户确认后再写入本表 |
-| `apps/luelan-OneHub/` | 活跃 | 多应用容器（`apps/`、`data/`、`docs/`、`collect.sh`），有 `AGENTS.md`/`BRAND.md`/canonical 规则；4 个本地 worktree；最后 commit 2026-07-05 |
+| `apps/luelan-course/` | **活跃** | 全栈项目（frontend/server/deploy + `DEPLOY.md` + `ecosystem.config.js`，端口 **3009**），引用 `auth.luelanai.com` 走 SSO；已有 GitHub remote（`Ylsssq926/luelan-course`）。线上域名待用户确认后再写入本表；remote/分支状态以 workspace-status 为准 |
+| `apps/luelan-OneHub/` | 活跃 | 多应用容器（`apps/`、`data/`、`docs/`、`collect.sh`），有 `AGENTS.md`/`BRAND.md`/canonical 规则；4 个本地 worktree |
 | `apps/AI-Concept/` | 未上线 | 一站式 AI 综合服务平台，待评估（见 shared/08「工具/内部/周边」） |
-| `apps/Game-IAA ALL/` | 立项期 | 猫咪小游戏量产线母项目。⚠️ 目录名带空格，canonical 规则文件名却是 `Game-IAA-ALL.md` |
-| `apps/game-wzmx/` | 有仓无入口 | 有 `.git`/`.codebuddy/`，但**没有 `CLAUDE.md`/`AGENTS.md`** → 不被 `discoverProjects` 发现，validate 不检查；canonical `game-wzmx.md` 成了无人认领的规则 |
-| `apps/godot-game/` | 容器目录 | 本身无 `.git`；真实项目是子目录 `BulletRoguelite/`（有 remote）与 `party/`（**无 remote**）。工具的项目发现只扫 `apps/<一层>`，这两个子仓永远不进 validate |
-| `apps/luelan-gengwang-mp/` | 小程序壳 | 梗王的 webview 包装，8 文件，无 `.git`（描述与 shared/08 一致） |
-| `apps/catpaw books/` | 原创内容，无版本控制 | 有 `AGENTS.md`/`CLAUDE.md`/`projects/REGISTRY.md`，**canonical 规则与站点表双缺**（validate 唯一那条 WARN 就是它） |
-| `apps/luelan-EndPoint/` | 原创文档，无版本控制 | 只有 `docs/`（出海方案/产品架构），规则与索引零登记 |
+| `apps/Game-IAA ALL/` | 立项期 | 猫咪小游戏量产线母项目。目录名带空格，但 canonical `Game-IAA-ALL.md` 与 `projectLocalName()` 推导一致（空格→`-`），已纳管 |
+| `apps/game-wzmx/` | 已纳管（2026-09-20） | 掠蓝修仙模拟器。此前**整个仓没有任何 Agent 入口文件**，123 行的 canonical `game-wzmx.md` 一直无人认领；补 `AGENTS.md` 后 sync/validate 正常覆盖 |
+| `apps/godot-game/` | 容器目录 | 本身无 `.git`；真实项目是子目录 `BulletRoguelite/`（有 remote）与 `party/`（**无 remote**）。`discoverProjects` 现在会**下探容器目录一层、只收独立成仓的子目录**，所以 `godot-game/party` 已进 validate（canonical `godot-game-party.md`）；`BulletRoguelite/` 仍无入口，它真正的 Godot 工程在再下一层的 `roguelike_survivor/`（与根同名旧副本的分叉 2026-09-21 已查清，见 D4），先不纳管 |
+| `apps/luelan-gengwang-mp/` | 已纳管（2026-09-20） | 梗王的 webview 包装，21 文件（2026-10-23 实测），**无 `.git`**（内容不在任何仓里，根仓也忽略 `apps/`）；补 `AGENTS.md` 后 canonical `luelan-gengwang-mp.md` 不再是孤儿 |
+| `apps/catpaw books/` | 原创内容，**2026-09-20 起有仓无 remote** | 两部小说章节 + `projects/REGISTRY.md` 断点续作协议；已建 canonical `.agent/rules/projects/catpaw-books.md`，`AGENTS.md` 与 `.claude/rules/shared/` 副本已入本仓，正式被 `discoverProjects` 接管 |
+| `apps/luelan-EndPoint/` | 原创文档，**2026-09-20 起有仓无 remote** | 只有 `docs/`（出海方案/产品架构 6 篇，全 AI 完结小说平台的立项方案）；已补 `AGENTS.md` 与 canonical `luelan-EndPoint.md`，未上线、无代码 |
 | `apps/novel-translator/` | 自用 CLI | 中文网文出海翻译，见 shared/08 |
 | `apps/CoPlay/` | **残骸，勿当第二个 coplay** | 只剩 `frontend/`，其 `dist/index.html` 是 Vue 产物；现役 CoPlay 是 `apps/luelan-coplay/`（React）。旧 H5 完整副本在 `coplay-h5-rescue` 分支 |
 | `apps/renpy-8.5.0-sdk/` | 保护目录 | 见下文「Ren'Py 特例」 |
@@ -94,16 +102,19 @@
 
 ### 根仓库直接跟踪（确实无独立 .git）
 
-- `roguelike_survivor/`：Godot 4 肉鸽幸存者原型，含 `docs/` 设计文档（根仓跟踪 165 个文件）。
-  ⚠️ 与 `apps/godot-game/BulletRoguelite/roguelike_survivor/` **已分叉**：内层那份多出 `locales/`、
-  `.godot/`（说明 Godot 编辑器实际打开的是内层那份），根这份独有 `docs/`。两份都有独有内容，
-  合并或删除前必须人工比对，不要按"看起来重复"处理。
+- `roguelike_survivor/`：Godot 4 肉鸽幸存者原型《刹那少女》的**旧副本**（根仓跟踪 165 个文件）。
+  活的那份在 `apps/godot-game/BulletRoguelite/roguelike_survivor/`（有 `.godot/`、全套 `.import`
+  与 `locales/` 三语，编辑器实际打开的是它）。2026-09-21 逐文件比对结论：**这份已无任何独有内容**
+  —— `docs/` 20/21 与内层版完全相同，剩下 1 段《刹那少女》命名映射已回收进内层仓，
+  7 个"独有"代码文件都是被改名取代的旧脚手架（`enemy_spawn_manager` → `enemy_spawner` 等）。
+  退役它属可恢复操作（根仓历史里有），但**先等用户点头**，在此之前不要把这里当活工程改。见决策清单 D4。
 
 ### 自身是独立 Git 仓（根仓已忽略；改动必须在各自仓内 commit）
 
 - `ai-course-factory/`：AI 课程内容工厂（多模块 Markdown + HTML 内容站），3.8G，
-  remote `github.com/Ylsssq926/kecheng2026`。2026-09-20 实测 **ahead 59 + 212 个未提交文件**，
-  最后 commit 停在 2026-06-05，而工作树一直改到当天 —— 三个月的内容只在本地一块盘上。
+  remote `github.com/Ylsssq926/kecheng2026`。2026-09-20 把积压三个月的未提交内容（207 文件快照）
+  连同此前 ahead 59 一起推走；2026-10-23 实测工作树 **clean、ahead 0**。内容仍在持续修改，
+  接手前先跑 `git -C ai-course-factory status --short` 和 workspace-status。
 
 ### 含真实隐私，刻意不入任何仓库（本地唯一副本，需要单独加密备份）
 
@@ -124,18 +135,30 @@
   **明文未加密、仅此一份副本**，内含生产 `.env`(24KB)、`auth.json`、`config.yaml`、两个 SQLite、
   `pairing/*.json` 与 170M 的 `credential-scanner.tgz`；包内唯一的 `manifest.txt` 实测是 **0 字节**。
   逐项清单、恢复注意点与留删取舍见 `.server-backups/README.md`（该目录不入仓，说明只写在本地）。
+  盘面上只有那一个 `.tgz` + `README.md`，上面列的文件名都在 tar 包内（`tar tzf` 才看得见）——
+  用"文件名在磁盘上搜不到"来判定这条记录过期是错的。
+- `backups/`（2026-10-23 实测 1.4G）：手工 git bundle 备份，当前有两份 ruxi 历史改写前快照（各约 667M，
+  疑似重复，清理前先核对 hash）。该目录不入仓；保留策略与清理决定见 `governance/decisions/`。
+- `docs/`：根仓跟踪的两份部署设计文档（`docs/plans`、`docs/superpowers/specs`），不是规则源。
 - `quarantine-luelan-resume/`（112M）：2026-06-11 旧简历快照，**自带 README** 写明"当前唯一入口是
   `apps/luelan-resume/`、禁止合并回去"，属有意隔离，不要当垃圾删。
-- `governance/archive/`（778M）：其中 726M 是 2026-05-27 整治归档的项目副本（含约 435M `node_modules`
-  与 5 份重复的 `d12.mp4`）。逐项构成、归档规范与可回收量见 `governance/archive/README.md`。
+- `governance/archive/`（778M）：其中 726M 是 2026-05-27 整治归档的项目副本。实测可重建的
+  `node_modules` 有 **5 个共 496M**（每个旁边都有 `package.json` + lock），另有 5 份字节级相同的
+  `d12.mp4`（冗余 30M）。2026-09-21 已用 `python deploy/reclaim-archive-space.py --apply` 把这 526M
+  **移到** `governance/archive/.reclaim-trash/<时间戳>/`（含 manifest.json，**没有删除**）；
+  确认无误后手工删那一个目录才真正释放磁盘。逐项构成与归档规范见 `governance/archive/README.md`。
+  > 2026-10-23 实测：`governance/archive/` 仍为 778M，其中 `.reclaim-trash/20260921-103649/`
+  > 为 579M（不是旧记录的 526M），仍待用户确认后删除。
 
 > 这些目录都不是线上站点，不接 SSO，不进 `apps/`；如需独立 git 仓请先 `git init` 并加入根 `.gitignore`。
 
 ## Ren'Py 特例
 
 - `apps/renpy-8.5.0-sdk/` 是活动 Ren'Py 工作区，用户仍有任务在跑，禁止批量清理、移动、重置或同步规则。
-- ⚠️ 它的 `.git` 是**空壳**（见「工作区结构」），即该目录下的剧本等原创内容目前**没有版本控制**。
-  是否补 `git init` 需用户决定；在决定前，任何"整理"都不得触碰此目录。
+- ⚠️ 顶层 `.git` 是**空壳**（见「工作区结构」），但原创内容并非无版本控制：活动游戏目录
+  `关于我想摆烂却被三个女人逼成金牌主播这档事/` 与 `renpy-gui-studio/` 各自有独立 `.git` 和 remote；
+  2026-10-23 实测游戏仓与 `origin/main` 同步。顶层 SDK 目录本身仍无版本控制；是否给它补 `git init`
+  不再紧急，且未决前不得对目录做任何"整理"。
 - 🚨 **对它会静默操作根仓**：因为 `.git` 无效，`git -C apps/renpy-8.5.0-sdk <任何命令>` 会**向上
   回落到 `F:/Azure Glance/.git`**，于是你在"renpy 目录"里跑的 `git add` / `git reset` / `git status`
   其实作用在**根仓**上。2026-09-20 一个批量提交脚本就因此把根仓索引整个 reset 掉（未丢内容）。

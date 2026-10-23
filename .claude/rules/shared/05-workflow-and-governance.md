@@ -30,16 +30,26 @@
 | 共享公共规则 canonical | 根 `.agent/rules/shared/` | 唯一权威源 |
 | 根本地规则 | 根 `.agent/rules/workspace/` | 工作区独有 |
 | 私有运维层 | 根 `.agent/private/` | 凭据 / 真实账号 |
-| 项目局部规则 | 各项目 `.claude/rules/project/` | 项目独有坑点 |
+| 项目局部规则 | 根 `.agent/rules/projects/<项目名>.md` | 项目独有坑点（2026-06 起统一上收，各项目 `.claude/rules/project/` 已空） |
 | **生成副本（不得手改）** | 各项目 `.claude/rules/shared/`、`.kiro/`、`.cursor/`、`.codebuddy/` 等 | 由 sync-rules 生成 |
 
-**编辑规则**：改 canonical → validate → sync。不要在 generated shared 或 IDE 适配层手改。
+**编辑规则**：改 canonical → validate → sync → propagate。不要在 generated shared 或 IDE 适配层手改。
+
+`python .agent/adapters/propagate-rules.py "<msg>"` 负责 sync + 把副本逐仓 commit/push，保护是硬要求，
+不要图省事自己写 `sync --write` + `git add -A`：
+
+- 子仓常年混着并行会话未提交的工作，全量 `git add` / `git reset` 会把别人的 WIP 裹进治理提交，
+  或悄悄改掉别人的暂存区（2026-09-20 两次实测踩到）。该脚本只按规则路径 pathspec 提交；
+  暂存区已有改动一律跳过；有已跟踪的非规则 WIP 且仓带 husky/lint-staged/custom hook 时跳过；
+  **仅有未跟踪文件不再阻塞**（2026-10-23 起）。先跑 `--dry-run` 看计划。
+- 项目自带 prettier/lint-staged 时会重排生成的 markdown 表格，导致根 sync 永远报 UPDATE，
+  真实漂移被噪声淹没 —— 解法是把生成路径写进该项目 `.prettierignore`（已按此法处理 `apps/AI-Concept`）。
 
 ## 不作为权威规则源的目录
 
 即使存在规则样式文件也只当参考 / 历史 / 临时副本：
 
-- `.deploy-tmp/` / `.narrafork/`
+- `.deploy-tmp/` / `.narrafork/` / `.trae/`（本地规划文档）
 - `**/_reference/` / `**/backup/` / `**/archived/` / `**/node_modules/`
 - `governance/archive/2026-05-27-apps-cleanup/_legacy-shells/`（已归档）
 - `apps/renpy-8.5.0-sdk/` 与 `apps/renpy-8.5.0-sdk-clean/`

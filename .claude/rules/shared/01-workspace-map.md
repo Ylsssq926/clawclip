@@ -148,8 +148,8 @@
   `d12.mp4`（冗余 30M）。2026-09-21 已用 `python deploy/reclaim-archive-space.py --apply` 把这 526M
   **移到** `governance/archive/.reclaim-trash/<时间戳>/`（含 manifest.json，**没有删除**）；
   确认无误后手工删那一个目录才真正释放磁盘。逐项构成与归档规范见 `governance/archive/README.md`。
-  > 2026-10-23 实测：`governance/archive/` 仍为 778M，其中 `.reclaim-trash/20260921-103649/`
-  > 为 579M（不是旧记录的 526M），仍待用户确认后删除。
+  > 2026-10-23 复核：原 `.reclaim-trash/20260921-103649/`（579M）已移到
+  > `G:\azure-glance-backups\reclaim-trash-20260921-103649`；F 盘 `governance/archive/` 现约 200M。
 
 > 这些目录都不是线上站点，不接 SSO，不进 `apps/`；如需独立 git 仓请先 `git init` 并加入根 `.gitignore`。
 

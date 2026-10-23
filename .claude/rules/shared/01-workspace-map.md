@@ -137,13 +137,13 @@
   逐项清单、恢复注意点与留删取舍见 `.server-backups/README.md`（该目录不入仓，说明只写在本地）。
   盘面上只有那一个 `.tgz` + `README.md`，上面列的文件名都在 tar 包内（`tar tzf` 才看得见）——
   用"文件名在磁盘上搜不到"来判定这条记录过期是错的。
-- `backups/`（2026-10-23 实测 1.4G）：手工 git bundle 备份，当前有两份 ruxi 历史改写前快照
-  （各约 667M；2026-10-23 核对 sha256 **不同**，不是重复，勿按重复删）。该目录不入仓；
-  保留策略与清理决定见 `governance/decisions/`。
+- `backups/`（2026-10-23 实测 2.0G）：手工 git bundle 备份，当前有两份 ruxi 历史改写前快照
+  （各约 667M；2026-10-23 核对 sha256 **不同**，不是重复，勿按重复删），另有 19M stash patch
+  与 602M Relic 旧快照。该目录不入仓；保留策略与清理决定见 `governance/decisions/`。
 - `docs/`：根仓跟踪的两份部署设计文档（`docs/plans`、`docs/superpowers/specs`），不是规则源。
 - `quarantine-luelan-resume/`（112M）：2026-06-11 旧简历快照，**自带 README** 写明"当前唯一入口是
   `apps/luelan-resume/`、禁止合并回去"，属有意隔离，不要当垃圾删。
-- `governance/archive/`（778M）：其中 726M 是 2026-05-27 整治归档的项目副本。实测可重建的
+- `governance/archive/`（约 200M，2026-10-23 实测）：2026-05-27 整治归档的项目副本当时约 726M。实测可重建的
   `node_modules` 有 **5 个共 496M**（每个旁边都有 `package.json` + lock），另有 5 份字节级相同的
   `d12.mp4`（冗余 30M）。2026-09-21 已用 `python deploy/reclaim-archive-space.py --apply` 把这 526M
   **移到** `governance/archive/.reclaim-trash/<时间戳>/`（含 manifest.json，**没有删除**）；

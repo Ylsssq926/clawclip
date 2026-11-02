@@ -21,10 +21,14 @@
 | PM2 进程名 | 端口 | 域名 / 入口 |
 |---|---:|---|
 | `auth` | 3008 | `auth.luelanai.com` |
+| `course` | 3009 | `course.luelanai.com` |
 | `writing-pro` | 3001 | `writing.luelanai.com` |
 | `resume` | 3006 | `resume.luelanai.com` |
-| `ruxi` | 3004 | `ruxi.luelanai.com`（前台 Next.js）|
-| `ruxi-api` | 3007 | `ruxi.luelanai.com/api`（后端 Express）|
+| `ruxi` | 3004 | `ruxi.luelanai.com`（前台 Next.js；2026-11-02 暂停）|
+| `ruxi-api` | 3007 | `ruxi.luelanai.com/api`（后端 Express；2026-11-02 暂停）|
+
+> 2026-11-02：按用户要求 `pm2 stop ruxi ruxi-api`（释放约 200MB；数据保留，域名暂时 502）。
+> 恢复命令：`pm2 start ruxi ruxi-api`。`course` 实际一直在 3009 运行（此前漏登记）。
 
 > 注：ruxi 后台 admin 原端口 3005 已停（2026-06 内存治理），改为静态导出 + nginx alias 托管 `/luelan`（`/opt/apps/services/luelan-ruxi/admin-dist/`），`/api/` 仍反代 3007。
 > ruxi-admin 不再作为 PM2 进程运行，**已从 deploy/ecosystem.config.js 移除**。线上只有 ruxi(3004) + ruxi-api(3007) 两个 PM2 进程。

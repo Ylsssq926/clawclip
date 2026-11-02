@@ -33,7 +33,7 @@
 | 个人主站 | `luelanai.com` | `luelan.online` | `luelan-portal/` | `/opt/apps/static/luelan-portal/dist` (香港) | 静态站 |
 | 企业站 | `company.luelanai.com` | `company.luelan.online` | `apps/luelan-company/` | `/opt/apps/static/luelan-company/dist` (香港) | 静态站 |
 | 写作 Pro | `writing.luelanai.com` | `writing.luelan.online` | `apps/luelan-writing-pro/` | `/opt/apps/services/luelan-writing-pro` (香港 PM2:3001) | PM2 服务 |
-| 入戏 | `ruxi.luelanai.com` | `ruxi.luelan.online` | `apps/luelan-ruxi/` | `/opt/apps/services/luelan-ruxi` (香港 PM2:3007 ruxi-api) | PM2 服务 |
+| 入戏 | `ruxi.luelanai.com` | `ruxi.luelan.online` | `apps/luelan-ruxi/` | `/opt/apps/services/luelan-ruxi` (香港 PM2:3004 ruxi + 3007 ruxi-api；2026-11-02 暂停) | PM2 服务 |
 | 简历工坊 | `resume.luelanai.com` | `resume.luelan.online` | `apps/luelan-resume/` | `/opt/apps/services/luelan-resume` (香港 PM2:3006) | PM2 服务 |
 | 统一认证 | `auth.luelanai.com` | `auth.luelan.online` | `apps/luelan-auth/` | `/opt/apps/services/luelan-auth` (香港 PM2:3008) | PM2 服务 |
 | 2048 猫猫 | `2048maomao.luelan.online` | — | `apps/luelan-2048maomao/` | `/opt/apps/services/luelan-2048maomao` (上海 PM2) | PM2 服务（演示站） |
@@ -54,7 +54,7 @@
 
 | 目录 | 状态 | 事实 |
 |---|---|---|
-| `apps/luelan-course/` | **活跃** | 全栈项目（frontend/server/deploy + `DEPLOY.md` + `ecosystem.config.js`，端口 **3009**），引用 `auth.luelanai.com` 走 SSO；已有 GitHub remote（`Ylsssq926/luelan-course`）。线上域名待用户确认后再写入本表；remote/分支状态以 workspace-status 为准 |
+| `apps/luelan-course/` | **活跃** | 全栈项目（frontend/server/deploy + `DEPLOY.md` + `ecosystem.config.js`，端口 **3009**），引用 `auth.luelanai.com` 走 SSO；已有 GitHub remote（`Ylsssq926/luelan-course`）。线上域名 `course.luelanai.com`（2026-11-02 实测 200，PM2 `course`）；remote/分支状态以 workspace-status 为准 |
 | `apps/luelan-OneHub/` | 活跃 | 多应用容器（`apps/`、`data/`、`docs/`、`collect.sh`），有 `AGENTS.md`/`BRAND.md`/canonical 规则；4 个本地 worktree |
 | `apps/AI-Concept/` | 未上线 | 一站式 AI 综合服务平台，待评估（见 shared/08「工具/内部/周边」） |
 | `apps/Game-IAA ALL/` | 立项期 | 猫咪小游戏量产线母项目。目录名带空格，但 canonical `Game-IAA-ALL.md` 与 `projectLocalName()` 推导一致（空格→`-`），已纳管 |

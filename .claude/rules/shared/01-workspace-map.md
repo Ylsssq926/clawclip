@@ -33,7 +33,7 @@
 | 个人主站 | `luelanai.com` | `luelan.online` | `luelan-portal/` | `/opt/apps/static/luelan-portal/dist` (香港) | 静态站 |
 | 企业站 | `company.luelanai.com` | `company.luelan.online` | `apps/luelan-company/` | `/opt/apps/static/luelan-company/dist` (香港) | 静态站 |
 | 写作 Pro | `writing.luelanai.com` | `writing.luelan.online` | `apps/luelan-writing-pro/` | `/opt/apps/services/luelan-writing-pro` (香港 PM2:3001) | PM2 服务 |
-| 入戏 | `ruxi.luelanai.com` | `ruxi.luelan.online` | `apps/luelan-ruxi/` | `/opt/apps/services/luelan-ruxi` (香港 PM2:3004 ruxi + 3007 ruxi-api；2026-11-02 暂停) | PM2 服务 |
+| 入戏 | `ruxi.luelanai.com` | `ruxi.luelan.online` | `apps/luelan-ruxi/` | `/opt/apps/services/luelan-ruxi` (香港 PM2:3004 ruxi + 3007 ruxi-api；2026-11-02 已从 PM2 移除，数据保留) | PM2 服务 |
 | 简历工坊 | `resume.luelanai.com` | `resume.luelan.online` | `apps/luelan-resume/` | `/opt/apps/services/luelan-resume` (香港 PM2:3006) | PM2 服务 |
 | 统一认证 | `auth.luelanai.com` | `auth.luelan.online` | `apps/luelan-auth/` | `/opt/apps/services/luelan-auth` (香港 PM2:3008) | PM2 服务 |
 | 2048 猫猫 | `2048maomao.luelan.online` | — | `apps/luelan-2048maomao/` | `/opt/apps/services/luelan-2048maomao` (上海 PM2) | PM2 服务（演示站） |
